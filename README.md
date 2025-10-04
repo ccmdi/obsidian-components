@@ -7,17 +7,17 @@ Adds custom components to Obsidian notes and sidebars.
 ![](images/permissions.png)
 
 ## Available components
-* **Analytics** - shows vault health
-* **Anki status** - shows Anki card status
-* **Clock** - simple clock
+* **Analytics** - vault health
+* **Anki status**
+* **Clock**
 * **Chart** - chart date-mapped array data
-* **Discord status** - shows Discord status
-* **GitHub streak** - Shows GitHub contribution streak
+* **Discord status**
+* **GitHub streak** - GitHub contribution streak
 * **Map** - map sourced from your notes
-* **Navigate button** - Navigate between periodic notes
+* **Navigate button** - navigate between periodic notes
 * **Reminders** - due tasks from periodic notes
 * **Timeline** - timeline of periodic notes
-* **Widget space** - a container for multiple components
+* **Widget space** - a customizable container for multiple components
 
 ## Usage
 The easiest way to get started is by typing a codeblock and whichever component you want to use inside a note (e.g. \`\`\`reminders). This will prompt autocomplete by default, which will guide you through all the possible arguments for that component.
