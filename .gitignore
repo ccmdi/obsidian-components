@@ -27,6 +27,7 @@ llm.json
 
 
 *.md
+!README.md
 
 images/*
 !images/preview.png
