@@ -1,0 +1,10 @@
+{
+	"id": "new-old-components",
+	"name": "Components",
+	"version": "0.1.0",
+	"minAppVersion": "0.15.0",
+	"description": "Reusable widgets for Obsidian",
+	"author": "ccmdi",
+	"authorUrl": "https://github.com/ccmdi",
+	"isDesktopOnly": false
+}
