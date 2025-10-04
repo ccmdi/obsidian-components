@@ -29,15 +29,14 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
 
         el.style.position = 'relative';
 
-        const style = document.createElement('style');
+        const style = el.createEl('style');
         style.textContent = ankiStatusStyles;
         el.appendChild(style);
 
         const widget = document.createElement('div');
         widget.className = `anki-status-container ${compact ? 'compact' : ''}`;
 
-        const connectionIndicator = document.createElement('div');
-        connectionIndicator.className = 'connection-status';
+        const connectionIndicator = el.createEl('div', { cls: 'connection-status' });
         widget.appendChild(connectionIndicator);
 
         if (showStats) {

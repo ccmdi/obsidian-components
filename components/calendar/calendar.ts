@@ -81,8 +81,7 @@ export const calendar: Component<['calendarUrl', 'maxEvents', 'showWeekends', 'v
 
         const view = args.view || 'week';
 
-        const calendarContainer = document.createElement('div');
-        calendarContainer.className = 'calendar-container';
+        const calendarContainer = el.createEl('div', { cls: 'calendar-container' });
         calendarContainer.style.height = (args.height as string) || '650px';
         calendarContainer.style.opacity = '1';
 
@@ -426,7 +425,7 @@ export const calendar: Component<['calendarUrl', 'maxEvents', 'showWeekends', 'v
             const { FullCalendar } = await loadLibraries();
 
             // Create a style element for custom calendar styling
-            let style = document.createElement('style');
+            let style = el.createEl('style');
             style.textContent += `
                 .fc .fc-toolbar.fc-header-toolbar {
                 background-color: var(--background-primary);

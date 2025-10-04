@@ -57,7 +57,7 @@ const renderAnalytics = async (
 
         el.innerHTML = html;
 
-        const style = document.createElement('style');
+        const style = el.createEl('style');
         style.textContent = analyticsStyles;
         el.appendChild(style);
 

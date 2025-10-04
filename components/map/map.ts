@@ -139,7 +139,7 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
             }
         }
 
-        const wrapper = document.createElement('div');
+        const wrapper = el.createEl('div', { cls: 'map-container' });
         wrapper.style.width = '100%';
         wrapper.style.height = height;
         wrapper.style.position = 'relative';

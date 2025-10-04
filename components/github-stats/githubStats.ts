@@ -49,14 +49,12 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
 
             el.style.position = 'relative';
 
-            const style = document.createElement('style');
+            const style = el.createEl('style');
             style.textContent = githubStyles;
             el.appendChild(style);
 
-            const widget = document.createElement('div');
-            widget.className = 'github-streak-container';
-            const tooltip = document.createElement('div');
-            tooltip.className = 'github-tooltip';
+            const widget = el.createEl('div', { cls: 'github-streak-container' });
+            const tooltip = el.createEl('div', { cls: 'github-tooltip' });
     
             widget.innerHTML = `
                 <div class="github-streak-wrapper">

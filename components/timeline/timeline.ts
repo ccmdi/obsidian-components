@@ -1,6 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from "../../components";
 import { TFile } from "obsidian";
 import { formatDate, getTasks, matchesQuery } from "../../utils";
+import timelineStyles from "./styles";
 
 
 export const timeline: Component<['query', 'limit', 'journalSection', 'taskSection', 'dateFormat', 'showTasks', 'showJournalDropdown']> = {
@@ -48,30 +49,10 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
         const showJournalDropdown = args.showJournalDropdown !== 'false';
         const dateFormat = args.dateFormat;
 
-        const container = document.createElement('div');
-        container.className = 'timeline-container';
-        container.style.cssText = `
-            padding: 8px 0;
-        `;
+        const container = el.createEl('div', { cls: 'timeline-container' });
 
-        // Add CSS for dropdown animation
-        const style = document.createElement('style');
-        style.textContent = `
-            
-            .timeline-container .journal-content.visible {
-                margin-top: 10px !important;
-                grid-template-rows: 1fr !important;
-                border-width: 1px !important;
-                opacity: 1 !important;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-            }
-            .timeline-container .journal-content.visible > div {
-                opacity: 1 !important;
-                transform: translateX(0) scale(1) !important;
-                padding: 12px !important;
-                transition-delay: 0.1s;
-            }
-        `;
+        const style = el.createEl('style');
+        style.textContent = timelineStyles;
         container.appendChild(style);
 
         const journalStatusCache: Record<string, boolean> = {};

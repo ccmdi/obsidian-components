@@ -31,20 +31,17 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
         el.style.position = 'relative';
 
-        const style = document.createElement('style');
+        const style = el.createEl('style');
         style.textContent = discordStatusStyles;
         el.appendChild(style);
 
-        const widget = document.createElement('div');
-        widget.className = `discord-status-container ${hideProfile ? 'hide-profile' : ''}`;
+        const widget = el.createEl('div', { cls: 'discord-status-container' });
+        widget.classList.toggle('hide-profile', hideProfile);
 
-        const tooltip = document.createElement('div');
-        tooltip.className = 'discord-tooltip';
+        const tooltip = el.createEl('div', { cls: 'discord-tooltip' });
 
-        const connectionIndicator = document.createElement('div');
-        connectionIndicator.className = 'connection-status';
+        const connectionIndicator = el.createEl('div', { cls: 'connection-status' });
         widget.appendChild(connectionIndicator);
-
 
         // Loading state
         widget.innerHTML += `
