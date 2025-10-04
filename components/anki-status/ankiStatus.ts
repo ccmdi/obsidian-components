@@ -33,11 +33,10 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
         style.textContent = ankiStatusStyles;
         el.appendChild(style);
 
-        const widget = document.createElement('div');
-        widget.className = `anki-status-container ${compact ? 'compact' : ''}`;
+        const widget = el.createEl('div', { cls: `anki-status-container ${compact ? 'compact' : ''}` });
 
         const connectionIndicator = el.createEl('div', { cls: 'connection-status' });
-        widget.appendChild(connectionIndicator);
+        widget.append(connectionIndicator);
 
         if (showStats) {
             widget.innerHTML += `

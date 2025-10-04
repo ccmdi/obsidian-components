@@ -175,7 +175,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         const { containerEl } = this;
 
         // Add CSS for smoother toggle animations
-        const style = document.createElement('style');
+        const style = containerEl.createEl('style');
         style.textContent = `
             .checkbox-container,
             .checkbox-container::before,

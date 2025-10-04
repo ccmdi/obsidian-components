@@ -131,22 +131,15 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
         };
         
         // Create UI
-        const container = document.createElement('div');
-        container.className = 'stat-chart-container';
+        const container = el.createEl('div', { cls: 'stat-chart-container' });
         
-        const filterContainer = document.createElement('div');
-        filterContainer.className = 'stat-chart-filters';
+        const filterContainer = el.createEl('div', { cls: 'stat-chart-filters' });
         
-        const startInput = document.createElement('input');
-        startInput.type = 'date';
-        startInput.value = startDate;
+        const startInput = el.createEl('input', { type: 'date', value: startDate });
         
-        const endInput = document.createElement('input');
-        endInput.type = 'date';
-        endInput.value = endDate;
+        const endInput = el.createEl('input', { type: 'date', value: endDate });
         
-        const chartContainer = document.createElement('div');
-        chartContainer.className = 'stat-chart';
+        const chartContainer = el.createEl('div', { cls: 'stat-chart' });
         chartContainer.style.height = args.height || '400px';
         
         filterContainer.appendChild(startInput);
@@ -173,8 +166,8 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
                 : 'rgba(54, 162, 235, 0.8)';
             
             chartContainer.innerHTML = '';
-            const canvas = document.createElement('canvas');
-            chartContainer.appendChild(canvas);
+            const canvas = el.createEl('canvas');
+            chartContainer.append(canvas);
             
             if (chartInstance) {
                 chartInstance.destroy();

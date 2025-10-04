@@ -70,14 +70,11 @@ export const widgetSpace: Component<['layout']> = {
             });
         }
 
-        // Create styles
-        const style = document.createElement('style');
+        const style = el.createEl('style');
         style.textContent = widgetSpaceStyles;
         el.appendChild(style);
 
-        // Create container
-        const container = document.createElement('div');
-        container.className = 'widget-space-container';
+        const container = el.createEl('div', { cls: 'widget-space-container' });
 
         // Function to update CSS variable with grid width
         const updateWidthVariable = () => {
@@ -86,13 +83,11 @@ export const widgetSpace: Component<['layout']> = {
         };
 
         // Grid container
-        const grid = document.createElement('div');
-        grid.className = 'widget-space-grid';
+        const grid = el.createEl('div', { cls: 'widget-space-grid' });
         container.appendChild(grid);
 
         // Show skeleton overlay
-        const skeleton = document.createElement('div');
-        skeleton.className = 'widget-space-skeleton';
+        const skeleton = el.createEl('div', { cls: 'widget-space-skeleton' });
         skeleton.style.position = 'absolute';
         skeleton.style.top = '0';
         skeleton.style.left = '0';
@@ -104,8 +99,7 @@ export const widgetSpace: Component<['layout']> = {
         // Create skeleton items based on saved layout
         const skeletonCount = Math.max(3, layout.widgets.length);
         for (let i = 0; i < skeletonCount; i++) {
-            const skeletonItem = document.createElement('div');
-            skeletonItem.className = 'widget-skeleton';
+            const skeletonItem = el.createEl('div', { cls: 'widget-skeleton' });
             skeleton.appendChild(skeletonItem);
         }
 
@@ -384,8 +378,7 @@ export const widgetSpace: Component<['layout']> = {
         const addWidget = async (componentKey: string, componentName: string, componentArgs: Record<string, string> = {}) => {
 
             const widgetId = `widget-${++widgetCounter}`;
-            const widget = document.createElement('div');
-            widget.className = 'widget-item';
+            const widget = el.createEl('div', { cls: 'widget-item' });
             widget.dataset.widgetId = widgetId;
             widget.dataset.componentKey = componentKey;
 
@@ -407,8 +400,7 @@ export const widgetSpace: Component<['layout']> = {
                 ).open();
             });
 
-            const content = document.createElement('div');
-            content.className = 'widget-content';
+            const content = el.createEl('div', { cls: 'widget-content' });
             widget.appendChild(content);
 
             const component = COMPONENTS.find(comp => comp.keyName === componentKey);

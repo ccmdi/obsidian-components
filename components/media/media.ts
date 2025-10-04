@@ -40,7 +40,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
             const resourcePath = app.vault.getResourcePath(file);
 
             if (isVideo) {
-                const video = document.createElement("video");
+                const video = el.createEl("video");
                 video.src = resourcePath;
                 video.autoplay = true;
                 video.loop = true;
@@ -50,9 +50,9 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                     video.style.margin = '0 auto';
                     video.style.textAlign = 'center';
                 }
-                container.appendChild(video);
+                container.append(video);
             } else {
-                const img = document.createElement("img");
+                const img = el.createEl("img");
                 img.src = resourcePath;
                 img.referrerPolicy = 'no-referrer';
                 if (centered) {
@@ -60,7 +60,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                     img.style.margin = '0 auto';
                     img.style.textAlign = 'center';
                 }
-                container.appendChild(img);
+                container.append(img);
             }
         };
 
@@ -73,7 +73,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
             }
         };
 
-        const style = document.createElement('style');
+        const style = el.createEl('style');
         style.textContent = mediaStyles;
         el.appendChild(style);
 
@@ -134,22 +134,18 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
             selectedFile = selectRandomFile();
         }
 
-        const mediaContainer = document.createElement("div");
-        mediaContainer.className = "media-container";
+        const mediaContainer = el.createEl('div', { cls: 'media-container' });
         applyCenteredStyles(mediaContainer);
 
         if (interactive) {
-            const selector = document.createElement('select');
-            selector.className = 'media-selector';
+            const selector = el.createEl('select', { cls: 'media-selector' });
 
             files.forEach((file, index) => {
-                const option = document.createElement('option');
-                option.value = index.toString();
-                option.textContent = file.basename;
+                const option = el.createEl('option', { value: index.toString(), text: file.basename });
                 if (file === selectedFile) {
                     option.selected = true;
                 }
-                selector.appendChild(option);
+                selector.append(option);
             });
 
             selector.addEventListener('change', async () => {

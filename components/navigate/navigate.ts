@@ -16,8 +16,7 @@ const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: Markdow
     const initiatorName = initiator.name.slice(0, initiator.name.length - 3);
 
     const createNavigationButton = (dayOffset: number, label: string) => {
-        const btn = document.createElement('button');
-        btn.className = `daily-nav ${dayOffset < 0 ? 'yesterday' : 'tomorrow'}`;
+        const btn = el.createEl('button', { cls: `daily-nav ${dayOffset < 0 ? 'yesterday' : 'tomorrow'}` });
         btn.type = 'button';
         btn.tabIndex = 0;
 
@@ -66,12 +65,11 @@ const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: Markdow
     // Clear existing content
     el.innerHTML = '';
 
-    const container = document.createElement('div');
-    container.className = 'daily-nav-container';
+    const container = el.createEl('div', { cls: 'daily-nav-container' });
     container.style.display = 'flex';
     container.style.gap = '0';
 
-    const style = document.createElement('style');
+    const style = el.createEl('style');
     style.textContent = navigateStyles;
     container.appendChild(style);
 

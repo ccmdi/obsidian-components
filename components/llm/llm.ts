@@ -134,11 +134,9 @@ The user can ask you questions about this note, request summaries, or general as
             }
         };
 
-        // Create container
         const container = el.createEl('div', { cls: 'llm-container' });
 
-        // Add styles
-        const style = document.createElement('style');
+        const style = el.createEl('style');
         style.textContent = `
             .llm-container {
                 display: flex;
@@ -471,10 +469,9 @@ The user can ask you questions about this note, request summaries, or general as
                                             contentBlocks[parsed.index].text += deltaText;
 
                                             // Wrap new text in animated span
-                                            const tokenSpan = document.createElement('span');
-                                            tokenSpan.className = 'llm-token';
+                                            const tokenSpan = el.createEl('span', { cls: 'llm-token' });
                                             tokenSpan.textContent = deltaText;
-                                            contentEl.appendChild(tokenSpan);
+                                            contentEl.append(tokenSpan);
 
                                             messagesContainer.scrollTop = messagesContainer.scrollHeight;
                                         }

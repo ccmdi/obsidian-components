@@ -160,7 +160,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
 
             const sortedTasks = useTargetNoteSorting(uniqueTasks, sortBy);
 
-            const style = document.createElement('style');
+            const style = el.createEl('style');
             style.textContent = remindersStyles;
             el.appendChild(style);
 

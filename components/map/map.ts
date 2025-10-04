@@ -149,17 +149,15 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
 
         let searchInput: HTMLInputElement | null = null;
         if (showSearch) {
-            const searchContainer = document.createElement('div');
+            const searchContainer = el.createEl('div', { cls: 'map-search-container' });
             searchContainer.style.padding = '10px';
             searchContainer.style.background = 'var(--background-secondary)';
             searchContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
             searchContainer.style.borderTopLeftRadius = '8px';
             searchContainer.style.borderTopRightRadius = '8px';
-            wrapper.appendChild(searchContainer);
+            wrapper.append(searchContainer);
 
-            searchInput = document.createElement('input');
-            searchInput.type = 'text';
-            searchInput.placeholder = 'Search locations...';
+            searchInput = el.createEl('input', { type: 'text', placeholder: 'Search locations...' });
             searchInput.style.width = '100%';
             searchInput.style.padding = '8px';
             searchInput.style.border = '1px solid var(--background-modifier-border)';
@@ -169,13 +167,13 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
             searchContainer.appendChild(searchInput);
         }
 
-        const canvasContainer = document.createElement('div');
+        const canvasContainer = el.createEl('div', { cls: 'map-canvas-container' });
         canvasContainer.style.flex = '1';
         canvasContainer.style.position = 'relative';
         canvasContainer.style.overflow = 'hidden';
-        wrapper.appendChild(canvasContainer);
+        wrapper.append(canvasContainer);
 
-        const mapContainer = document.createElement('canvas');
+        const mapContainer = el.createEl('canvas', { cls: 'map-canvas' });
         mapContainer.style.width = '100%';
         mapContainer.style.height = '100%';
         mapContainer.style.display = 'block';
@@ -187,9 +185,9 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
             }
         });
 
-        canvasContainer.appendChild(mapContainer);
+        canvasContainer.append(mapContainer);
 
-        const tooltip = document.createElement('div');
+        const tooltip = el.createEl('div', { cls: 'map-tooltip' });
         tooltip.style.position = 'absolute';
         tooltip.style.padding = '8px 12px';
         tooltip.style.background = 'var(--background-primary)';
@@ -202,7 +200,7 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
         tooltip.style.fontSize = '14px';
         tooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
         tooltip.style.maxWidth = '250px';
-        canvasContainer.appendChild(tooltip);
+        canvasContainer.append(tooltip);
 
         let isDestroyed = false;
 
@@ -214,7 +212,7 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
             if (point.cover && point.file) {
                 const coverFile = app.metadataCache.getFirstLinkpathDest(point.cover, point.file.path);
                 if (coverFile) {
-                    const img = document.createElement('img');
+                    const img = el.createEl('img');
                     img.style.width = '100%';
                     img.style.height = 'auto';
                     img.style.borderRadius = '4px';
@@ -229,25 +227,23 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
                     renderPromises.push(renderPromise);
                     
                     img.src = app.vault.getResourcePath(coverFile);
-                    tooltip.appendChild(img);
+                    tooltip.append(img);
                 }
             }
         
-            const titleEl = document.createElement('div');
+            const titleEl = el.createEl('div');
             titleEl.textContent = point.title || 'Untitled';
             titleEl.style.fontWeight = 'bold';
-            tooltip.appendChild(titleEl);
+            tooltip.append(titleEl);
         
             if (showTags === 'true' && point.tags) {
-                const tagsEl = document.createElement('div');
-                tagsEl.classList.add('map-tooltip-tags');
+                const tagsEl = el.createEl('div', { cls: 'map-tooltip-tags' });
                 tagsEl.style.display = 'flex';
                 tagsEl.style.flexWrap = 'wrap';
                 tagsEl.style.gap = '4px';
                 tagsEl.style.marginTop = '8px';
                 point.tags.forEach(tagText => {
-                    const tagEl = document.createElement('a');
-                    tagEl.classList.add('tag');
+                    const tagEl = el.createEl('a', { cls: 'tag' });
                     tagEl.textContent = `#${tagText}`;
                     tagsEl.appendChild(tagEl);
                 });
