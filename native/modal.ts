@@ -1,4 +1,4 @@
-import { App, FuzzySuggestModal, Modal, Setting, Notice } from "obsidian";
+import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor } from "obsidian";
 import { Component, COMPONENTS } from "../components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "../main";
 import { renderExternalLink } from "utils";
@@ -191,5 +191,69 @@ export class ComponentArgsModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
+    }
+}
+
+export class PlaceComponentModal extends Modal {
+    plugin: ComponentsPlugin;
+    editor: Editor;
+
+    constructor(app: App, plugin: ComponentsPlugin, editor: Editor) {
+        super(app);
+        this.plugin = plugin;
+        this.editor = editor;
+    }
+
+    onOpen() {
+        const { contentEl, titleEl } = this;
+        contentEl.empty();
+        titleEl.setText('Place Component');
+
+        const enabledComponents = COMPONENTS.filter(component =>
+            this.plugin.settings.componentStates[component.keyName] ?? false
+        ).sort((a, b) => (a.name || a.keyName).localeCompare(b.name || b.keyName));
+
+        enabledComponents.forEach(component => {
+            const option = contentEl.createEl('div', {
+                cls: 'clickable-icon'
+            });
+
+            const title = option.createEl('div', {
+                text: component.name || component.keyName,
+                cls: 'nav-file-title-content'
+            });
+
+            if (component.description) {
+                const descEl = option.createEl('div', {
+                    cls: 'nav-file-tag'
+                });
+                const processedDesc = renderExternalLink(component.description);
+                descEl.innerHTML = processedDesc;
+            } else {
+                option.createEl('div', {
+                    text: '',
+                    cls: 'nav-file-tag'
+                });
+            }
+
+            option.addEventListener('click', () => {
+                this.close();
+                new ComponentArgsModal(this.app, component, this.plugin, {
+                    mode: 'insert',
+                    onSubmit: (args) => {
+                        const argsLines = Object.entries(args)
+                            .filter(([, value]) => value && value.trim() !== '')
+                            .map(([key, value]) => `${key}="${value}"`)
+                            .join('\n');
+                        const codeBlock = `\`\`\`${component.keyName}\n${argsLines}\n\`\`\``;
+                        this.editor.replaceSelection(codeBlock);
+                    }
+                }).open();
+            });
+        });
+    }
+
+    onClose() {
+        this.contentEl.empty();
     }
 }
