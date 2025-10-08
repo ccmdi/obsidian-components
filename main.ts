@@ -1,12 +1,12 @@
 // main.ts
 
-import { App, Plugin, PluginSettingTab, Setting, Modal, FuzzySuggestModal, ItemView, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, Modal, FuzzySuggestModal, ItemView, WorkspaceLeaf, Editor } from 'obsidian';
 import { ComponentsSettings, DEFAULT_SETTINGS } from './settings'; // Assuming you still have this
 import { COMPONENTS, Component, componentInstances } from './components';
 
 import ComponentsSettingTab from './native/settings';
 import ComponentSidebarView from './native/sidebar';
-import ComponentSelectorModal from './native/modal';
+import ComponentSelectorModal, { PlaceComponentModal } from './native/modal';
 import { ComponentAutoComplete } from './native/autocomplete';
 
 export const COMPONENT_SIDEBAR_VIEW_TYPE = 'component-sidebar';
@@ -34,6 +34,14 @@ export default class ComponentsPlugin extends Plugin {
             }
         });
 
+        this.addCommand({
+            id: 'place-component',
+            name: 'Place component',
+            editorCallback: (editor) => {
+                new PlaceComponentModal(this.app, this, editor).open();
+            }
+        });
+
         // Add sidebar icon for widget-space
         this.addRibbonIcon('layout-grid', 'Open Widget Space', async () => {
             // Check if widget-space view already exists
@@ -55,13 +63,9 @@ export default class ComponentsPlugin extends Plugin {
             }
         });
 
-        // api (optionally)
-        // setupComponentAPI(this.app, this.settings);
-
         this.registerProcessors();
         this.updateGlobalStyles();
 
-        // Register autocomplete
         if (this.settings.enableAutoComplete) {
             this.autoComplete = new ComponentAutoComplete(this);
             this.registerEditorSuggest(this.autoComplete);

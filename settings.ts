@@ -27,8 +27,8 @@ function generateDefaultSettings(): ComponentsSettings {
 		componentStates,
 		componentSettings,
 		defaultContainerMargin: 6,
-		enableAutoComplete: true,
-		autoCompleteOpenModal: true
+		enableAutoComplete: false,
+		autoCompleteOpenModal: false
 	};
 }
 
