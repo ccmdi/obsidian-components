@@ -12,22 +12,6 @@ export default class ConfirmationModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        const style = contentEl.createEl('style');
-
-        style.textContent = `
-            .modal .modal-content {
-                padding-top: 10px !important;
-            }
-            .confirmation-modal h2 {
-                margin-top: 0 !important;
-                margin-bottom: 15px !important;
-            }
-            .confirmation-modal p {
-                margin-bottom: 20px;
-                line-height: 1.4;
-            }
-        `;
-
         contentEl.addClass('confirmation-modal');
 
         const header = contentEl.createEl('h2', { text: 'Confirm Action' });
