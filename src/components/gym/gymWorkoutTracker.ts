@@ -1,4 +1,4 @@
-import { Component, ComponentInstance } from "components";
+import { Component, ComponentGroup, ComponentInstance } from "components";
 import { gymRoutineMenuStyles } from "./styles";
 
 export const gymWorkoutTracker: Component<[]> = {
@@ -7,6 +7,7 @@ export const gymWorkoutTracker: Component<[]> = {
     description: 'Track your workout progress for the day',
     args: {},
     isMountable: true,
+    group: ComponentGroup.GYM,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const initiator = ctx.sourcePath;
         const file = app.vault.getFileByPath(initiator);

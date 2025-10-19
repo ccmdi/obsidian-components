@@ -14,8 +14,8 @@ import { reminders } from "components/reminders/reminders";
 import { ankiStatus } from "components/anki-status/ankiStatus";
 import { widgetSpace } from "components/widget-space/widgetSpace";
 import { analytics } from "components/analytics/analytics";
-import { map } from "components/map/map";
-import { llm } from "components/llm/llm";
+// import { map } from "components/map/map";
+// import { llm } from "components/llm/llm";
 import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
 import { gymStats } from "components/gym/gymStats";
@@ -131,6 +131,10 @@ export enum ComponentAction {
     EXTERNAL = 'EXTERNAL'
 }
 
+export enum ComponentGroup {
+    GYM = 'gym'
+}
+
 export type ComponentArgs = Record<string, string> & {
     original: Record<string, string>;
 };
@@ -150,6 +154,7 @@ export interface Component<TArgs extends readonly string[]> {
         [key: string]: ComponentSetting | ((containerEl: HTMLElement, app: App, plugin: ComponentsPlugin) => Promise<void> | void);
     };
     does?: ComponentAction[];
+    group?: ComponentGroup;
 }
 
 export namespace Component {
@@ -262,14 +267,14 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     navigate,
     statChart,
     clock,
-    // calendar,
     discordStatus,
     timeline,
     reminders,
     widgetSpace,
+
+    //gym group
     gymRoutineMenu,
     gymWorkoutTracker,
     gymStats,
-    // map,
-    // llm,
+    
 ];

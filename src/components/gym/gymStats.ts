@@ -1,4 +1,4 @@
-import { Component, ComponentInstance } from "components";
+import { Component, ComponentGroup, ComponentInstance } from "components";
 import { gymRoutineMenuStyles } from "./styles";
 import { TFile, TFolder } from "obsidian";
 
@@ -8,6 +8,7 @@ export const gymStats: Component<[]> = {
     description: 'Display stats for your workouts',
     args: {},
     isMountable: true,
+    group: ComponentGroup.GYM,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const style = el.createEl("style");
         style.textContent = gymRoutineMenuStyles;
