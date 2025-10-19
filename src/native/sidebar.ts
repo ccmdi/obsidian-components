@@ -49,6 +49,12 @@ export default class ComponentSidebarView extends ItemView {
                 return 'trending-up';
             case 'media':
                 return 'play-circle';
+            case 'gym-routine-menu':
+                return 'dumbbell';
+            case 'gym-workout-tracker':
+                return 'dumbbell';
+            case 'gym-stats':
+                return 'dumbbell';
             default:
                 return 'puzzle';
         }
