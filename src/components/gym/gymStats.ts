@@ -1,37 +1,45 @@
 import { Component, ComponentGroup, ComponentInstance } from "components";
 import { gymRoutineMenuStyles } from "./styles";
 import { TFile, TFolder } from "obsidian";
+import { matchesQuery } from "utils";
 
 export const gymStats: Component<[]> = {
     keyName: 'gym-stats',
     name: 'Gym Stats',
     description: 'Display stats for your workouts',
-    args: {},
+    //TODO more args
+    args: {
+        query: {
+            description: 'Query to filter workout files',
+            default: ''
+        }
+    },
     isMountable: true,
     group: ComponentGroup.GYM,
     styles: gymRoutineMenuStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
-        // Get all workout files from the Gym folder
-        const gymFolder = app.vault.getAbstractFileByPath("gym");
-        if (!gymFolder || !(gymFolder instanceof TFolder)) {
-            el.createEl("p", { text: "Gym folder not found" });
-            return;
-        }
+        const allFiles = app.vault.getMarkdownFiles();
+
+        const files = allFiles
+            .filter(file => {
+                const cache = app.metadataCache.getFileCache(file);
+                return matchesQuery(file, cache, args.query);
+            })
+            .sort((a, b) => new Date(b.name.replace('.md', '')).getTime() - new Date(a.name.replace('.md', '')).getTime());
+        
 
         const workoutFiles: WorkoutFile[] = [];
         
-        for (const file of gymFolder.children) {
-            if (file instanceof TFile && file.extension === 'md') {
-                const cache = app.metadataCache.getFileCache(file);
-                const frontmatter = cache?.frontmatter;
-                
-                if (frontmatter?.exercises && frontmatter.exercises.length > 0) {
-                    workoutFiles.push({
-                        date: frontmatter.date,
-                        exercises: frontmatter.exercises,
-                        routines: frontmatter.routines
-                    });
-                }
+        for (const file of files) {
+            const cache = app.metadataCache.getFileCache(file);
+            const frontmatter = cache?.frontmatter;
+            
+            if (frontmatter?.exercises && frontmatter.exercises.length > 0) {
+                workoutFiles.push({
+                    date: frontmatter.date,
+                    exercises: frontmatter.exercises,
+                    routines: frontmatter.routines
+                });
             }
         }
 
