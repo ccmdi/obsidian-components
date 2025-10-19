@@ -1,6 +1,5 @@
-import { Component, ComponentGroup, ComponentInstance } from "components";
+import { Component, ComponentAction, ComponentGroup, ComponentInstance } from "components";
 import { gymRoutineMenuStyles } from "./styles";
-import { TFile, TFolder } from "obsidian";
 import { matchesQuery } from "utils";
 
 export const gymStats: Component<[]> = {
@@ -17,6 +16,7 @@ export const gymStats: Component<[]> = {
     isMountable: true,
     group: ComponentGroup.GYM,
     styles: gymRoutineMenuStyles,
+    does: [ComponentAction.READ],
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const allFiles = app.vault.getMarkdownFiles();
 
