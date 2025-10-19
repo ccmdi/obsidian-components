@@ -31,3 +31,28 @@
     margin-left: 4px;
   }
 }
+
+.checkbox-container,
+.checkbox-container::before,
+.checkbox-container input,
+.setting-item-control .checkbox-container,
+.setting-item-control .checkbox-container::before {
+    transition: all 0.4s ease-in-out !important;
+}
+.setting-item-indented {
+    margin-left: 30px;
+    padding-left: 15px;
+}
+
+
+.modal .modal-content {
+  padding-top: 10px !important;
+}
+.confirmation-modal h2 {
+  margin-top: 0 !important;
+  margin-bottom: 15px !important;
+}
+.confirmation-modal p {
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
