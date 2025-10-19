@@ -86,8 +86,6 @@ export const gymRoutineMenu: Component<[]> = {
                 exerciseInfo.createEl("strong", { text: "Exercises: " });
                 exerciseInfo.appendText(`${routine.exercises.length} exercises`);
 
-                card.createEl("div", { text: "Click to view details", cls: "click-hint" });
-
                 editBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     renderRoutineForm(routine);
@@ -260,7 +258,6 @@ export const gymRoutineMenu: Component<[]> = {
                 }
 
                 await saveRoutines();
-                await loadRoutines();
                 renderRoutinesList();
             });
         }

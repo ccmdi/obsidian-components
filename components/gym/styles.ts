@@ -48,7 +48,7 @@ td > span > ul {
     border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
-    transition: background 0.2s;
+    transition: opacity 0.2s;
     width: 32px;
     height: 32px;
     display: flex;
@@ -56,6 +56,10 @@ td > span > ul {
     justify-content: center;
     font-size: 18px;
     grid-column: 3;
+}
+
+.gym-routine-header button:hover {
+    opacity: 0.8;
 }
 
 /* Main content */
@@ -93,7 +97,7 @@ td > span > ul {
     position: relative;
 }
 
-.gym-routine-card:hover {
+.gym-routine-card:hover:not(:has(.edit-btn:hover)) {
     border-color: var(--interactive-accent);
     background: var(--background-modifier-hover);
 }
@@ -112,26 +116,23 @@ td > span > ul {
 }
 
 .gym-routine-card .edit-btn {
-    background: var(--background-modifier-form-field);
-    color: var(--text-normal);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
     border: none;
     padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
+    transition: opacity 0.2s;
+}
+
+.gym-routine-card .edit-btn:hover {
+    opacity: 0.8;
 }
 
 .gym-routine-card .info {
     color: #bbb;
     margin-bottom: 15px;
-}
-
-.gym-routine-card .click-hint {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    font-size: 12px;
-    color: #666;
 }
 
 /* Form styles */
@@ -147,15 +148,19 @@ td > span > ul {
 }
 
 .gym-routine-form .back-btn {
-    background: var(--background-modifier-form-field);
-    color: var(--text-normal);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
     border: none;
     padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
     margin-right: 15px;
     font-size: 16px;
-    /* box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1); */
+    transition: opacity 0.2s;
+}
+
+.gym-routine-form .back-btn:hover {
+    opacity: 0.8;
 }
 
 .gym-routine-form h3 {
@@ -209,11 +214,15 @@ td > span > ul {
     background: var(--background-modifier-form-field);
     color: var(--text-normal);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: opacity 0.2s;
     font-size: 14px;
     font-weight: bold;
     flex: 1;
     min-width: 0;
+}
+
+.gym-routine-days button:hover {
+    opacity: 0.8;
 }
 
 .gym-routine-days button.selected {
@@ -237,20 +246,26 @@ td > span > ul {
     grid-column: 2;
 }
 
-.gym-routine-exercises-header .add-btn {
+.gym-routine-exercises-header .add-exercise-btn {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
     border: none;
-    padding: 8px;
+    padding: 4px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
+    font-weight: bold;
     width: 24px;
     height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     grid-column: 3;
+    transition: opacity 0.2s;
+}
+
+.gym-routine-exercises-header .add-exercise-btn:hover {
+    opacity: 0.8;
 }
 
 /* Exercise rows */
@@ -278,8 +293,8 @@ td > span > ul {
 }
 
 .gym-routine-exercise-row .remove-btn {
-    background: var(--text-error);
-    color: var(--text-on-accent);
+    background: var(--background-modifier-form-field);
+    color: var(--text-normal);
     border: 1px solid var(--background-modifier-border);
     padding: 8px;
     border-radius: 4px;
@@ -292,6 +307,11 @@ td > span > ul {
     font-size: 16px;
     font-weight: bold;
     box-sizing: border-box;
+    transition: opacity 0.2s;
+}
+
+.gym-routine-exercise-row .remove-btn:hover {
+    opacity: 0.7;
 }
 
 /* Exercise empty state */
@@ -317,6 +337,11 @@ td > span > ul {
     cursor: pointer;
     font-weight: bold;
     font-size: 16px;
+    transition: opacity 0.2s;
+}
+
+.gym-routine-form-buttons button:hover {
+    opacity: 0.8;
 }
 
 .gym-routine-form-buttons .save-btn {
@@ -326,8 +351,9 @@ td > span > ul {
 }
 
 .gym-routine-form-buttons .delete-btn {
-    background: var(--text-error);
-    color: var(--text-on-accent);
+    background: var(--background-modifier-form-field);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
 }
 
 /* View routine styles */
@@ -349,14 +375,19 @@ td > span > ul {
 }
 
 .gym-routine-view .back-btn {
-    background: var(--background-modifier-form-field);
-    color: var(--text-normal);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
     border: none;
     padding: 8px 12px;
     border-radius: 4px;
     cursor: pointer;
     margin-right: 15px;
     font-size: 16px;
+    transition: opacity 0.2s;
+}
+
+.gym-routine-view .back-btn:hover {
+    opacity: 0.8;
 }
 
 .gym-routine-view h3 {
@@ -373,6 +404,11 @@ td > span > ul {
     border-radius: 6px;
     cursor: pointer;
     font-weight: bold;
+    transition: opacity 0.2s;
+}
+
+.gym-routine-view .edit-btn:hover {
+    opacity: 0.8;
 }
 
 .gym-routine-view-content {
@@ -404,7 +440,6 @@ td > span > ul {
     width: 100% !important;
     border-collapse: collapse;
     background: var(--background-primary);
-    /* border-radius: 6px; */
     overflow: hidden;
 }
 
@@ -414,8 +449,6 @@ td > span > ul {
 
 .gym-routine-table th {
     padding: 16px 12px;
-    /* border: none; */
-    /* border-right: 1px solid var(--background-modifier-border); */
     color: var(--text-accent);
     font-weight: bold;
     font-size: 14px;
@@ -436,7 +469,6 @@ td > span > ul {
 
 .gym-routine-table td {
     padding: 8px 12px;
-    /* border: 1spx solid var(--background-modifier-border); */
     color: var(--text-normal);
     vertical-align: middle;
     line-height: 1.2;
@@ -459,7 +491,6 @@ td > span > ul {
     border-radius: 6px;
 }
 
-
 .gym-routine-table td, .gym-routine-table th {
     border: 1px solid var(--background-modifier-border) !important;
 }
@@ -469,7 +500,6 @@ td > span > ul {
 }
 
 .gym-routine-main {
-    /* padding: 25px !important; */
     height: 100%;
     min-height: 300px;
     margin: auto !important;
@@ -478,11 +508,6 @@ td > span > ul {
 .gym-routine-view-section > div > span:first-child {
     display: none !important;
 }
-
-
-
-
-
 
 /* Mobile horizontal scroll */
 @media (max-width: 768px) {
@@ -501,14 +526,11 @@ td > span > ul {
         -webkit-overflow-scrolling: touch;
     }
 
-    /* Force table to maintain width and scroll */
     .gym-routine-table {
         table-layout: fixed !important;
         width: auto !important;
         min-width: 500px !important;
     }
-
-
 
     .gym-routine-table-container {
         overflow-x: auto !important;
@@ -520,7 +542,7 @@ td > span > ul {
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: none !important;
-        min-width: 120px !important; /* Force minimum column width */
+        min-width: 120px !important;
         width: 120px !important;
     }
 }
