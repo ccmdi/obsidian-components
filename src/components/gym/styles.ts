@@ -454,11 +454,7 @@ td > span > ul {
     font-size: 14px;
 }
 
-.gym-routine-table th:first-child {
-    text-align: left;
-}
-
-.gym-routine-table th:not(:first-child) {
+.gym-routine-table th {
     text-align: center;
 }
 
@@ -474,11 +470,7 @@ td > span > ul {
     line-height: 1.2;
 }
 
-.gym-routine-table td:first-child {
-    text-align: left;
-}
-
-.gym-routine-table td:not(:first-child) {
+.gym-routine-table td {
     text-align: center;
 }
 
