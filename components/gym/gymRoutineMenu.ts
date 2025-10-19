@@ -168,7 +168,7 @@ export const gymRoutineMenu: Component<[]> = {
 
                 if (formData.exercises.length === 0) {
                     exercisesList.createEl("div", {
-                        text: "No exercises added yet. Click Add Exercise to get started.",
+                        text: "No exercises added yet.",
                         cls: "gym-routine-exercises-empty"
                     });
                     return;

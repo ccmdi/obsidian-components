@@ -77,7 +77,7 @@ td > span > ul {
 .gym-routines-list {
     display: grid;
     gap: 15px;
-    grid-template-columns: 0px 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     justify-content: start;
     align-content: start;
 }
@@ -256,7 +256,7 @@ td > span > ul {
 /* Exercise rows */
 .gym-routine-exercise-row {
     display: grid;
-    grid-template-columns: 0px 0.4fr 0.25fr 0.25fr 0.25fr 0.1fr;
+    grid-template-columns: 0.4fr 0.25fr 0.25fr 0.25fr 0.1fr;
     gap: 12px;
     align-items: center;
     padding: 12px;
@@ -401,16 +401,14 @@ td > span > ul {
 }
 
 .gym-routine-table {
-    /* width: 95% !important; */
+    width: 100% !important;
     border-collapse: collapse;
     background: var(--background-primary);
     /* border-radius: 6px; */
     overflow: hidden;
-    margin: auto !important;
 }
 
 .gym-routine-table thead tr {
-    background: var(--background-modifier-form-field);
     border-bottom: 2px solid var(--background-modifier-border);
 }
 
