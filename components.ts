@@ -21,6 +21,7 @@ import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
+import { gymStats } from "components/gym/gymStats";
 
 // Global instance registry for cleanup
 export const componentInstances = new Map<string, ComponentInstance>();
@@ -268,6 +269,7 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     widgetSpace,
     gymRoutineMenu,
     gymWorkoutTracker,
+    gymStats,
     // map,
     // llm,
 ];
