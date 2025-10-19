@@ -44,14 +44,11 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
         },
         isMountable: true,
         does: [ComponentAction.EXTERNAL],
+        styles: githubStyles,
         render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
             const GITHUB_TOKEN = args.GITHUB_TOKEN;
 
             el.style.position = 'relative';
-
-            const style = el.createEl('style');
-            style.textContent = githubStyles;
-            el.appendChild(style);
 
             const widget = el.createEl('div', { cls: 'github-streak-container' });
             const tooltip = el.createEl('div', { cls: 'github-tooltip' });

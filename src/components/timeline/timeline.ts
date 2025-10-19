@@ -40,6 +40,7 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
     },
     isMountable: true,
     does: [ComponentAction.READ],
+    styles: timelineStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const query = args.query || `"${ctx.sourcePath?.split('/').slice(0, -1).join('/') || ''}"`;
         const limit = parseInt(args.limit);
@@ -50,10 +51,6 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
         const dateFormat = args.dateFormat;
 
         const container = el.createEl('div', { cls: 'timeline-container' });
-
-        const style = el.createEl('style');
-        style.textContent = timelineStyles;
-        container.appendChild(style);
 
         const journalStatusCache: Record<string, boolean> = {};
         const journalData: Record<string, { hasJournal: boolean; completedTasks: string[]; journalContent: string }> = {};

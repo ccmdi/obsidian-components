@@ -1,5 +1,4 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
-import { TFile } from "obsidian";
 import { matchesQuery } from "utils";
 
 declare global {
@@ -48,6 +47,7 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
     },
     isMountable: false,
     does: [ComponentAction.READ, ComponentAction.WRITE, ComponentAction.EXTERNAL],
+    styles: null,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const query = args.query;
         const field = args.field;

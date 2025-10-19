@@ -108,6 +108,7 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
     },
     isMountable: true,
     does: [ComponentAction.READ],
+    styles: null,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const query = args.query || '';
         const latKey = args.latKey || 'lat';

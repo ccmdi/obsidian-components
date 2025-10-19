@@ -1,6 +1,6 @@
 import { Component, ComponentInstance, ComponentAction } from "components";
 import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
-import { analyticsStyles } from "./style";
+import { analyticsStyles } from "./styles";
 import { renderMarkdownLink } from "utils";
 
 interface LinkData {
@@ -56,11 +56,6 @@ const renderAnalytics = async (
         const html = generateAnalyticsHTML(data, searchFolder, colors, showTitle);
 
         el.innerHTML = html;
-
-        const style = el.createEl('style');
-        style.textContent = analyticsStyles;
-        el.appendChild(style);
-
 
     } catch (error) {
         console.error('Analytics error:', error);
@@ -343,6 +338,7 @@ export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {
     },
     isMountable: false,
     does: [ComponentAction.READ],
+    styles: analyticsStyles,
     render: renderAnalytics,
     refresh: true,
     settings: {

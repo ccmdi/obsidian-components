@@ -39,6 +39,7 @@ export const widgetSpace: Component<['layout']> = {
         // }
     },
     does: [ComponentAction.READ, ComponentAction.WRITE, ComponentAction.EXTERNAL],
+    styles: widgetSpaceStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         // const columns = parseInt(args.columns) || 1;
         let layout: WidgetSpaceLayout;
@@ -69,10 +70,6 @@ export const widgetSpace: Component<['layout']> = {
                 document.head.appendChild(script);
             });
         }
-
-        const style = el.createEl('style');
-        style.textContent = widgetSpaceStyles;
-        el.appendChild(style);
 
         const container = el.createEl('div', { cls: 'widget-space-container' });
 

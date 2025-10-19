@@ -65,6 +65,7 @@ export const calendar: Component<['calendarUrl', 'maxEvents', 'showWeekends', 'v
         }
     },
     isMountable: false,
+    styles: calendarStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const calendarUrl = args.calendarUrl;
         const maxEvents = parseInt(args.maxEvents);
@@ -423,21 +424,6 @@ export const calendar: Component<['calendarUrl', 'maxEvents', 'showWeekends', 'v
 
         const initCalendar = async (): Promise<void> => {
             const { FullCalendar } = await loadLibraries();
-
-            // Create a style element for custom calendar styling
-            let style = el.createEl('style');
-            style.textContent += `
-                .fc .fc-toolbar.fc-header-toolbar {
-                background-color: var(--background-primary);
-                color: var(--text-normal);
-                position: static !important;
-                top: unset !important;
-                z-index: unset !important;
-                margin-bottom: 10px;
-                ${hideHeader ? 'display: none !important;' : ''}
-            }`;
-            style.textContent = calendarStyles;
-            calendarContainer.appendChild(style);
 
             calendar = new FullCalendar.Calendar(calendarContainer, {
                 initialView: viewMap[view],

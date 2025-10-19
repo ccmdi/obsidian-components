@@ -21,16 +21,13 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
     },
     isMountable: true,
     does: [ComponentAction.EXTERNAL],
+    styles: ankiStatusStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const showStats = args.showStats === 'true';
         const showDeck = args.showDeck === 'true';
         const compact = args.compact === 'true';
 
         el.style.position = 'relative';
-
-        const style = el.createEl('style');
-        style.textContent = ankiStatusStyles;
-        el.appendChild(style);
 
         const widget = el.createEl('div', { cls: `anki-status-container ${compact ? 'compact' : ''}` });
 

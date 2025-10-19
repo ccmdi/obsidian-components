@@ -161,6 +161,7 @@ export interface Component<TArgs extends readonly string[]> {
     };
     does?: ComponentAction[];
     group?: ComponentGroup;
+    styles: string | null;
 }
 
 export namespace Component {
@@ -259,6 +260,13 @@ export namespace Component {
 
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
+
+        // Auto-inject component styles if specified
+        if (component.styles) {
+            const styleEl = el.createEl('style');
+            styleEl.textContent = component.styles;
+            el.appendChild(styleEl);
+        }
 
         await component.render(argsWithOriginal, el, ctx, app, instance, componentSettings);
     }

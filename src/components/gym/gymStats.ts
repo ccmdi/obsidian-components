@@ -9,11 +9,8 @@ export const gymStats: Component<[]> = {
     args: {},
     isMountable: true,
     group: ComponentGroup.GYM,
+    styles: gymRoutineMenuStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
-        const style = el.createEl("style");
-        style.textContent = gymRoutineMenuStyles;
-        el.appendChild(style);
-
         // Get all workout files from the Gym folder
         const gymFolder = app.vault.getAbstractFileByPath("gym");
         if (!gymFolder || !(gymFolder instanceof TFolder)) {

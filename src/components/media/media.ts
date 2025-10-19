@@ -27,6 +27,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
     },
     isMountable: true,
     does: [ComponentAction.READ],
+    styles: mediaStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const folderPath = args.folder;
         const centered = args.centered === 'true';
@@ -72,10 +73,6 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                 el.style.paddingBottom = '0.5em';
             }
         };
-
-        const style = el.createEl('style');
-        style.textContent = mediaStyles;
-        el.appendChild(style);
 
         // Check if path points to a specific file
         const specificFile = app.vault.getFileByPath(folderPath);

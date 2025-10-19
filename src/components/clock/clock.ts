@@ -42,6 +42,7 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
         }
     },
     isMountable: true,
+    styles: null,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const type = args.type;
         const format = args.format;

@@ -1,5 +1,4 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
-import { TFile } from "obsidian";
 import { useNavigation, useTargetNoteSorting, getTasks, matchesQuery } from "utils";
 import { remindersStyles } from "./styles";
 
@@ -43,6 +42,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
     },
     isMountable: true,
     does: [ComponentAction.READ],
+    styles: remindersStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const query = args.query;
         const monthsBack = parseInt(args.monthsBack) || 6;
@@ -159,10 +159,6 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
                 });
 
             const sortedTasks = useTargetNoteSorting(uniqueTasks, sortBy);
-
-            const style = el.createEl('style');
-            style.textContent = remindersStyles;
-            el.appendChild(style);
 
             const container = el.createEl('div', { cls: 'reminders-container' });
 

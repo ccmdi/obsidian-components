@@ -8,6 +8,7 @@ export const gymWorkoutTracker: Component<[]> = {
     args: {},
     isMountable: true,
     group: ComponentGroup.GYM,
+    styles: gymRoutineMenuStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const initiator = ctx.sourcePath;
         const file = app.vault.getFileByPath(initiator);
@@ -15,10 +16,6 @@ export const gymWorkoutTracker: Component<[]> = {
             el.textContent = 'Could not find source file';
             return;
         }
-
-        const style = el.createEl("style");
-        style.textContent = gymRoutineMenuStyles;
-        el.appendChild(style);
 
         const cache = app.metadataCache.getFileCache(file);
         const frontmatter = cache?.frontmatter;

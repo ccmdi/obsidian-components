@@ -69,10 +69,6 @@ const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: Markdow
     container.style.display = 'flex';
     container.style.gap = '0';
 
-    const style = el.createEl('style');
-    style.textContent = navigateStyles;
-    container.appendChild(style);
-
     const yesterdayBtn = createNavigationButton(-1, 'Yesterday');
     const tomorrowBtn = createNavigationButton(1, 'Tomorrow');
 
@@ -107,6 +103,7 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat']> =
     render: renderNavigate,
     refresh: true,
     does: [ComponentAction.READ, ComponentAction.WRITE],
+    styles: navigateStyles,
     settings: {
         dateFormat: {
             name: "Date Format",

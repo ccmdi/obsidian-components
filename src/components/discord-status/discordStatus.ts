@@ -23,6 +23,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         }
     },
     isMountable: true,
+    styles: discordStatusStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const userId = args.userId;
         const showActivity = args.showActivity !== 'false';
@@ -30,10 +31,6 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         const hideProfile = args.hideProfile === 'true';
 
         el.style.position = 'relative';
-
-        const style = el.createEl('style');
-        style.textContent = discordStatusStyles;
-        el.appendChild(style);
 
         const widget = el.createEl('div', { cls: 'discord-status-container' });
         widget.classList.toggle('hide-profile', hideProfile);
