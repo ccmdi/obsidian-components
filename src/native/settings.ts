@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import { COMPONENTS, Component, ComponentAction, ComponentSetting, ComponentGroup } from "components";
+import { COMPONENTS, Component, ComponentAction, ComponentSetting, ComponentGroup, GROUPS, ComponentGroupMetadata } from "components";
 import ComponentsPlugin from "main";
 
 export default class ComponentsSettingTab extends PluginSettingTab {
@@ -174,38 +174,14 @@ export default class ComponentsSettingTab extends PluginSettingTab {
     displayMainMenu(): void {
         const { containerEl } = this;
 
-        // Group components by their group property
-        const groupedComponents = new Map<ComponentGroup | null, Component<readonly string[]>[]>();
-        const groupInfo = new Map<ComponentGroup, { name: string; description: string }>();
-
-        // Define group metadata
-        groupInfo.set(ComponentGroup.GYM, {
-            name: 'Gym',
-            description: 'Components for tracking gym routines and workouts'
-        });
-
-        COMPONENTS.forEach(component => {
-            const group = component.group || null;
-            if (!groupedComponents.has(group)) {
-                groupedComponents.set(group, []);
-            }
-            groupedComponents.get(group)!.push(component);
-        });
-
         // Sort components within each group
-        groupedComponents.forEach((components, _) => {
-            components.sort((a, b) => {
-                const nameA = (a.name || a.keyName).toLowerCase();
-                const nameB = (b.name || b.keyName).toLowerCase();
-                return nameA.localeCompare(nameB);
-            });
+        Object.values(GROUPS).forEach((group) => {
+            group.members?.sort((a, b) => (a.name || a.keyName).localeCompare(b.name || b.keyName));
         });
 
-        // Create a sorted list of items (both ungrouped components and groups)
         const sortedItems: Array<{ type: 'component' | 'group', item: Component<readonly string[]> | ComponentGroup, name: string }> = [];
 
-        // Add ungrouped components
-        const ungroupedComponents = groupedComponents.get(null) || [];
+        const ungroupedComponents = COMPONENTS.filter(c => !c.group);
         ungroupedComponents.forEach(component => {
             sortedItems.push({
                 type: 'component',
@@ -214,32 +190,26 @@ export default class ComponentsSettingTab extends PluginSettingTab {
             });
         });
 
-        // Add groups
-        groupedComponents.forEach((components, group) => {
-            if (group === null) return;
-            const groupMetadata = groupInfo.get(group);
-            if (groupMetadata) {
-                sortedItems.push({
-                    type: 'group',
-                    item: group,
-                    name: groupMetadata.name.toLowerCase()
-                });
-            }
+        Object.entries(GROUPS).forEach(([groupKey, group]: [ComponentGroup, ComponentGroupMetadata]) => {
+            if (!group.members || group.members.length === 0) return;
+            sortedItems.push({
+                type: 'group',
+                item: groupKey,
+                name: group.name.toLowerCase()
+            });
         });
 
-        // Sort all items alphabetically
         sortedItems.sort((a, b) => a.name.localeCompare(b.name));
 
-        // Render items in sorted order
         sortedItems.forEach(({ type, item }) => {
             if (type === 'component') {
                 this.renderComponent(containerEl, item as Component<readonly string[]>, false);
             } else {
                 // Render group
-                const group = item as ComponentGroup;
-                const groupMetadata = groupInfo.get(group)!;
-                const components = groupedComponents.get(group)!;
-                const isGroupEnabled = this.plugin.settings.groupStates[group] ?? false;
+                const groupKey = item as ComponentGroup;
+                const groupMetadata = GROUPS[groupKey];
+                const components = groupMetadata.members!;
+                const isGroupEnabled = this.plugin.settings.groupStates[groupKey] ?? false;
 
                 // Render group toggle
                 const groupSetting = new Setting(containerEl)
@@ -248,7 +218,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                     .addToggle(toggle => toggle
                         .setValue(isGroupEnabled)
                         .onChange(async (value) => {
-                            this.plugin.settings.groupStates[group] = value;
+                            this.plugin.settings.groupStates[groupKey] = value;
 
                             // If disabling the group, disable all child components
                             if (!value) {

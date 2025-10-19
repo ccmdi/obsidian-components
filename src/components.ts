@@ -135,6 +135,12 @@ export enum ComponentGroup {
     GYM = 'gym'
 }
 
+export type ComponentGroupMetadata = {
+    name: string;
+    description: string;
+    members?: Component<readonly string[]>[];
+};
+
 export type ComponentArgs = Record<string, string> & {
     original: Record<string, string>;
 };
@@ -258,7 +264,6 @@ export namespace Component {
     }
 }
 
-
 export const COMPONENTS: Component<readonly string[]>[] = [
     analytics,
     ankiStatus,
@@ -278,3 +283,20 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     gymStats,
     
 ];
+
+
+export const GROUPS: Record<ComponentGroup, ComponentGroupMetadata> = {
+    [ComponentGroup.GYM]: {
+        name: 'Gym',
+        description: 'Components for tracking gym routines and workouts'
+    }
+}
+
+for(const component of COMPONENTS) {
+    if (component.group) {
+        if (!GROUPS[component.group].members) {
+            GROUPS[component.group].members = [];
+        }
+        GROUPS[component.group].members!.push(component);
+    }
+}
