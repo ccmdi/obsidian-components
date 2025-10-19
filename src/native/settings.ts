@@ -174,74 +174,32 @@ export default class ComponentsSettingTab extends PluginSettingTab {
     displayMainMenu(): void {
         const { containerEl } = this;
 
-        // Sort components within each group
         Object.values(GROUPS).forEach((group) => {
             group.members?.sort((a, b) => (a.name || a.keyName).localeCompare(b.name || b.keyName));
         });
 
-        const sortedItems: Array<{ type: 'component' | 'group', item: Component<readonly string[]> | ComponentGroup, name: string }> = [];
+        const sortedItems: Array<Component<readonly string[]> | ComponentGroup> = [];
 
         const ungroupedComponents = COMPONENTS.filter(c => !c.group);
-        ungroupedComponents.forEach(component => {
-            sortedItems.push({
-                type: 'component',
-                item: component,
-                name: (component.name || component.keyName).toLowerCase()
-            });
-        });
+        sortedItems.push(...ungroupedComponents);
 
-        Object.entries(GROUPS).forEach(([groupKey, group]: [ComponentGroup, ComponentGroupMetadata]) => {
+        (Object.keys(GROUPS) as ComponentGroup[]).forEach((groupKey) => {
+            const group = GROUPS[groupKey];
             if (!group.members || group.members.length === 0) return;
-            sortedItems.push({
-                type: 'group',
-                item: groupKey,
-                name: group.name.toLowerCase()
-            });
+            sortedItems.push(groupKey);
         });
 
-        sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+        sortedItems.sort((a, b) => {
+            const nameA = typeof a === 'string' ? GROUPS[a].name : (a.name || a.keyName);
+            const nameB = typeof b === 'string' ? GROUPS[b].name : (b.name || b.keyName);
+            return nameA.toLowerCase().localeCompare(nameB.toLowerCase());
+        });
 
-        sortedItems.forEach(({ type, item }) => {
-            if (type === 'component') {
-                this.renderComponent(containerEl, item as Component<readonly string[]>, false);
+        sortedItems.forEach((item) => {
+            if (typeof item === 'string') {
+                this.renderGroup(containerEl, item);
             } else {
-                // Render group
-                const groupKey = item as ComponentGroup;
-                const groupMetadata = GROUPS[groupKey];
-                const components = groupMetadata.members!;
-                const isGroupEnabled = this.plugin.settings.groupStates[groupKey] ?? false;
-
-                // Render group toggle
-                const groupSetting = new Setting(containerEl)
-                    .setName(groupMetadata.name)
-                    .setDesc(groupMetadata.description)
-                    .addToggle(toggle => toggle
-                        .setValue(isGroupEnabled)
-                        .onChange(async (value) => {
-                            this.plugin.settings.groupStates[groupKey] = value;
-
-                            // If disabling the group, disable all child components
-                            if (!value) {
-                                components.forEach(component => {
-                                    this.plugin.settings.componentStates[component.keyName] = false;
-                                });
-                            }
-
-                            await this.plugin.saveSettings();
-                            // Refresh the entire view to show/hide children
-                            this.display();
-                        })
-                    );
-
-                // Make group name bold
-                groupSetting.nameEl.style.fontWeight = '600';
-
-                // Render child components if group is enabled
-                if (isGroupEnabled) {
-                    components.forEach(component => {
-                        this.renderComponent(containerEl, component, true);
-                    });
-                }
+                this.renderComponent(containerEl, item, false);
             }
         });
     }
@@ -306,6 +264,45 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
         // Set initial clickability using the same method
         this.updateComponentClickabilityInPlace(component, componentSetting.nameEl, isEnabledBySettings);
+    }
+
+    renderGroup(containerEl: HTMLElement, group: ComponentGroup): void {
+        const groupKey = group;
+        const groupMetadata = GROUPS[groupKey];
+        const components = groupMetadata.members!;
+        const isGroupEnabled = this.plugin.settings.groupStates[groupKey] ?? false;
+
+        // Render group toggle
+        const groupSetting = new Setting(containerEl)
+            .setName(groupMetadata.name)
+            .setDesc(groupMetadata.description)
+            .addToggle(toggle => toggle
+                .setValue(isGroupEnabled)
+                .onChange(async (value) => {
+                    this.plugin.settings.groupStates[groupKey] = value;
+
+                    // If disabling the group, disable all child components
+                    if (!value) {
+                        components.forEach(component => {
+                            this.plugin.settings.componentStates[component.keyName] = false;
+                        });
+                    }
+
+                    await this.plugin.saveSettings();
+                    // Refresh the entire view to show/hide children
+                    this.display();
+                })
+            );
+
+        // Make group name bold
+        groupSetting.nameEl.style.fontWeight = '600';
+
+        // Render child components if group is enabled
+        if (isGroupEnabled) {
+            components.forEach(component => {
+                this.renderComponent(containerEl, component, true);
+            });
+        }
     }
 
     displayComponentSettings(componentKey: string): void {
