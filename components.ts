@@ -19,6 +19,7 @@ import { llm } from "components/llm/llm";
 
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
+import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 
 // Global instance registry for cleanup
 export const componentInstances = new Map<string, ComponentInstance>();
@@ -264,6 +265,7 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     timeline,
     reminders,
     widgetSpace,
+    gymRoutineMenu,
     // map,
     // llm,
 ];
