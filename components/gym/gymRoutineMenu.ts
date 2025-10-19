@@ -1,4 +1,5 @@
 import { Component, ComponentInstance } from "../../components";
+import { gymRoutineMenuStyles } from "./styles";
 
 export const gymRoutineMenu: Component<[]> = {
     keyName: 'gym-routine-menu',
@@ -13,25 +14,24 @@ export const gymRoutineMenu: Component<[]> = {
             el.textContent = 'Could not find source file';
             return;
         }
-        const cache = app.metadataCache.getFileCache(file);
-        const frontmatter = cache?.frontmatter;
 
-        const routineData = {
-            routines: frontmatter?.routines || [],
-            activeRoutine: null,
-            editingRoutine: false
-        };
+        const style = el.createEl("style");
+        style.textContent = gymRoutineMenuStyles;
+        el.appendChild(style);
 
-        // Utility functions
+        let routines: Routine[] = [];
+
+        // Load routines from frontmatter
+        async function loadRoutines() {
+            const cache = app.metadataCache.getFileCache(file!);
+            routines = cache?.frontmatter?.routines || [];
+        }
+
+        // Save routines to frontmatter
         async function saveRoutines() {
             try {
-                const file = app.vault.getFileByPath(initiator);
-                if (!file) {
-                    throw new Error('Could not find file in vault');
-                }
-                
-                await app.fileManager.processFrontMatter(file, (frontmatter) => {
-                    frontmatter.routines = routineData.routines;
+                await app.fileManager.processFrontMatter(file!, (frontmatter) => {
+                    frontmatter.routines = routines;
                 });
             } catch (error) {
                 console.error('Error saving routines:', error);
@@ -43,369 +43,204 @@ export const gymRoutineMenu: Component<[]> = {
             return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
+        // Initialize
+        await loadRoutines();
+
         // Create main container
         const container = el.createEl("div", { cls: "gym-routine-container" });
 
         // Header
-        const header = el.createEl("div", { cls: "gym-routine-header" });
-
-        const headerTitle = el.createEl("h2", { text: "Gym Routines" });
-
-        const addRoutineBtn = el.createEl("button", { text: "+", cls: "add-routine-btn" });
-
-        header.appendChild(el.createEl("div", { cls: "empty-column" })); // Empty first column
-        header.appendChild(headerTitle);
-        header.appendChild(addRoutineBtn);
-        container.appendChild(header);
+        const header = container.createEl("div", { cls: "gym-routine-header" });
+        header.createEl("div", { cls: "empty-column" });
+        header.createEl("h2", { text: "Gym Routines" });
+        const addRoutineBtn = header.createEl("button", { text: "+", cls: "add-routine-btn" });
 
         // Main content area
-        const mainContent = el.createEl("div", { cls: "gym-routine-main" });
-        container.appendChild(mainContent);
+        const mainContent = container.createEl("div", { cls: "gym-routine-main" });
 
-        // Exercise management functions
-        let currentFormData = null;
-        let exerciseInputs = [];
+        // RENDER FUNCTIONS
 
-        function updateExercise(index, field, value) {
-            if (currentFormData && currentFormData.exercises[index]) {
-                currentFormData.exercises[index][field] = value;
-            }
-        }
-
-        function removeExercise(index) {
-            if (currentFormData && currentFormData.exercises[index]) {
-                currentFormData.exercises.splice(index, 1);
-                // Re-render will be handled by the specific context
-            }
-        }
-
-        // Render routines list
         function renderRoutinesList() {
-            mainContent.innerHTML = "";
-            exerciseInputs = [];
-            currentFormData = null;
+            mainContent.empty();
             
-            if (routineData.routines.length === 0) {
-                const emptyState = dv.el("div", "", {
-                    attr: { class: "gym-routine-empty" }
-                });
-                
-                emptyState.innerHTML = `
-                    <p>No routines yet. Create your first workout routine!</p>
-                `;
-                
-                mainContent.appendChild(emptyState);
+            if (routines.length === 0) {
+                const emptyState = mainContent.createEl("div", { cls: "gym-routine-empty" });
+                emptyState.createEl("p", { text: "No routines yet. Create your first workout routine!" });
                 return;
             }
 
-            const routinesList = dv.el("div", "", {
-                attr: { class: "gym-routines-list" }
-            });
+            const routinesList = mainContent.createEl("div", { cls: "gym-routines-list" });
             
-            routineData.routines.forEach(routine => {
-                const routineCard = dv.el("div", "", {
-                    attr: { class: "gym-routine-card" }
-                });
+            routines.forEach(routine => {
+                const card = routinesList.createEl("div", { cls: "gym-routine-card" });
+                
+                const cardHeader = card.createEl("div", { cls: "gym-routine-card-header" });
+                cardHeader.createEl("h3", { text: routine.name });
+                const editBtn = cardHeader.createEl("button", { text: "Edit", cls: "edit-btn" });
 
-                const cardHeader = dv.el("div", "", {
-                    attr: { class: "gym-routine-card-header" }
-                });
+                const daysInfo = card.createEl("div", { cls: "info" });
+                daysInfo.createEl("strong", { text: "Days: " });
+                daysInfo.appendText(routine.days.length > 0 ? routine.days.join(', ') : 'No days selected');
 
-                const routineTitle = dv.el("h3", routine.name);
+                const exerciseInfo = card.createEl("div", { cls: "info" });
+                exerciseInfo.createEl("strong", { text: "Exercises: " });
+                exerciseInfo.appendText(`${routine.exercises.length} exercises`);
 
-                const editBtn = dv.el("button", "Edit", {
-                    attr: { class: "edit-btn" }
-                });
+                card.createEl("div", { text: "Click to view details", cls: "click-hint" });
 
-                const daysInfo = dv.el("div", "", {
-                    attr: { class: "info" }
-                });
-                daysInfo.innerHTML = `<strong>Days:</strong> ${routine.days.length > 0 ? routine.days.join(', ') : 'No days selected'}`;
-
-                const exerciseInfo = dv.el("div", "", {
-                    attr: { class: "info" }
-                });
-                exerciseInfo.innerHTML = `<strong>Exercises:</strong> ${routine.exercises.length} exercises`;
-
-                const clickHint = dv.el("div", "Click to view details", {
-                    attr: { class: "click-hint" }
-                });
-
-                cardHeader.appendChild(routineTitle);
-                cardHeader.appendChild(editBtn);
-                routineCard.appendChild(cardHeader);
-                routineCard.appendChild(daysInfo);
-                routineCard.appendChild(exerciseInfo);
-                routineCard.appendChild(clickHint);
-
-                // Event listeners
                 editBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    showRoutineForm(routine);
+                    renderRoutineForm(routine);
                 });
 
-                routineCard.addEventListener('click', () => {
-                    viewRoutine(routine);
-                });
-
-                routineCard.addEventListener('mouseenter', () => {
-                    routineCard.classList.add('hover');
-                });
-
-                routineCard.addEventListener('mouseleave', () => {
-                    routineCard.classList.remove('hover');
-                });
-
-                routinesList.appendChild(routineCard);
+                card.addEventListener('click', () => renderRoutineView(routine));
             });
-
-            mainContent.appendChild(routinesList);
         }
 
-        // Create/Edit routine form
-        function showRoutineForm(routine = null) {
+        function renderRoutineForm(routine: Routine | null = null) {
+            mainContent.empty();
+            
             const isEditing = routine !== null;
-            currentFormData = routine || {
+            const formData: Routine = routine || {
                 id: generateId(),
                 name: '',
                 days: [],
                 exercises: []
             };
 
-            mainContent.innerHTML = "";
-            exerciseInputs = [];
+            const formContainer = mainContent.createEl("div", { cls: "gym-routine-form" });
 
-            const formContainer = dv.el("div", "", {
-                attr: { class: "gym-routine-form" }
+            // Header
+            const formHeader = formContainer.createEl("div", { cls: "gym-routine-form-header" });
+            const backBtn = formHeader.createEl("button", { text: "←", cls: "back-btn" });
+            formHeader.createEl("h3", { text: isEditing ? 'Edit Routine' : 'Create New Routine' });
+
+            const formContent = formContainer.createEl("div", { cls: "gym-routine-form-content" });
+
+            // Name section
+            const nameSection = formContent.createEl("div", { cls: "gym-routine-form-section" });
+            nameSection.createEl("label", { text: "Routine Name" });
+            const nameInput = nameSection.createEl("input", {
+                type: "text",
+                value: formData.name,
+                placeholder: "Enter routine name..."
             });
-
-            const formHeader = dv.el("div", "", {
-                attr: { class: "gym-routine-form-header" }
-            });
-
-            const backBtn = dv.el("button", "←", {
-                attr: { class: "back-btn" }
-            });
-
-            const formTitle = dv.el("h3", isEditing ? 'Edit Routine' : 'Create New Routine');
-
-            formHeader.appendChild(backBtn);
-            formHeader.appendChild(formTitle);
-
-            const formContent = dv.el("div", "", {
-                attr: { class: "gym-routine-form-content" }
-            });
-
-            // Name input section
-            const nameSection = dv.el("div", "", {
-                attr: { class: "gym-routine-form-section" }
-            });
-
-            const nameLabel = dv.el("label", "Routine Name");
-
-            const nameInput = dv.el("input", "", {
-                attr: {
-                    type: "text",
-                    value: currentFormData.name,
-                    placeholder: "Enter routine name..."
-                }
-            });
-
-            nameSection.appendChild(nameLabel);
-            nameSection.appendChild(nameInput);
 
             // Days section
-            const daysSection = dv.el("div", "", {
-                attr: { class: "gym-routine-form-section" }
-            });
-
-            const daysLabel = dv.el("label", "Days of the Week");
-
-            const daysSelector = dv.el("div", "", {
-                attr: { class: "gym-routine-days" }
-            });
+            const daysSection = formContent.createEl("div", { cls: "gym-routine-form-section" });
+            daysSection.createEl("label", { text: "Days of the Week" });
+            const daysSelector = daysSection.createEl("div", { cls: "gym-routine-days" });
 
             const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
             const daysFull = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             
             days.forEach((day, index) => {
                 const dayFull = daysFull[index];
-                const isSelected = currentFormData.days.includes(dayFull);
-                const dayBtn = dv.el("button", day, {
-                    attr: { class: isSelected ? "selected" : "" }
+                const isSelected = formData.days.includes(dayFull);
+                const dayBtn = daysSelector.createEl("button", {
+                    text: day,
+                    cls: isSelected ? "selected" : ""
                 });
 
                 dayBtn.addEventListener('click', () => {
-                    const currentlySelected = currentFormData.days.includes(dayFull);
-                    if (currentlySelected) {
-                        currentFormData.days = currentFormData.days.filter(d => d !== dayFull);
+                    const idx = formData.days.indexOf(dayFull);
+                    if (idx > -1) {
+                        formData.days.splice(idx, 1);
                         dayBtn.classList.remove('selected');
                     } else {
-                        currentFormData.days.push(dayFull);
+                        formData.days.push(dayFull);
                         dayBtn.classList.add('selected');
                     }
                 });
-
-                daysSelector.appendChild(dayBtn);
             });
-
-            daysSection.appendChild(daysLabel);
-            daysSection.appendChild(daysSelector);
 
             // Exercises section
-            const exercisesSection = dv.el("div", "", {
-                attr: { class: "gym-routine-form-section" }
-            });
+            const exercisesSection = formContent.createEl("div", { cls: "gym-routine-form-section" });
+            const exercisesHeader = exercisesSection.createEl("div", { cls: "gym-routine-exercises-header" });
+            exercisesHeader.createEl("div");
+            exercisesHeader.createEl("label", { text: "Exercises" });
+            const addExerciseBtn = exercisesHeader.createEl("button", { text: "+", cls: "add-exercise-btn" });
 
-            const exercisesHeader = dv.el("div", "", {
-                attr: { class: "gym-routine-exercises-header" }
-            });
+            const exercisesList = exercisesSection.createEl("div");
 
-            const exercisesLabel = dv.el("label", "Exercises");
-
-            const addExerciseBtn = dv.el("button", "", {
-                attr: { 
-                    class: "add-exercise-btn" 
-                }
-            });
-            addExerciseBtn.textContent = "+";
-
-            const exercisesList = dv.el("div", "");
-
-            exercisesHeader.appendChild(dv.el("div", "")); // Empty first column
-            exercisesHeader.appendChild(exercisesLabel);
-            exercisesHeader.appendChild(addExerciseBtn);
-            exercisesSection.appendChild(exercisesHeader);
-            exercisesSection.appendChild(exercisesList);
-
-            // Buttons section
-            const buttonsSection = dv.el("div", "", {
-                attr: { class: "gym-routine-form-buttons" }
-            });
-
-            const saveBtn = dv.el("button", isEditing ? 'Update Routine' : 'Create Routine', {
-                attr: { class: "save-btn" }
-            });
-
-            buttonsSection.appendChild(saveBtn);
-
-            if (isEditing) {
-                const deleteBtn = dv.el("button", "Delete", {
-                    attr: { class: "delete-btn" }
-                });
-
-                deleteBtn.addEventListener('click', async () => {
-                    if (confirm('Are you sure you want to delete this routine?')) {
-                        routineData.routines = routineData.routines.filter(r => r.id !== routine.id);
-                        await saveRoutines();
-                        renderRoutinesList();
-                    }
-                });
-
-                buttonsSection.appendChild(deleteBtn);
-            }
-
-            // Assembly
-            formContent.appendChild(nameSection);
-            formContent.appendChild(daysSection);
-            formContent.appendChild(exercisesSection);
-            formContent.appendChild(buttonsSection);
-            formContainer.appendChild(formHeader);
-            formContainer.appendChild(formContent);
-            mainContent.appendChild(formContainer);
-
-            // Setup exercises list
             function renderExercisesList() {
-                exercisesList.innerHTML = '';
-                exerciseInputs = [];
+                exercisesList.empty();
 
-                if (currentFormData.exercises.length === 0) {
-                    const emptyState = dv.el("div", "No exercises added yet. Click Add Exercise to get started.", {
-                        attr: { class: "gym-routine-exercises-empty" }
+                if (formData.exercises.length === 0) {
+                    exercisesList.createEl("div", {
+                        text: "No exercises added yet. Click Add Exercise to get started.",
+                        cls: "gym-routine-exercises-empty"
                     });
-                    exercisesList.appendChild(emptyState);
                     return;
                 }
 
-                currentFormData.exercises.forEach((exercise, index) => {
-                    const exerciseRow = dv.el("div", "", {
-                        attr: { class: "gym-routine-exercise-row" }
+                formData.exercises.forEach((exercise, index) => {
+                    const row = exercisesList.createEl("div", { cls: "gym-routine-exercise-row" });
+
+                    const nameInput = row.createEl("input", {
+                        type: "text",
+                        value: exercise.name,
+                        placeholder: "Exercise name"
                     });
 
-                    const nameInput = dv.el("input", "", {
-                        attr: {
-                            type: "text",
-                            value: exercise.name,
-                            placeholder: "Exercise name"
-                        }
+                    const setsInput = row.createEl("input", {
+                        type: "number",
+                        value: exercise.sets,
+                        placeholder: "Sets"
                     });
 
-                    const setsInput = dv.el("input", "", {
-                        attr: {
-                            type: "number",
-                            value: exercise.sets,
-                            placeholder: "Sets"
-                        }
+                    const repsInput = row.createEl("input", {
+                        type: "number",
+                        value: exercise.reps,
+                        placeholder: "Reps"
                     });
 
-                    const repsInput = dv.el("input", "", {
-                        attr: {
-                            type: "number",
-                            value: exercise.reps,
-                            placeholder: "Reps"
-                        }
+                    const weightInput = row.createEl("input", {
+                        type: "text",
+                        value: exercise.weight,
+                        placeholder: "Weight"
                     });
 
-                    const weightInput = dv.el("input", "", {
-                        attr: {
-                            type: "text",
-                            value: exercise.weight,
-                            placeholder: "Weight"
-                        }
+                    const removeBtn = row.createEl("button", { text: "×", cls: "remove-btn" });
+
+                    nameInput.addEventListener('change', () => exercise.name = nameInput.value);
+                    setsInput.addEventListener('change', () => exercise.sets = setsInput.value);
+                    repsInput.addEventListener('change', () => exercise.reps = repsInput.value);
+                    weightInput.addEventListener('change', () => exercise.weight = weightInput.value);
+                    removeBtn.addEventListener('click', () => {
+                        formData.exercises.splice(index, 1);
+                        renderExercisesList();
                     });
-
-                    const removeBtn = dv.el("button", "×", {
-                        attr: { class: "remove-btn" }
-                    });
-
-                    // Event listeners for inputs
-                    nameInput.addEventListener('change', () => updateExercise(index, 'name', nameInput.value));
-                    setsInput.addEventListener('change', () => updateExercise(index, 'sets', setsInput.value));
-                    repsInput.addEventListener('change', () => updateExercise(index, 'reps', repsInput.value));
-                    weightInput.addEventListener('change', () => updateExercise(index, 'weight', weightInput.value));
-                    removeBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (currentFormData && currentFormData.exercises[index]) {
-                            currentFormData.exercises.splice(index, 1);
-                            renderExercisesList();
-                        }
-                    });
-
-                    exerciseRow.appendChild(nameInput);
-                    exerciseRow.appendChild(setsInput);
-                    exerciseRow.appendChild(repsInput);
-                    exerciseRow.appendChild(weightInput);
-                    exerciseRow.appendChild(removeBtn);
-
-                    exercisesList.appendChild(exerciseRow);
                 });
             }
 
             renderExercisesList();
 
-            // Event listeners
-            backBtn.addEventListener('click', renderRoutinesList);
-
             addExerciseBtn.addEventListener('click', () => {
-                currentFormData.exercises.push({
-                    name: '',
-                    sets: '',
-                    reps: '',
-                    weight: ''
-                });
+                formData.exercises.push({ name: '', sets: '', reps: '', weight: '' });
                 renderExercisesList();
             });
+
+            // Buttons section
+            const buttonsSection = formContent.createEl("div", { cls: "gym-routine-form-buttons" });
+            const saveBtn = buttonsSection.createEl("button", {
+                text: isEditing ? 'Update Routine' : 'Create Routine',
+                cls: "save-btn"
+            });
+
+            if (isEditing) {
+                const deleteBtn = buttonsSection.createEl("button", { text: "Delete", cls: "delete-btn" });
+                deleteBtn.addEventListener('click', async () => {
+                    if (confirm('Are you sure you want to delete this routine?')) {
+                        routines = routines.filter(r => r.id !== routine.id);
+                        await saveRoutines();
+                        await loadRoutines();
+                        renderRoutinesList();
+                    }
+                });
+            }
+
+            backBtn.addEventListener('click', renderRoutinesList);
 
             saveBtn.addEventListener('click', async () => {
                 const name = nameInput.value.trim();
@@ -415,138 +250,91 @@ export const gymRoutineMenu: Component<[]> = {
                     return;
                 }
 
-                currentFormData.name = name;
+                formData.name = name;
 
                 if (isEditing) {
-                    const index = routineData.routines.findIndex(r => r.id === routine.id);
-                    routineData.routines[index] = currentFormData;
+                    const index = routines.findIndex(r => r.id === routine.id);
+                    routines[index] = formData;
                 } else {
-                    routineData.routines.push(currentFormData);
+                    routines.push(formData);
                 }
 
                 await saveRoutines();
+                await loadRoutines();
                 renderRoutinesList();
             });
         }
 
-        // View routine details
-        function viewRoutine(routine) {
-            mainContent.innerHTML = "";
-            currentFormData = null;
-            exerciseInputs = [];
+        function renderRoutineView(routine: Routine) {
+            mainContent.empty();
 
-            const viewContainer = dv.el("div", "", {
-                attr: { class: "gym-routine-view" }
-            });
+            const viewContainer = mainContent.createEl("div", { cls: "gym-routine-view" });
 
-            const viewHeader = dv.el("div", "", {
-                attr: { class: "gym-routine-view-header" }
-            });
+            // Header
+            const viewHeader = viewContainer.createEl("div", { cls: "gym-routine-view-header" });
+            const headerLeft = viewHeader.createEl("div", { cls: "gym-routine-view-header-left" });
+            const backBtn = headerLeft.createEl("button", { text: "←", cls: "back-btn" });
+            headerLeft.createEl("h3", { text: routine.name });
+            const editBtn = viewHeader.createEl("button", { text: "Edit Routine", cls: "edit-btn" });
 
-            const headerLeft = dv.el("div", "", {
-                attr: { class: "gym-routine-view-header-left" }
-            });
-
-            const backBtn = dv.el("button", "←", {
-                attr: { class: "back-btn" }
-            });
-
-            const routineTitle = dv.el("h3", routine.name);
-
-            const editBtn = dv.el("button", "Edit Routine", {
-                attr: { class: "edit-btn" }
-            });
-
-            headerLeft.appendChild(backBtn);
-            headerLeft.appendChild(routineTitle);
-            viewHeader.appendChild(headerLeft);
-            viewHeader.appendChild(editBtn);
-
-            const viewContent = dv.el("div", "", {
-                attr: { class: "gym-routine-view-content" }
-            });
+            const viewContent = viewContainer.createEl("div", { cls: "gym-routine-view-content" });
 
             // Schedule section
-            const scheduleSection = dv.el("div", "", {
-                attr: { class: "gym-routine-view-section" }
-            });
-
-            const scheduleTitle = dv.el("h4", "Schedule");
-
-            const scheduleInfo = dv.el("div", "", {
-                attr: { class: "schedule-info" }
-            });
-            scheduleInfo.innerHTML = routine.days.length > 0 ? 
-                `<strong>Days:</strong> ${routine.days.join(', ')}` : 
-                'No days scheduled';
-
-            scheduleSection.appendChild(scheduleTitle);
-            scheduleSection.appendChild(scheduleInfo);
+            const scheduleSection = viewContent.createEl("div", { cls: "gym-routine-view-section" });
+            scheduleSection.createEl("h4", { text: "Schedule" });
+            const scheduleInfo = scheduleSection.createEl("div", { cls: "schedule-info" });
+            scheduleInfo.createEl("strong", { text: "Days: " });
+            scheduleInfo.appendText(routine.days.length > 0 ? routine.days.join(', ') : 'No days scheduled');
 
             // Exercises section
-            const exercisesSection = dv.el("div", "");
-
             if (routine.exercises.length > 0) {
-                const tableContainer = dv.el("div", "", {
-                    attr: { class: "gym-routine-table-container" }
-                });
+                const tableContainer = viewContent.createEl("div", { cls: "gym-routine-table-container" });
+                const table = tableContainer.createEl("table", { cls: "gym-routine-table" });
 
-                const table = dv.el("table", "", {
-                    attr: { class: "gym-routine-table" }
-                });
-
-                const thead = dv.el("thead");
-                const headerRow = dv.el("tr");
-
+                const thead = table.createEl("thead");
+                const headerRow = thead.createEl("tr");
                 ['Exercise', 'Sets', 'Reps', 'Weight'].forEach(header => {
-                    const th = dv.el("th", header);
-                    headerRow.appendChild(th);
+                    headerRow.createEl("th", { text: header });
                 });
 
-                thead.appendChild(headerRow);
-                table.appendChild(thead);
-
-                const tbody = dv.el("tbody");
+                const tbody = table.createEl("tbody");
                 routine.exercises.forEach(exercise => {
-                    const row = dv.el("tr");
-                    
-                    const nameCell = dv.el("td", exercise.name || 'Unnamed exercise');
-                    const setsCell = dv.el("td", exercise.sets || '-');
-                    const repsCell = dv.el("td", exercise.reps || '-');
-                    const weightCell = dv.el("td", exercise.weight || '-');
-
-                    row.appendChild(nameCell);
-                    row.appendChild(setsCell);
-                    row.appendChild(repsCell);
-                    row.appendChild(weightCell);
-                    tbody.appendChild(row);
+                    const row = tbody.createEl("tr");
+                    row.createEl("td", { text: exercise.name || 'Unnamed exercise' });
+                    row.createEl("td", { text: exercise.sets || '-' });
+                    row.createEl("td", { text: exercise.reps || '-' });
+                    row.createEl("td", { text: exercise.weight || '-' });
                 });
-
-                table.appendChild(tbody);
-                tableContainer.appendChild(table);
-                exercisesSection.appendChild(tableContainer);
             } else {
-                const emptyState = dv.el("div", "No exercises in this routine yet.", {
-                    attr: { class: "gym-routine-view-empty" }
+                viewContent.createEl("div", {
+                    text: "No exercises in this routine yet.",
+                    cls: "gym-routine-view-empty"
                 });
-                exercisesSection.appendChild(emptyState);
             }
 
-            viewContent.appendChild(scheduleSection);
-            viewContent.appendChild(exercisesSection);
-            viewContainer.appendChild(viewHeader);
-            viewContainer.appendChild(viewContent);
-            mainContent.appendChild(viewContainer);
-
-            // Event listeners
             backBtn.addEventListener('click', renderRoutinesList);
-            editBtn.addEventListener('click', () => showRoutineForm(routine));
+            editBtn.addEventListener('click', () => renderRoutineForm(routine));
         }
 
         // Event listeners
-        addRoutineBtn.addEventListener('click', () => showRoutineForm());
+        addRoutineBtn.addEventListener('click', () => renderRoutineForm());
 
         // Initial render
         renderRoutinesList();
     }
+};
+
+// Types
+interface Exercise {
+    name: string;
+    sets: string;
+    reps: string;
+    weight: string;
+}
+
+interface Routine {
+    id: string;
+    name: string;
+    days: string[];
+    exercises: Exercise[];
 }
