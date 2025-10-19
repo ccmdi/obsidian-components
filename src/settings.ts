@@ -3,6 +3,7 @@ import { COMPONENTS } from 'components';
 export interface ComponentsSettings {
 	componentStates: Record<string, boolean>;
 	componentSettings: Record<string, Record<string, any>>;
+	groupStates: Record<string, boolean>;
 	defaultContainerMargin: number;
 	enableAutoComplete: boolean;
 	autoCompleteOpenModal: boolean;
@@ -26,6 +27,7 @@ function generateDefaultSettings(): ComponentsSettings {
 	return {
 		componentStates,
 		componentSettings,
+		groupStates: {},
 		defaultContainerMargin: 6,
 		enableAutoComplete: false,
 		autoCompleteOpenModal: false

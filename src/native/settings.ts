@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import { COMPONENTS, Component, ComponentAction, ComponentSetting } from "components";
+import { COMPONENTS, Component, ComponentAction, ComponentSetting, ComponentGroup } from "components";
 import ComponentsPlugin from "main";
 
 export default class ComponentsSettingTab extends PluginSettingTab {
@@ -174,81 +174,168 @@ export default class ComponentsSettingTab extends PluginSettingTab {
     displayMainMenu(): void {
         const { containerEl } = this;
 
-        // Add CSS for smoother toggle animations
-        const style = containerEl.createEl('style');
-        style.textContent = `
-            .checkbox-container,
-            .checkbox-container::before,
-            .checkbox-container input,
-            .setting-item-control .checkbox-container,
-            .setting-item-control .checkbox-container::before {
-                transition: all 0.4s ease-in-out !important;
-            }
-        `;
-        containerEl.appendChild(style);
+        // Group components by their group property
+        const groupedComponents = new Map<ComponentGroup | null, Component<readonly string[]>[]>();
+        const groupInfo = new Map<ComponentGroup, { name: string; description: string }>();
 
-        const sortedComponents = [...COMPONENTS].sort((a, b) => {
-            const nameA = (a.name || a.keyName).toLowerCase();
-            const nameB = (b.name || b.keyName).toLowerCase();
-            return nameA.localeCompare(nameB);
+        // Define group metadata
+        groupInfo.set(ComponentGroup.GYM, {
+            name: 'Gym',
+            description: 'Components for tracking gym routines and workouts'
         });
 
-        sortedComponents.forEach(component => {
-            const isEnabledBySettings = this.plugin.settings.componentStates[component.keyName] ?? false;
-            const hasSettings = component.settings && Object.keys(component.settings).length > 0;
-            const hasArgs = Component.hasArgs(component);
+        COMPONENTS.forEach(component => {
+            const group = component.group || null;
+            if (!groupedComponents.has(group)) {
+                groupedComponents.set(group, []);
+            }
+            groupedComponents.get(group)!.push(component);
+        });
 
+        // Sort components within each group
+        groupedComponents.forEach((components, _) => {
+            components.sort((a, b) => {
+                const nameA = (a.name || a.keyName).toLowerCase();
+                const nameB = (b.name || b.keyName).toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+        });
 
-            const displayName = component.name || component.keyName;
-            const description = component.description || '';
+        // Create a sorted list of items (both ungrouped components and groups)
+        const sortedItems: Array<{ type: 'component' | 'group', item: Component<readonly string[]> | ComponentGroup, name: string }> = [];
 
-            const componentSetting = new Setting(containerEl)
-                .setName(displayName)
-                .setDesc(description)
-                .addToggle(toggle => toggle
-                    .setValue(isEnabledBySettings)
-                    .onChange(async (value) => {
-                        this.plugin.settings.componentStates[component.keyName] = value;
-                        await this.plugin.saveSettings();
-                        // Smooth update instead of full refresh
-                        this.updateComponentClickabilityInPlace(component, componentSetting.nameEl, value);
-                    })
-                );
+        // Add ungrouped components
+        const ungroupedComponents = groupedComponents.get(null) || [];
+        ungroupedComponents.forEach(component => {
+            sortedItems.push({
+                type: 'component',
+                item: component,
+                name: (component.name || component.keyName).toLowerCase()
+            });
+        });
 
-            // Add keyName as separate element if component has a display name
-            if (component.name) {
-                const keyNameEl = componentSetting.nameEl.createSpan({
-                    text: ` - ${component.keyName}`,
-                    cls: 'setting-item-keyname'
+        // Add groups
+        groupedComponents.forEach((components, group) => {
+            if (group === null) return;
+            const groupMetadata = groupInfo.get(group);
+            if (groupMetadata) {
+                sortedItems.push({
+                    type: 'group',
+                    item: group,
+                    name: groupMetadata.name.toLowerCase()
                 });
-                keyNameEl.style.fontSize = '0.85em';
-                keyNameEl.style.color = 'var(--text-faint)';
-                keyNameEl.style.pointerEvents = 'none';
             }
-            if(component.does) {
-                for(const does of component.does) {
-                  const doesEl = componentSetting.nameEl.createSpan({
-                    text: `${does}`,
-                    cls: 'setting-item-does'
-                  });
-              
-                  switch (does) {
-                    case ComponentAction.READ:
-                      doesEl.addClass('does-read');
-                      break;
-                    case ComponentAction.WRITE:
-                      doesEl.addClass('does-write');
-                      break;
-                    case ComponentAction.EXTERNAL:
-                      doesEl.addClass('does-external');
-                      break;
-                  }
-                }
-              }
-
-            // Set initial clickability using the same method
-            this.updateComponentClickabilityInPlace(component, componentSetting.nameEl, isEnabledBySettings);
         });
+
+        // Sort all items alphabetically
+        sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+
+        // Render items in sorted order
+        sortedItems.forEach(({ type, item }) => {
+            if (type === 'component') {
+                this.renderComponent(containerEl, item as Component<readonly string[]>, false);
+            } else {
+                // Render group
+                const group = item as ComponentGroup;
+                const groupMetadata = groupInfo.get(group)!;
+                const components = groupedComponents.get(group)!;
+                const isGroupEnabled = this.plugin.settings.groupStates[group] ?? false;
+
+                // Render group toggle
+                const groupSetting = new Setting(containerEl)
+                    .setName(groupMetadata.name)
+                    .setDesc(groupMetadata.description)
+                    .addToggle(toggle => toggle
+                        .setValue(isGroupEnabled)
+                        .onChange(async (value) => {
+                            this.plugin.settings.groupStates[group] = value;
+
+                            // If disabling the group, disable all child components
+                            if (!value) {
+                                components.forEach(component => {
+                                    this.plugin.settings.componentStates[component.keyName] = false;
+                                });
+                            }
+
+                            await this.plugin.saveSettings();
+                            // Refresh the entire view to show/hide children
+                            this.display();
+                        })
+                    );
+
+                // Make group name bold
+                groupSetting.nameEl.style.fontWeight = '600';
+
+                // Render child components if group is enabled
+                if (isGroupEnabled) {
+                    components.forEach(component => {
+                        this.renderComponent(containerEl, component, true);
+                    });
+                }
+            }
+        });
+    }
+
+    renderComponent(containerEl: HTMLElement, component: Component<readonly string[]>, isIndented: boolean): void {
+        const isEnabledBySettings = this.plugin.settings.componentStates[component.keyName] ?? false;
+        const hasSettings = component.settings && Object.keys(component.settings).length > 0;
+        const hasArgs = Component.hasArgs(component);
+
+        const displayName = component.name || component.keyName;
+        const description = component.description || '';
+
+        const componentSetting = new Setting(containerEl)
+            .setName(displayName)
+            .setDesc(description)
+            .addToggle(toggle => toggle
+                .setValue(isEnabledBySettings)
+                .onChange(async (value) => {
+                    this.plugin.settings.componentStates[component.keyName] = value;
+                    await this.plugin.saveSettings();
+                    // Smooth update instead of full refresh
+                    this.updateComponentClickabilityInPlace(component, componentSetting.nameEl, value);
+                })
+            );
+
+        // Add indentation for grouped components
+        if (isIndented) {
+            componentSetting.settingEl.addClass('setting-item-indented');
+        }
+
+        // Add keyName as separate element if component has a display name
+        if (component.name) {
+            const keyNameEl = componentSetting.nameEl.createSpan({
+                text: ` - ${component.keyName}`,
+                cls: 'setting-item-keyname'
+            });
+            keyNameEl.style.fontSize = '0.85em';
+            keyNameEl.style.color = 'var(--text-faint)';
+            keyNameEl.style.pointerEvents = 'none';
+        }
+
+        if(component.does) {
+            for(const does of component.does) {
+              const doesEl = componentSetting.nameEl.createSpan({
+                text: `${does}`,
+                cls: 'setting-item-does'
+              });
+
+              switch (does) {
+                case ComponentAction.READ:
+                  doesEl.addClass('does-read');
+                  break;
+                case ComponentAction.WRITE:
+                  doesEl.addClass('does-write');
+                  break;
+                case ComponentAction.EXTERNAL:
+                  doesEl.addClass('does-external');
+                  break;
+              }
+            }
+        }
+
+        // Set initial clickability using the same method
+        this.updateComponentClickabilityInPlace(component, componentSetting.nameEl, isEnabledBySettings);
     }
 
     displayComponentSettings(componentKey: string): void {
