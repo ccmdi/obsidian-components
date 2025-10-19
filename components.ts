@@ -264,6 +264,6 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     timeline,
     reminders,
     widgetSpace,
-    map,
+    // map,
     // llm,
 ];
