@@ -71,7 +71,7 @@ export const gymStats: Component<[]> = {
         let totalSetsCompleted = 0;
 
         workoutFiles.forEach(workout => {
-            const workoutDate = new Date(workout.date);
+            const workoutDate = new Date(workout.date + 'T00:00:00');
             const isRecent = workoutDate >= thirtyDaysAgo;
 
             workout.exercises.forEach(exercise => {
@@ -287,7 +287,7 @@ export const gymStats: Component<[]> = {
             const recent = exercise.recent30Days;
             const imp = exercise.improvements;
 
-            const lastSession = recent.lastWorkout ? new Date(recent.lastWorkout).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "—";
+            const lastSession = recent.lastWorkout ? new Date(recent.lastWorkout + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
 
             const cells = [
                 { text: exercise.name, html: false },
@@ -353,7 +353,7 @@ export const gymStats: Component<[]> = {
             const row = tbody.createEl("tr");
 
             const completionRate = Math.round((exercise.completedSets / exercise.totalSets) * 100);
-            const lastDone = exercise.lastPerformed ? new Date(exercise.lastPerformed).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Never";
+            const lastDone = exercise.lastPerformed ? new Date(exercise.lastPerformed + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Never";
 
             const cells = [
                 exercise.name,
@@ -403,7 +403,7 @@ export const gymStats: Component<[]> = {
             });
 
             workoutCard.createEl("div", {
-                text: new Date(workout.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                text: new Date(workout.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
                 attr: {
                     style: "font-weight: bold; color: var(--text-accent); margin-bottom: 8px;"
                 }
