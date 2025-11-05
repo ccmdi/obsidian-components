@@ -1,6 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { TFile } from "obsidian";
 import { mediaStyles } from "./styles";
+import { parseBoolean } from "utils";
 
 export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> = {
     name: 'Media',
@@ -30,9 +31,9 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
     styles: mediaStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const folderPath = args.folder;
-        const centered = args.centered === 'true';
-        const writeFM = args.writeFM !== 'false';
-        const interactive = args.interactive === 'true';
+        const centered = parseBoolean(args.centered, false);
+        const writeFM = parseBoolean(args.writeFM, true);
+        const interactive = parseBoolean(args.interactive, false);
 
         const fmKey = 'mediaPath';
 
@@ -41,7 +42,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
             const resourcePath = app.vault.getResourcePath(file);
 
             if (isVideo) {
-                const video = el.createEl("video");
+                const video = container.createEl("video");
                 video.src = resourcePath;
                 video.autoplay = true;
                 video.loop = true;
@@ -51,9 +52,8 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                     video.style.margin = '0 auto';
                     video.style.textAlign = 'center';
                 }
-                container.append(video);
             } else {
-                const img = el.createEl("img");
+                const img = container.createEl("img");
                 img.src = resourcePath;
                 img.referrerPolicy = 'no-referrer';
                 if (centered) {
@@ -61,7 +61,6 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                     img.style.margin = '0 auto';
                     img.style.textAlign = 'center';
                 }
-                container.append(img);
             }
         };
 

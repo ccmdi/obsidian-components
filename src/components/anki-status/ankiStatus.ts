@@ -1,6 +1,7 @@
-import { Component, ComponentAction, ComponentInstance } from "components";   
+import { Component, ComponentAction, ComponentInstance } from "components";
 import { requestUrl } from "obsidian";
 import { ankiStatusStyles } from "./styles";
+import { parseBoolean } from "utils";
 
 export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
     name: 'Anki Status',
@@ -23,9 +24,9 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
     does: [ComponentAction.EXTERNAL],
     styles: ankiStatusStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
-        const showStats = args.showStats === 'true';
-        const showDeck = args.showDeck === 'true';
-        const compact = args.compact === 'true';
+        const showStats = parseBoolean(args.showStats, true);
+        const showDeck = parseBoolean(args.showDeck, false);
+        const compact = parseBoolean(args.compact, false);
 
         el.style.position = 'relative';
 

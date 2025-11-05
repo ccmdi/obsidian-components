@@ -7,6 +7,9 @@ import { media } from "components/media/media";
 import { navigate } from "components/navigate/navigate";
 import { statChart } from "components/stat-chart/statChart";
 import { clock } from "components/clock/clock";
+// DISABLED: calendar component - Requires FullCalendar and ICAL.js libraries (~500KB)
+// These dependencies were temporarily removed to reduce bundle size.
+// To re-enable: uncomment import, add to COMPONENTS array, and load required libraries.
 // import { calendar } from "components/calendar/calendar";
 import { discordStatus } from "components/discord-status/discordStatus";
 import { timeline } from "components/timeline/timeline";
@@ -14,7 +17,13 @@ import { reminders } from "components/reminders/reminders";
 import { ankiStatus } from "components/anki-status/ankiStatus";
 import { widgetSpace } from "components/widget-space/widgetSpace";
 import { analytics } from "components/analytics/analytics";
+// DISABLED: map component - Requires deck.gl and maplibre-gl libraries (~1MB+)
+// These heavy dependencies were temporarily removed to reduce bundle size.
+// To re-enable: uncomment import, add to COMPONENTS array, and load required libraries.
 // import { map } from "components/map/map";
+// DISABLED: llm component - Claude AI chat interface
+// Disabled pending API integration improvements and cost optimization.
+// To re-enable: uncomment import, add to COMPONENTS array.
 // import { llm } from "components/llm/llm";
 import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
