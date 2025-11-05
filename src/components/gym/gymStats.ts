@@ -257,6 +257,9 @@ export const gymStats: Component<[]> = {
                 const firstHalfAvg = firstHalf.length > 0 ? firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length : 0;
                 const secondHalfAvg = secondHalf.length > 0 ? secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length : 0;
 
+                const firstHalfMax = firstHalf.length > 0 ? Math.max(...firstHalf) : 0;
+                const secondHalfMax = secondHalf.length > 0 ? Math.max(...secondHalf) : 0;
+
                 // Weight progression (first vs last workout)
                 const sortedWeights = [...recent.weightHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                 const firstWeight = sortedWeights.length > 0 ? sortedWeights[0].weight : 0;
@@ -265,7 +268,7 @@ export const gymStats: Component<[]> = {
                 return {
                     ...exercise,
                     improvements: {
-                        maxRepsChange: recent.maxReps - (exercise.maxReps - recent.maxReps || 0),
+                        maxRepsChange: secondHalfMax - firstHalfMax,
                         avgRepsChange: secondHalfAvg - firstHalfAvg,
                         weightChange: lastWeight - firstWeight,
                         volumeTrend: secondHalf.length > firstHalf.length ? 'Increasing' :
@@ -275,11 +278,11 @@ export const gymStats: Component<[]> = {
             })
             .sort((a, b) => b.recent30Days.sessions - a.recent30Days.sessions);
 
-        const formatChange = (value: number, suffix: string = '') => {
+        const formatChange = (value: number, decimals: number = 0) => {
             if (value === 0) return '—';
             const sign = value > 0 ? '+' : '';
             const color = value > 0 ? '#4CAF50' : value < 0 ? '#F44336' : 'var(--text-muted)';
-            return `<span style="color: ${color}">${sign}${value.toFixed(suffix === 'lbs' || suffix === 'kg' ? 1 : 0)}${suffix}</span>`;
+            return `<span style="color: ${color}">${sign}${value.toFixed(decimals)}</span>`;
         };
 
         exercisesWithProgress.forEach(exercise => {
@@ -292,9 +295,9 @@ export const gymStats: Component<[]> = {
             const cells = [
                 { text: exercise.name, html: false },
                 { text: recent.sessions.toString(), html: false },
-                { text: formatChange(imp.maxRepsChange), html: true },
-                { text: formatChange(imp.avgRepsChange, ' reps'), html: true },
-                { text: formatChange(imp.weightChange, 'lbs'), html: true },
+                { text: formatChange(imp.maxRepsChange, 0), html: true },
+                { text: formatChange(imp.avgRepsChange, 1), html: true },
+                { text: formatChange(imp.weightChange, 1), html: true },
                 { text: imp.volumeTrend, html: false },
                 { text: lastSession, html: false }
             ];
