@@ -219,7 +219,7 @@ export async function useNavigation(
  * Access a nested property using dot notation or array syntax.
  * Supports paths like "frontmatter.priority", "stat.mtime", "location[0]", or "nested.array[1]"
  */
-export function usePropertyAccess(obj: Record<string, any> | null | undefined, path: string): any {
+export function usePropertyAccess(obj: any, path: string): any {
     // Support dot notation like "frontmatter.priority" or "stat.mtime"
     // Also support array syntax like "location[0]" or "nested.array[1]"
     return path.split('.').reduce((current: any, key: string) => {
@@ -241,7 +241,7 @@ export function useTargetNoteProperty(noteObj: CachedMetadata | null | undefined
     // Handle note.* prefix for accessing target note properties
     if (propertyPath.startsWith('note.')) {
         const actualPath = propertyPath.slice(5); // Remove 'note.' prefix
-        return usePropertyAccess(noteObj as any, actualPath);
+        return usePropertyAccess(noteObj, actualPath);
     }
     return undefined;
 }
