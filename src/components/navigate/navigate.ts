@@ -62,9 +62,6 @@ const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: Markdow
         return btn;
     };
 
-    // Clear existing content
-    el.innerHTML = '';
-
     const container = el.createEl('div', { cls: 'daily-nav-container' });
     container.style.display = 'flex';
     container.style.gap = '0';
