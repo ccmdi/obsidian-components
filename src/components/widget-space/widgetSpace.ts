@@ -403,8 +403,6 @@ export const widgetSpace: Component<['layout']> = {
             const component = COMPONENTS.find(comp => comp.keyName === componentKey);
             if (component) {
                 try {
-                    content.innerHTML = '';
-
                     // Add unique identifier to help with component isolation
                     content.dataset.widgetId = widgetId;
                     content.dataset.componentKey = componentKey;
@@ -566,6 +564,9 @@ export const widgetSpace: Component<['layout']> = {
                                     existingInstance.destroy();
                                 }
                             }
+
+                            // Clear content before re-render (Component.render will inject styles after)
+                            content.empty();
 
                             // Use active file context if widget-space is mounted, otherwise use original context
                             const activeFile = app.workspace.getActiveFile();
