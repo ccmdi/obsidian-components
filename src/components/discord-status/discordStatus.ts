@@ -1,5 +1,6 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { discordStatusStyles } from './styles';
+import { parseBoolean } from "utils";
 
 export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hideProfile']> = {
     name: 'Discord Status',
@@ -26,9 +27,9 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
     styles: discordStatusStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const userId = args.userId;
-        const showActivity = args.showActivity !== 'false';
-        const compact = args.compact === 'true';
-        const hideProfile = args.hideProfile === 'true';
+        const showActivity = parseBoolean(args.showActivity, true);
+        const compact = parseBoolean(args.compact, false);
+        const hideProfile = parseBoolean(args.hideProfile, false);
 
         el.style.position = 'relative';
 

@@ -1,4 +1,5 @@
 import { Component, ComponentInstance } from "components";
+import { parseBoolean } from "utils";
 
 export const clock: Component<['type', 'format', 'timezone', 'size', 'showSeconds', 'showDate', 'background', 'background-color', 'border']> = {
     name: 'Clock',
@@ -48,8 +49,8 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
         const format = args.format;
         const timezone = args.timezone;
         const size = args.size;
-        const showSeconds = args.showSeconds !== 'false';
-        const showDate = args.showDate === 'true'; // TODO still need logic for 'true'/'false' strings to avoid this
+        const showSeconds = parseBoolean(args.showSeconds, true);
+        const showDate = parseBoolean(args.showDate, false);
 
         el.style.textAlign = 'center';
         el.style.maxWidth = '100%';
@@ -85,7 +86,8 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
                     timeString = `${dateString}\n${timeString}`;
                 }
 
-                el.innerHTML = timeString.replace('\n', '<br>');
+                // Use textContent for safety - no HTML needed here, just use CSS for line breaks
+                el.textContent = timeString.replace('\n', ' | ');
             };
 
             ComponentInstance.createUpdateLoop(instance, updateDigital, 1000, true);

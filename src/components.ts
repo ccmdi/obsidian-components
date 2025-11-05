@@ -2,28 +2,32 @@
 
 import { App, MarkdownPostProcessorContext, TAbstractFile, TFile, MarkdownRenderChild } from "obsidian";
 import { parseArguments, validateArguments, parseFM, resolveSpecialVariables, parseArgsAliases } from "utils";
+
 import { githubStats } from "components/github-stats/githubStats";
 import { media } from "components/media/media";
 import { navigate } from "components/navigate/navigate";
 import { statChart } from "components/stat-chart/statChart";
 import { clock } from "components/clock/clock";
-// import { calendar } from "components/calendar/calendar";
 import { discordStatus } from "components/discord-status/discordStatus";
 import { timeline } from "components/timeline/timeline";
 import { reminders } from "components/reminders/reminders";
 import { ankiStatus } from "components/anki-status/ankiStatus";
 import { widgetSpace } from "components/widget-space/widgetSpace";
 import { analytics } from "components/analytics/analytics";
-// import { map } from "components/map/map";
-// import { llm } from "components/llm/llm";
 import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
 import { gymStats } from "components/gym/gymStats";
 
+// import { calendar } from "components/calendar/calendar";
+// import { map } from "components/map/map";
+// import { llm } from "components/llm/llm";
+
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 
-// Global instance registry for cleanup
+/**
+ * Global instance registry for cleanup
+ */
 export const componentInstances = new Map<string, ComponentInstance>();
 
 export interface ComponentInstance {
@@ -288,8 +292,7 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     //gym group
     gymRoutineMenu,
     gymWorkoutTracker,
-    gymStats,
-    
+    gymStats, 
 ];
 
 

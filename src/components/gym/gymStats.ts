@@ -307,9 +307,17 @@ export const gymStats: Component<[]> = {
                             "padding: 8px 12px; border: 1px solid var(--background-modifier-border); text-align: center;"
                     }
                 });
-                
+
                 if (cellData.html) {
-                    cell.innerHTML = cellData.text;
+                    // Parse the HTML to extract color and text safely
+                    const match = cellData.text.match(/<span style="color: ([^"]+)">([^<]+)<\/span>/);
+                    if (match) {
+                        const [, color, text] = match;
+                        const span = cell.createEl('span', { text });
+                        span.style.color = color;
+                    } else {
+                        cell.textContent = cellData.text;
+                    }
                 } else {
                     cell.textContent = cellData.text;
                 }

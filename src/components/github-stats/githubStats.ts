@@ -68,37 +68,53 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
     
             const accentColorHex = getAccentColorHex(el);
             const svgUrl = `https://cdn.simpleicons.org/github/${accentColorHex}`;
-            
-            const [response, svgFile] = await Promise.all([
-                fetch('https://api.github.com/graphql', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query })
-                }),
-                fetch(svgUrl).then(res => res.text())
-            ]);
-    
+
+            const response = await fetch('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query })
+            });
+
             const data: GithubApiResponse = await response.json();
             const username = data.data.viewer.login;
             const allDays = data.data.viewer.contributionsCollection.contributionCalendar.weeks.flatMap(w => w.contributionDays);
             const last7Days = allDays.slice(-7);
-    
-            widget.innerHTML = `
-                <div class="github-streak-wrapper">
-                    <div class="github-icon"><a href='https://github.com/${username}'>${svgFile}</a></div>
-                    <div class="github-streak">
-                    ${last7Days.map(day => {
-                        const count = day.contributionCount;
-                        
-                        const [year, month, dayNum] = day.date.split('-').map(Number);
-                        const date = new Date(year, month - 1, dayNum);
-                        const formattedDate = date.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                        
-                        const opacity = count === 0 ? 0.1 : Math.min(0.2 + (count / 20) * 0.8, 1);
-                        return `<div class="day-square" style="background-color: var(--text-accent); opacity: ${opacity};" data-tooltip="${count} contributions on ${formattedDate}"></div>`;
-                    }).join('')}
-                    </div>
-                </div>`;
+
+            // Clear loading state
+            widget.empty();
+
+            // Build DOM safely without innerHTML
+            const wrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
+
+            // Create icon with safe image element instead of injecting SVG
+            const iconContainer = wrapper.createEl('div', { cls: 'github-icon' });
+            const link = iconContainer.createEl('a', { href: `https://github.com/${username}` });
+            const icon = link.createEl('img', {
+                attr: {
+                    src: svgUrl,
+                    alt: 'GitHub',
+                    style: 'width: 100%; height: 100%;'
+                }
+            });
+
+            const streakContainer = wrapper.createEl('div', { cls: 'github-streak' });
+
+            last7Days.forEach(day => {
+                const count = day.contributionCount;
+
+                const [year, month, dayNum] = day.date.split('-').map(Number);
+                const date = new Date(year, month - 1, dayNum);
+                const formattedDate = date.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+                const opacity = count === 0 ? 0.1 : Math.min(0.2 + (count / 20) * 0.8, 1);
+                streakContainer.createEl('div', {
+                    cls: 'day-square',
+                    attr: {
+                        style: `background-color: var(--text-accent); opacity: ${opacity};`,
+                        'data-tooltip': `${count} contributions on ${formattedDate}`
+                    }
+                });
+            });
             
             widget.querySelectorAll('.day-square').forEach(square => {
                 square.addEventListener('mouseenter', (e) => {

@@ -103,12 +103,33 @@ export function applyCssFromArgs(element: HTMLElement, args: Record<string, stri
         if (!handledKeys.has(key)) {
             const previousValue = element.style.getPropertyValue(key);
             element.style.setProperty(key, value);
-            
+
             if (element.style.getPropertyValue(key) !== value && value !== '') {
                 throw new Error(`CSS property '${key}' with value '${value}' is invalid or not supported`);
             }
         }
     });
+}
+
+/**
+ * Converts a string argument to a boolean value.
+ * Handles common boolean string representations consistently.
+ * - 'true', '1', 'yes', 'on' -> true
+ * - 'false', '0', 'no', 'off', '' -> false
+ * - undefined/null -> defaultValue
+ */
+export function parseBoolean(value: string | undefined, defaultValue: boolean = false): boolean {
+    if (value === undefined || value === null || value === '') {
+        return defaultValue;
+    }
+    const normalized = value.toLowerCase().trim();
+    if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on') {
+        return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'off') {
+        return false;
+    }
+    return defaultValue;
 }
 
 
@@ -194,11 +215,14 @@ export async function useNavigation(
     }
 }
 
-//TODO type
-export function usePropertyAccess(obj: any, path: string) {
+/**
+ * Access a nested property using dot notation or array syntax.
+ * Supports paths like "frontmatter.priority", "stat.mtime", "location[0]", or "nested.array[1]"
+ */
+export function usePropertyAccess(obj: any, path: string): any {
     // Support dot notation like "frontmatter.priority" or "stat.mtime"
     // Also support array syntax like "location[0]" or "nested.array[1]"
-    return path.split('.').reduce((current, key) => {
+    return path.split('.').reduce((current: any, key: string) => {
         // Check for array syntax like "location[0]"
         const arrayMatch = key.match(/^(.+)\[(\d+)\]$/);
         if (arrayMatch) {
@@ -210,8 +234,10 @@ export function usePropertyAccess(obj: any, path: string) {
     }, obj);
 }
 
-//TODO type
-export function useTargetNoteProperty(noteObj: any, propertyPath: string) {
+/**
+ * Access a property from a note's cached metadata with 'note.' prefix support.
+ */
+export function useTargetNoteProperty(noteObj: CachedMetadata | null | undefined, propertyPath: string): any {
     // Handle note.* prefix for accessing target note properties
     if (propertyPath.startsWith('note.')) {
         const actualPath = propertyPath.slice(5); // Remove 'note.' prefix
@@ -220,7 +246,9 @@ export function useTargetNoteProperty(noteObj: any, propertyPath: string) {
     return undefined;
 }
 
-//TODO type
+/**
+ * Sort an array of items by various criteria (age, date, file stats, or note properties).
+ */
 export function useTargetNoteSorting<T extends { fm?: CachedMetadata | null, age?: number, date?: Date, file?: TFile, text?: string }>(
     items: T[],
     sortBy: string
@@ -337,6 +365,8 @@ export async function getTasks(app: App, file: TFile, options: {
  * - Quoted folder paths: "folder/path"
  * - Unquoted folder paths: folder/path
  * - AND operator: "#tag AND folder/path"
+ * - OR operator: "#tag1 OR #tag2"
+ * - Combined: "#tag1 OR #tag2 AND folder/path" (AND has higher precedence)
  */
 export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: string): boolean {
     if (!query.trim()) return true;
@@ -347,10 +377,8 @@ export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: s
                   frontmatter?.tags ? [frontmatter.tags] : [];
     const allTags = [...tags, ...fmTags.map((t: string) => t.startsWith('#') ? t : `#${t}`)];
 
-    const queryParts = query.split(' AND ').map(part => part.trim());
-    //TODO ors
-
-    return queryParts.every(part => {
+    // Helper function to check if a single query part matches
+    const matchesPart = (part: string): boolean => {
         // Tag query
         if (part.startsWith('#')) {
             return allTags.some(tag => tag.includes(part.slice(1)));
@@ -364,6 +392,15 @@ export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: s
 
         // Unquoted folder path
         return file.path.includes(part);
+    };
+
+    // Split by OR first (lower precedence)
+    const orGroups = query.split(' OR ').map(group => group.trim());
+
+    // For each OR group, all AND conditions must be true
+    return orGroups.some(orGroup => {
+        const andParts = orGroup.split(' AND ').map(part => part.trim());
+        return andParts.every(matchesPart);
     });
 }
 
