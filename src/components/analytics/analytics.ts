@@ -229,8 +229,8 @@ function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder
         }
     };
 
-    const createCard = (titleText: string, titleColor: string, mainValue: string, mainSuffix: string, subtitleText: string) => {
-        const card = el.createEl('div', {
+    const createCard = (container: HTMLElement, titleText: string, titleColor: string, mainValue: string, mainSuffix: string, subtitleText: string) => {
+        const card = container.createEl('div', {
             attr: { style: `${getCardStyle()} ${getBorderStyle(titleColor)}` }
         });
         const title = card.createEl('strong', { attr: { style: getTitleStyle(titleColor) }, text: titleText });
@@ -256,39 +256,39 @@ function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder
     // Grid
     const grid = el.createEl('div', { cls: 'vault-analytics-grid' });
 
-    createCard('CONNECTION HEALTH', 'var(--color-accent)',
+    createCard(grid, 'CONNECTION HEALTH', 'var(--color-accent)',
         `${Math.round((totalPages - islands.length) / totalPages * 100)}%`, 'connected',
         `${islands.length} islands, ${wellConnected.length} bridges`);
 
-    createCard('KNOWLEDGE DEPTH', 'var(--color-green)',
+    createCard(grid, 'KNOWLEDGE DEPTH', 'var(--color-green)',
         `${totalPages > 0 ? Math.round(substantialNotes / totalPages * 100) : 0}%`, 'substantial',
         `${substantialNotes} notes >1k chars`);
 
-    createCard('INTERNAL LINKS', 'var(--color-purple)',
+    createCard(grid, 'INTERNAL LINKS', 'var(--color-purple)',
         `${(totalInternalLinks / totalPages).toFixed(1)}`, 'per note',
         `${totalInternalLinks} note-to-note`);
 
-    createCard('EXTERNAL LINKS', 'var(--color-blue)',
+    createCard(grid, 'EXTERNAL LINKS', 'var(--color-blue)',
         `${(totalExternalLinks / totalPages).toFixed(1)}`, 'per note',
         `${totalExternalLinks} outside links`);
 
-    createCard('FRESHNESS', 'var(--color-orange)',
+    createCard(grid, 'FRESHNESS', 'var(--color-orange)',
         `${Math.round(recentlyActive / totalPages * 100)}%`, 'active',
         `${recentlyActive} updated this week`);
 
-    createCard('MAINTENANCE', 'var(--color-red)',
+    createCard(grid, 'MAINTENANCE', 'var(--color-red)',
         `${Math.round(staleNotes / totalPages * 100)}%`, 'stale',
         `${staleNotes} notes >90 days old`);
 
-    createCard('ORGANIZATION', 'var(--color-yellow)',
+    createCard(grid, 'ORGANIZATION', 'var(--color-yellow)',
         `${Math.round(taggedNotes / totalPages * 100)}%`, 'tagged',
         `${totalTags} tags total`);
 
-    createCard('CONTENT QUALITY', 'var(--color-cyan)',
+    createCard(grid, 'CONTENT QUALITY', 'var(--color-cyan)',
         `${notesWithContent.length > 0 ? Math.round(developedNotes / notesWithContent.length * 100) : 0}%`, 'developed',
         `${shortNotes} stub notes <200 chars`);
 
-    createCard('KNOWLEDGE SIZE', 'var(--color-pink)',
+    createCard(grid, 'KNOWLEDGE SIZE', 'var(--color-pink)',
         `${totalPages}`, 'notes',
         `${Math.round(totalSize / 1000)}k chars, ${Math.round(avgSize)} avg`);
 

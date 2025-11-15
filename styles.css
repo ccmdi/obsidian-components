@@ -152,7 +152,14 @@
 }
 
 /* Media component */
-.media-centered,
+.media-centered {
+  display: block;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+
 .media-centered video,
 .media-centered img {
   display: block;
@@ -160,17 +167,13 @@
   text-align: center;
 }
 
-.media-centered {
-  padding-top: 0.5em;
-  padding-bottom: 0.5em;
-}
-
 /* Clock component */
 .clock-container {
   text-align: center;
   max-width: 100%;
   width: fit-content;
-  margin: 0 auto;
+  margin-left: auto !important;
+  margin-right: auto !important;
   padding: 0.25em;
 }
 
