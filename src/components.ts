@@ -18,8 +18,6 @@ import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
 import { gymStats } from "components/gym/gymStats";
 
-// import { calendar } from "components/calendar/calendar";
-// import { map } from "components/map/map";
 // import { llm } from "components/llm/llm";
 
 import { applyCssFromArgs } from "utils";

@@ -13,7 +13,6 @@ Adds custom components to Obsidian notes and sidebars.
 * **Chart** - chart date-mapped array data
 * **Discord status**
 * **GitHub streak** - GitHub contribution streak
-* **Map** - map sourced from your notes
 * **Navigate button** - navigate between periodic notes
 * **Reminders** - due tasks from periodic notes
 * **Timeline** - timeline of periodic notes
@@ -34,8 +33,9 @@ Some components make use of templates, and thus integrate with the very popular 
 * Explicit mobile support[^2]
 * Custom aliases/alias management
 * Multiple column widget space
-* Calendar component
 * Other stuff that I need
 
 [^1]: If you want to be more declarative or if there is future namespace collision.
-[^2]: It works now, but a few components require the Node API. 
+[^2]: It works now, but a few components require the Node API.
+
+> **Note:** The Map component has been replaced by its own dedicated plugin: [Obsidian Map Plus](https://github.com/ccmdi/obsidian-map-plus) 
