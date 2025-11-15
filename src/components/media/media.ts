@@ -64,11 +64,9 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
         // Check if path points to a specific file
         const specificFile = app.vault.getFileByPath(folderPath);
         if (specificFile && specificFile.extension?.match(/(jpg|jpeg|png|gif|webp|mp4|mov|webm)$/i)) {
-            const mediaContainer = document.createElement("div");
-            mediaContainer.className = "media-container";
+            const mediaContainer = el.createEl("div", { cls: "media-container" });
             applyCenteredStyles(mediaContainer);
             renderMedia(specificFile, mediaContainer);
-            el.appendChild(mediaContainer);
             return;
         }
 
