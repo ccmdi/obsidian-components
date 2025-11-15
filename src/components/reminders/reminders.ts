@@ -163,22 +163,24 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             const container = el.createEl('div', { cls: 'reminders-container' });
 
             if (sortedTasks.length === 0) {
-                container.innerHTML = `
-                    ${showHeader ? `<div class="reminders-header">
-                        <h3 class="reminders-title">Reminders</h3>
-                    </div>` : ''}
-                    <div class="reminders-empty">No incomplete tasks found.</div>
-                `;
+                if (showHeader) {
+                    const header = container.createEl('div', { cls: 'reminders-header' });
+                    header.createEl('h3', { cls: 'reminders-title', text: 'Reminders' });
+                }
+                container.createEl('div', { cls: 'reminders-empty', text: 'No incomplete tasks found.' });
                 return;
             }
 
             // Create header with count
             if (showHeader) {
                 const header = container.createEl('div', { cls: 'reminders-header' });
-                header.innerHTML = `
-                    <h3 class="reminders-title">Reminders</h3>
-                        ${showCount ? `<div class="reminders-count">${Math.min(sortedTasks.length, limit)}</div>` : ''}
-                    `;
+                header.createEl('h3', { cls: 'reminders-title', text: 'Reminders' });
+                if (showCount) {
+                    header.createEl('div', {
+                        cls: 'reminders-count',
+                        text: Math.min(sortedTasks.length, limit).toString()
+                    });
+                }
             }
 
             // Create task list
@@ -187,12 +189,19 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             for (const task of sortedTasks.slice(0, limit)) {
                 const listItem = taskList.createEl('div', { cls: 'reminder-item' });
 
-                const ageText = styledAge(task.age);
-                listItem.innerHTML = `
-                    <span class="reminder-bullet">•</span>
-                    <span class="reminder-text">${task.text}</span>
-                    ${ageText ? `<span class="reminder-age">${ageText}</span>` : ''}
-                `;
+                listItem.createEl('span', { cls: 'reminder-bullet', text: '•' });
+                listItem.createEl('span', { cls: 'reminder-text', text: task.text });
+
+                // Add age if needed
+                if (showAges && task.age >= 7) {
+                    const color = getColorForAge(task.age);
+                    const ageText = `${task.age} day${task.age === 1 ? '' : 's'} old`;
+                    const ageSpan = listItem.createEl('span', { cls: 'reminder-age' });
+                    const ageContent = ageSpan.createEl('span', {
+                        attr: { style: `color: ${color}; font-weight: bold;` },
+                        text: `(${ageText})`
+                    });
+                }
 
                 // Make clickable to open the file
                 listItem.addEventListener('mousedown', async (event) => {

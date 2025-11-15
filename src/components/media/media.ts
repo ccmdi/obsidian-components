@@ -47,29 +47,17 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                 video.autoplay = true;
                 video.loop = true;
                 video.muted = true;
-                if (centered) {
-                    video.style.display = 'block';
-                    video.style.margin = '0 auto';
-                    video.style.textAlign = 'center';
-                }
             } else {
                 const img = container.createEl("img");
                 img.src = resourcePath;
                 img.referrerPolicy = 'no-referrer';
-                if (centered) {
-                    img.style.display = 'block';
-                    img.style.margin = '0 auto';
-                    img.style.textAlign = 'center';
-                }
             }
         };
 
         const applyCenteredStyles = (container: HTMLElement) => {
             if (centered) {
-                container.style.margin = '0 auto';
-                el.style.margin = '0 auto';
-                el.style.paddingTop = '0.5em';
-                el.style.paddingBottom = '0.5em';
+                container.addClass('media-centered');
+                el.addClass('media-centered');
             }
         };
 
@@ -148,7 +136,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                 const newIndex = parseInt(selector.value);
                 selectedFile = files[newIndex];
 
-                mediaContainer.innerHTML = '';
+                mediaContainer.empty();
                 renderMedia(selectedFile, mediaContainer);
 
                 if (writeFM && currentFile && selectedFile) {

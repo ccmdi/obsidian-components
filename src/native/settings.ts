@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { COMPONENTS, Component, ComponentAction, ComponentSetting, ComponentGroup, GROUPS, ComponentGroupMetadata } from "components";
 import ComponentsPlugin from "main";
+import { renderExternalLinkToElement } from "utils";
 
 export default class ComponentsSettingTab extends PluginSettingTab {
     plugin: ComponentsPlugin;
@@ -32,26 +33,12 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
         // Tab container
         const tabContainer = containerEl.createEl('div', { cls: 'setting-tab-container' });
-        tabContainer.style.cssText = `
-            display: flex;
-            border-bottom: 1px solid var(--background-modifier-border);
-            margin-bottom: 20px;
-        `;
 
-        
         // Components tab
         const componentsTab = tabContainer.createEl('div', {
             text: 'Components',
-            cls: 'setting-tab'
+            cls: `setting-tab ${this.currentView === 'components' ? 'is-active' : ''}`
         });
-        componentsTab.style.cssText = `
-            padding: 10px 20px;
-            cursor: pointer;
-            border-bottom: 2px solid ${this.currentView === 'components' ? 'var(--interactive-accent)' : 'transparent'};
-            color: ${this.currentView === 'components' ? 'var(--interactive-accent)' : 'var(--text-normal)'};
-            font-weight: ${this.currentView === 'components' ? '600' : '400'};
-            transition: all 0.2s ease;
-        `;
         componentsTab.onclick = () => {
             this.currentView = 'components';
             this.display();
@@ -60,16 +47,8 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         // General tab
         const generalTab = tabContainer.createEl('div', {
             text: 'General',
-            cls: 'setting-tab'
+            cls: `setting-tab ${this.currentView === 'general' ? 'is-active' : ''}`
         });
-        generalTab.style.cssText = `
-            padding: 10px 20px;
-            cursor: pointer;
-            border-bottom: 2px solid ${this.currentView === 'general' ? 'var(--interactive-accent)' : 'transparent'};
-            color: ${this.currentView === 'general' ? 'var(--interactive-accent)' : 'var(--text-normal)'};
-            font-weight: ${this.currentView === 'general' ? '600' : '400'};
-            transition: all 0.2s ease;
-        `;
         generalTab.onclick = () => {
             this.currentView = 'general';
             this.display();
@@ -99,11 +78,9 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                     }
                     if (modalSetting) {
                         if (!value) {
-                            modalSetting.setClass('is-disabled');
-                            modalSetting.settingEl.style.opacity = '0.5';
+                            modalSetting.settingEl.addClass('is-disabled');
                         } else {
                             modalSetting.settingEl.removeClass('is-disabled');
-                            modalSetting.settingEl.style.opacity = '1';
                         }
                     }
                 })
@@ -126,8 +103,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
         // Gray out the setting if autocomplete is disabled
         if (!this.plugin.settings.enableAutoComplete) {
-            modalSetting.setClass('is-disabled');
-            modalSetting.settingEl.style.opacity = '0.5';
+            modalSetting.settingEl.addClass('is-disabled');
         }
 
         // Container margin setting
@@ -152,9 +128,8 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         const hasSubmenu = hasSettings || hasArgs;
 
         if (hasSubmenu && isEnabled) {
-            nameEl.style.cursor = 'pointer';
-            nameEl.style.color = 'var(--text-accent)';
-            nameEl.style.transition = 'color 0.2s ease';
+            nameEl.addClass('is-clickable');
+            nameEl.addClass('is-enabled');
 
             // Add click handler if not already there
             if (!nameEl.onclick) {
@@ -164,9 +139,8 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                 };
             }
         } else {
-            nameEl.style.cursor = 'default';
-            nameEl.style.color = 'var(--text-normal)';
-            nameEl.style.transition = 'color 0.2s ease';
+            nameEl.removeClass('is-clickable');
+            nameEl.removeClass('is-enabled');
             nameEl.onclick = null;
         }
     }
@@ -232,13 +206,10 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
         // Add keyName as separate element if component has a display name
         if (component.name) {
-            const keyNameEl = componentSetting.nameEl.createSpan({
+            componentSetting.nameEl.createSpan({
                 text: ` - ${component.keyName}`,
                 cls: 'setting-item-keyname'
             });
-            keyNameEl.style.fontSize = '0.85em';
-            keyNameEl.style.color = 'var(--text-faint)';
-            keyNameEl.style.pointerEvents = 'none';
         }
 
         if(component.does) {
@@ -295,7 +266,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
             );
 
         // Make group name bold
-        groupSetting.nameEl.style.fontWeight = '600';
+        groupSetting.nameEl.addClass('setting-item-group-name');
 
         // Render child components if group is enabled
         if (isGroupEnabled) {
@@ -341,26 +312,28 @@ export default class ComponentsSettingTab extends PluginSettingTab {
             containerEl.createEl('h3', { text: 'Arguments' });
             Object.entries(component.args!).forEach(([argKey, argConfig]) => {
                 const argDesc = argConfig?.description || '';
-                // Parse markdown links in description
-                const processedDesc = argDesc.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
                 const argSetting = new Setting(containerEl)
                     .setName(argKey);
 
                 // Add red asterisk for required args
                 if (argConfig?.required) {
-                    const asterisk = argSetting.nameEl.createSpan({
+                    argSetting.nameEl.createSpan({
                         text: ' *',
-                        cls: 'mod-warning'
+                        cls: 'setting-item-required-asterisk'
                     });
-                    asterisk.style.color = 'var(--text-error)';
                 }
 
-                // Set description with HTML rendering
+                // Set description with DOM rendering
                 const descEl = argSetting.descEl;
-                descEl.innerHTML = processedDesc + (argConfig?.default ? `<br><em>Default: ${argConfig.default}</em>` : '');
-                argSetting.settingEl.style.borderLeft = '3px solid var(--text-accent)';
-                argSetting.settingEl.style.paddingLeft = '12px';
-                argSetting.settingEl.style.marginBottom = '8px';
+                descEl.empty();
+                if (argDesc) {
+                    renderExternalLinkToElement(argDesc, descEl);
+                }
+                if (argConfig?.default) {
+                    descEl.createEl('br');
+                    descEl.createEl('em', { text: `Default: ${argConfig.default}` });
+                }
+                argSetting.settingEl.addClass('component-arg-setting');
             });
         }
 

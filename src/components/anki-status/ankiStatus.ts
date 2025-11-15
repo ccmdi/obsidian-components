@@ -35,39 +35,20 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
         const connectionIndicator = el.createEl('div', { cls: 'connection-status' });
         widget.append(connectionIndicator);
 
+        // Initial loading skeleton
         if (showStats) {
-            widget.innerHTML += `
-                <div class="anki-stats ${compact ? 'compact' : ''}">
-                    <div class="stat-card new ${compact ? 'compact' : ''}">
-                        <div class="stat-icon ${compact ? 'compact' : ''}">
-                            <div class="loading-placeholder" style="width:24px; height:24px; border-radius:50%;"></div>
-                        </div>
-                        <div class="stat-value ${compact ? 'compact' : ''} loading-placeholder" style="width:30px; height:20px; margin:0 auto 4px;"></div>
-                        <div class="stat-label ${compact ? 'compact' : ''}">New</div>
-                    </div>
-                    <div class="stat-card learning ${compact ? 'compact' : ''}">
-                        <div class="stat-icon ${compact ? 'compact' : ''}">
-                            <div class="loading-placeholder" style="width:24px; height:24px; border-radius:50%;"></div>
-                        </div>
-                        <div class="stat-value ${compact ? 'compact' : ''} loading-placeholder" style="width:30px; height:20px; margin:0 auto 4px;"></div>
-                        <div class="stat-label ${compact ? 'compact' : ''}">Learning</div>
-                    </div>
-                    <div class="stat-card review ${compact ? 'compact' : ''}">
-                        <div class="stat-icon ${compact ? 'compact' : ''}">
-                            <div class="loading-placeholder" style="width:24px; height:24px; border-radius:50%;"></div>
-                        </div>
-                        <div class="stat-value ${compact ? 'compact' : ''} loading-placeholder" style="width:30px; height:20px; margin:0 auto 4px;"></div>
-                        <div class="stat-label ${compact ? 'compact' : ''}">Reviewed</div>
-                    </div>
-                    <div class="stat-card due ${compact ? 'compact' : ''}">
-                        <div class="stat-icon ${compact ? 'compact' : ''}">
-                            <div class="loading-placeholder" style="width:24px; height:24px; border-radius:50%;"></div>
-                        </div>
-                        <div class="stat-value ${compact ? 'compact' : ''} loading-placeholder" style="width:30px; height:20px; margin:0 auto 4px;"></div>
-                        <div class="stat-label ${compact ? 'compact' : ''}">Due</div>
-                    </div>
-                </div>
-            `;
+            const statsContainer = widget.createEl('div', { cls: `anki-stats ${compact ? 'compact' : ''}` });
+
+            const cards = ['new', 'learning', 'review', 'due'];
+            const labels = ['New', 'Learning', 'Reviewed', 'Due'];
+
+            for (let i = 0; i < cards.length; i++) {
+                const statCard = statsContainer.createEl('div', { cls: `stat-card ${cards[i]} ${compact ? 'compact' : ''}` });
+                const statIcon = statCard.createEl('div', { cls: `stat-icon ${compact ? 'compact' : ''}` });
+                statIcon.createEl('div', { cls: 'loading-placeholder anki-loading-icon' });
+                statCard.createEl('div', { cls: `stat-value ${compact ? 'compact' : ''} loading-placeholder anki-loading-value` });
+                statCard.createEl('div', { cls: `stat-label ${compact ? 'compact' : ''}`, text: labels[i] });
+            }
         }
 
         el.appendChild(widget);
@@ -102,14 +83,14 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
         };
 
         const showError = (message: string, help?: string) => {
-            widget.innerHTML = `
-                <div class="anki-error">
-                    <div class="error-icon">!</div>
-                    <div class="error-message">${message}</div>
-                    ${help ? `<div class="error-help">${help}</div>` : ''}
-                    <button class="retry-button" id="anki-retry-btn">Retry</button>
-                </div>
-            `;
+            widget.empty();
+            const errorContainer = widget.createEl('div', { cls: 'anki-error' });
+            errorContainer.createEl('div', { cls: 'error-icon', text: '!' });
+            errorContainer.createEl('div', { cls: 'error-message', text: message });
+            if (help) {
+                errorContainer.createEl('div', { cls: 'error-help', text: help });
+            }
+            errorContainer.createEl('button', { cls: 'retry-button', text: 'Retry', attr: { id: 'anki-retry-btn' } });
 
             // Add event listener to retry button with proper cleanup
             const retryBtn = widget.querySelector('#anki-retry-btn') as HTMLButtonElement;
@@ -146,95 +127,63 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
 
                 connectionIndicator.className = 'connection-status';
 
+                // Helper function to create SVG element
+                const createSvg = (pathD: string): SVGElement => {
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('width', '12');
+                    svg.setAttribute('height', '12');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    svg.setAttribute('fill', 'currentColor');
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', pathD);
+                    svg.appendChild(path);
+                    return svg;
+                };
 
-                let statsHtml = '';
+                widget.empty();
+                widget.appendChild(connectionIndicator);
+
+                // Build stats section
                 if (showStats) {
-                    statsHtml = `
-                        <div class="anki-stats ${compact ? 'compact' : ''}">
-                            <div class="stat-card new ${compact ? 'compact' : ''}">
-                                <div class="stat-icon ${compact ? 'compact' : ''}">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                                    </svg>
-                                </div>
-                                <div class="stat-value ${compact ? 'compact' : ''}">${newCards.length}</div>
-                                <div class="stat-label ${compact ? 'compact' : ''}">New</div>
-                            </div>
-                            <div class="stat-card learning ${compact ? 'compact' : ''}">
-                                <div class="stat-icon ${compact ? 'compact' : ''}">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                    </svg>
-                                </div>
-                                <div class="stat-value ${compact ? 'compact' : ''}">${learningCards.length}</div>
-                                <div class="stat-label ${compact ? 'compact' : ''}">Learning</div>
-                            </div>
-                            <div class="stat-card review ${compact ? 'compact' : ''}">
-                                <div class="stat-icon ${compact ? 'compact' : ''}">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                                    </svg>
-                                </div>
-                                <div class="stat-value ${compact ? 'compact' : ''}">${reviewedToday}</div>
-                                <div class="stat-label ${compact ? 'compact' : ''}">Reviewed</div>
-                            </div>
-                            <div class="stat-card due ${compact ? 'compact' : ''}">
-                                <div class="stat-icon ${compact ? 'compact' : ''}">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                                    </svg>
-                                </div>
-                                <div class="stat-value ${compact ? 'compact' : ''}">${dueCards.length}</div>
-                                <div class="stat-label ${compact ? 'compact' : ''}">Due</div>
-                            </div>
-                        </div>
-                    `;
+                    const statsContainer = widget.createEl('div', { cls: `anki-stats ${compact ? 'compact' : ''}` });
+
+                    const cardData = [
+                        { type: 'new', value: newCards.length, label: 'New', svg: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z' },
+                        { type: 'learning', value: learningCards.length, label: 'Learning', svg: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
+                        { type: 'review', value: reviewedToday, label: 'Reviewed', svg: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z' },
+                        { type: 'due', value: dueCards.length, label: 'Due', svg: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z' }
+                    ];
+
+                    for (const card of cardData) {
+                        const statCard = statsContainer.createEl('div', { cls: `stat-card ${card.type} ${compact ? 'compact' : ''}` });
+                        const statIcon = statCard.createEl('div', { cls: `stat-icon ${compact ? 'compact' : ''}` });
+                        statIcon.appendChild(createSvg(card.svg));
+                        statCard.createEl('div', { cls: `stat-value ${compact ? 'compact' : ''}`, text: String(card.value) });
+                        statCard.createEl('div', { cls: `stat-label ${compact ? 'compact' : ''}`, text: card.label });
+                    }
                 }
 
-                let deckHtml = '';
+                // Build deck section
                 if (showDeck && deckNames.length > 0) {
                     try {
                         // Use deckStats API which is much faster than individual queries
                         const deckStatsData = await ankiConnectRequest('getDeckStats', { decks: deckNames.slice(0, 5) });
 
                         for (const deck of deckNames.slice(0, 5)) {
+                            const deckContainer = widget.createEl('div', { cls: 'anki-deck' });
+                            deckContainer.createEl('div', { cls: 'deck-name', text: deck });
                             const stats = deckStatsData[deck];
                             if (stats) {
-                                deckHtml += `
-                                    <div class="anki-deck">
-                                        <div class="deck-name">${deck}</div>
-                                        <div class="deck-details">${stats.total_cards || 0} cards • ${stats.due_count || 0} due</div>
-                                    </div>
-                                `;
-                            } else {
-                                // Fallback - just show deck name without stats
-                                deckHtml += `
-                                    <div class="anki-deck">
-                                        <div class="deck-name">${deck}</div>
-                                    </div>
-                                `;
+                                deckContainer.createEl('div', { cls: 'deck-details', text: `${stats.total_cards || 0} cards • ${stats.due_count || 0} due` });
                             }
                         }
                     } catch (error) {
                         // Fallback - just show deck names without detailed stats
                         for (const deck of deckNames.slice(0, 5)) {
-                            deckHtml += `
-                                <div class="anki-deck">
-                                    <div class="deck-name">${deck}</div>
-                                </div>
-                            `;
+                            const deckContainer = widget.createEl('div', { cls: 'anki-deck' });
+                            deckContainer.createEl('div', { cls: 'deck-name', text: deck });
                         }
                     }
-                }
-                widget.innerHTML = '';
-                widget.appendChild(connectionIndicator);
-
-                // Add content
-                if (statsHtml) {
-                    widget.insertAdjacentHTML('beforeend', statsHtml);
-                }
-                if (deckHtml) {
-                    widget.insertAdjacentHTML('beforeend', deckHtml);
                 }
 
             } catch (error) {

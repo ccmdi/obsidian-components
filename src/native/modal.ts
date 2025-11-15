@@ -1,7 +1,7 @@
 import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
-import { renderExternalLink } from "utils";
+import { renderExternalLinkToElement } from "utils";
 
 export default class ComponentSelectorModal extends Modal {
     plugin: ComponentsPlugin;
@@ -28,25 +28,24 @@ export default class ComponentSelectorModal extends Modal {
             const option = contentEl.createEl('div', {
                 cls: 'clickable-icon'
             });
-        
+
             const title = option.createEl('div', {
                 text: component.name || component.keyName,
                 cls: 'nav-file-title-content'
             });
-        
+
             if (component.description) {
                 const descEl = option.createEl('div', {
                     cls: 'nav-file-tag'
                 });
-                const processedDesc = renderExternalLink(component.description);
-                descEl.innerHTML = processedDesc;
+                renderExternalLinkToElement(component.description, descEl);
             } else {
                 option.createEl('div', {
                     text: '',
                     cls: 'nav-file-tag'
                 });
             }
-        
+
             option.addEventListener('click', () => {
                 this.close();
                 new ComponentArgsModal(this.app, component, this.plugin).open();
@@ -120,8 +119,10 @@ export class ComponentArgsModal extends Modal {
                     );
 
                 const description = argConfig?.description || '';
-                const processedDesc = renderExternalLink(description);
-                setting.descEl.innerHTML = processedDesc;
+                if (description) {
+                    setting.descEl.empty();
+                    renderExternalLinkToElement(description, setting.descEl);
+                }
 
                 // Mark required args
                 if (argConfig?.required === true) {
@@ -227,8 +228,7 @@ export class PlaceComponentModal extends Modal {
                 const descEl = option.createEl('div', {
                     cls: 'nav-file-tag'
                 });
-                const processedDesc = renderExternalLink(component.description);
-                descEl.innerHTML = processedDesc;
+                renderExternalLinkToElement(component.description, descEl);
             } else {
                 option.createEl('div', {
                     text: '',

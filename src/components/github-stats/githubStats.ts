@@ -52,14 +52,21 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
 
             const widget = el.createEl('div', { cls: 'github-streak-container' });
             const tooltip = el.createEl('div', { cls: 'github-tooltip' });
-    
-            widget.innerHTML = `
-                <div class="github-streak-wrapper">
-                    <div class="github-icon"><div class="loading-placeholder" style="width:100%; aspect-ratio:1;"></div></div>
-                    <div class="github-streak">
-                        ${Array(7).fill(0).map(() => `<div class="day-square loading-placeholder" style="aspect-ratio:1;"></div>`).join('')}
-                    </div>
-                </div>`;
+
+            // Loading state
+            const loadingWrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
+            const iconPlaceholder = loadingWrapper.createEl('div', { cls: 'github-icon' });
+            iconPlaceholder.createEl('div', {
+                cls: 'loading-placeholder',
+                attr: { style: 'width:100%; aspect-ratio:1;' }
+            });
+            const streakPlaceholder = loadingWrapper.createEl('div', { cls: 'github-streak' });
+            for (let i = 0; i < 7; i++) {
+                streakPlaceholder.createEl('div', {
+                    cls: 'day-square loading-placeholder',
+                    attr: { style: 'aspect-ratio:1;' }
+                });
+            }
             
             el.appendChild(widget);
             el.appendChild(tooltip);

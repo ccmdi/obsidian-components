@@ -420,7 +420,12 @@ export const widgetSpace: Component<['layout']> = {
                     await Component.render(component, argsSource, content, dynamicCtx, app, componentSettings);
 
                 } catch (error) {
-                    content.innerHTML = `<div style="color: var(--text-error); padding: 8px;">Error loading ${componentName}<br>${error.message}</div>`;
+                    const errorDiv = content.createEl('div', {
+                        attr: { style: 'color: var(--text-error); padding: 8px;' }
+                    });
+                    errorDiv.appendText(`Error loading ${componentName}`);
+                    errorDiv.appendChild(document.createElement('br'));
+                    errorDiv.appendText(error.message);
                 }
             }
 

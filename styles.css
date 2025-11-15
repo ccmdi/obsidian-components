@@ -44,6 +44,24 @@
     padding-left: 15px;
 }
 
+.component-arg-setting {
+    border-left: 3px solid var(--text-accent);
+    padding-left: 12px;
+    margin-bottom: 8px;
+}
+
+.anki-loading-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
+
+.anki-loading-value {
+    width: 30px;
+    height: 20px;
+    margin: 0 auto 4px;
+}
+
 
 .confirmation-modal h2 {
   margin-top: 0 !important;
@@ -52,4 +70,131 @@
 .confirmation-modal p {
   margin-bottom: 20px;
   line-height: 1.4;
+}
+
+/* Autocomplete suggestions */
+.component-suggestion-title {
+  font-weight: bold;
+}
+
+.component-suggestion-keyname {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.component-suggestion-description {
+  font-size: 0.85em;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* Settings tab navigation */
+.setting-tab-container {
+  display: flex;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 20px;
+}
+
+.setting-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.setting-tab.is-active {
+  border-bottom: 2px solid var(--interactive-accent);
+  color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.setting-tab:not(.is-active) {
+  border-bottom: 2px solid transparent;
+  color: var(--text-normal);
+  font-weight: 400;
+}
+
+/* Settings item states */
+.setting-item.is-disabled {
+  opacity: 0.5;
+}
+
+.setting-item-name.is-clickable {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.setting-item-name.is-clickable.is-enabled {
+  color: var(--text-accent);
+}
+
+.setting-item-name.is-clickable:not(.is-enabled) {
+  color: var(--text-normal);
+}
+
+.setting-item-keyname {
+  font-size: 0.85em;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.setting-item-group-name {
+  font-weight: 600;
+}
+
+.setting-item-required-asterisk {
+  color: var(--text-error);
+}
+
+/* Navigate component */
+.daily-nav-container {
+  display: flex;
+  gap: 0;
+}
+
+/* Media component */
+.media-centered,
+.media-centered video,
+.media-centered img {
+  display: block;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.media-centered {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+
+/* Clock component */
+.clock-container {
+  text-align: center;
+  max-width: 100%;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 0.25em;
+}
+
+.clock-digital {
+  font-size: 2em;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.clock-binary {
+  font-family: monospace;
+  font-size: 1.2em;
+}
+
+.clock-matrix {
+  font-family: 'Courier New', monospace;
+  background-color: black;
+  color: #00ff00;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 1.5em;
+}
+
+/* Error messages */
+.component-error {
+  color: var(--text-error);
 }

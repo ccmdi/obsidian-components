@@ -42,17 +42,25 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         widget.appendChild(connectionIndicator);
 
         // Loading state
-        widget.innerHTML += `
-            <div class="discord-status-wrapper">
-                <div class="discord-avatar">
-                    <div class="loading-placeholder" style="width:clamp(32px, 12vw, 48px); height:clamp(32px, 12vw, 48px); border-radius:50%;"></div>
-                    <div class="status-indicator loading-placeholder" style="width:clamp(12px, 4vw, 16px); height:clamp(12px, 4vw, 16px); border-radius:50%;"></div>
-                </div>
-                <div class="discord-info">
-                    <div class="discord-username loading-placeholder" style="width:60%; height:clamp(14px, 4vw, 16px); border-radius:4px;"></div>
-                    <div class="discord-status-text loading-placeholder" style="width:40%; height:clamp(11px, 3.2vw, 13px); border-radius:4px; margin-top:4px;"></div>
-                </div>
-            </div>`;
+        const loadingWrapper = widget.createEl('div', { cls: 'discord-status-wrapper' });
+        const loadingAvatar = loadingWrapper.createEl('div', { cls: 'discord-avatar' });
+        loadingAvatar.createEl('div', {
+            cls: 'loading-placeholder',
+            attr: { style: 'width:clamp(32px, 12vw, 48px); height:clamp(32px, 12vw, 48px); border-radius:50%;' }
+        });
+        loadingAvatar.createEl('div', {
+            cls: 'loading-placeholder status-indicator',
+            attr: { style: 'width:clamp(12px, 4vw, 16px); height:clamp(12px, 4vw, 16px); border-radius:50%;' }
+        });
+        const loadingInfo = loadingWrapper.createEl('div', { cls: 'discord-info' });
+        loadingInfo.createEl('div', {
+            cls: 'discord-username loading-placeholder',
+            attr: { style: 'width:60%; height:clamp(14px, 4vw, 16px); border-radius:4px;' }
+        });
+        loadingInfo.createEl('div', {
+            cls: 'discord-status-text loading-placeholder',
+            attr: { style: 'width:40%; height:clamp(11px, 3.2vw, 13px); border-radius:4px; margin-top:4px;' }
+        });
 
         el.appendChild(widget);
         el.appendChild(tooltip);
@@ -143,47 +151,123 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         };
 
         const showError = (message: string) => {
-            widget.innerHTML = `
-                <div class="discord-error" style="color: var(--text-error); padding: 16px; text-align: center; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 12px;">
-                    ❌ ${message}
-                </div>
-            `;
+            widget.empty();
+            const errorDiv = widget.createEl('div', {
+                cls: 'discord-error',
+                attr: {
+                    style: 'color: var(--text-error); padding: 16px; text-align: center; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 12px;'
+                }
+            });
+            errorDiv.appendText('❌ ');
+            errorDiv.appendText(message);
+        };
+
+        const createActivityCard = (activity: any, artworkUrl: string | null, title: string, subtitle: string) => {
+            const card = document.createElement('div');
+            card.classList.add('discord-spotify');
+
+            // Artwork container
+            const artworkDiv = card.createEl('div', { cls: 'activity-artwork' });
+            if (artworkUrl) {
+                const img = artworkDiv.createEl('img', {
+                    attr: {
+                        src: artworkUrl,
+                        alt: '' // Will be set safely below
+                    }
+                });
+                // Set alt text safely using textContent (not directly in template)
+                img.alt = `${title} artwork`;
+
+                img.onload = () => {
+                    img.classList.add('loaded');
+                    artworkDiv.classList.add('has-image');
+                };
+
+                img.onerror = () => {
+                    img.remove();
+                };
+
+                if (img.complete && img.naturalWidth > 0) {
+                    img.classList.add('loaded');
+                    artworkDiv.classList.add('has-image');
+                }
+            }
+
+            // Info container
+            const infoDiv = card.createEl('div', { cls: 'spotify-info' });
+            const trackDiv = infoDiv.createEl('div', { cls: 'spotify-track' });
+            trackDiv.textContent = title;
+            const artistDiv = infoDiv.createEl('div', { cls: 'spotify-artist' });
+            artistDiv.textContent = subtitle;
+
+            // Controls container
+            const controlsDiv = card.createEl('div', { cls: 'spotify-controls' });
+            if (activity.timestamps && activity.timestamps.start) {
+                const timeDiv = controlsDiv.createEl('div', { cls: 'spotify-time' });
+                timeDiv.textContent = formatTime(Date.now() - activity.timestamps.start);
+            }
+
+            return card;
         };
 
         const updateUI = (user: any) => {
             const statusColor = getStatusColor(user.discord_status);
 
-            let activitiesHtml = '';
             currentActivities = [];
 
+            // Update the main card content
+            const mainContent = widget.querySelector('.discord-status-wrapper') || widget;
+            mainContent.empty();
+
+            const wrapper = mainContent.createEl('div', { cls: 'discord-status-wrapper' });
+
+            // Avatar container
+            const avatarDiv = wrapper.createEl('div', { cls: 'discord-avatar' });
+            const avatarImg = avatarDiv.createEl('img', {
+                attr: {
+                    src: `https://cdn.discordapp.com/avatars/${userId}/${user.discord_user.avatar}.png?size=128`,
+                    alt: '' // Will be set safely below
+                }
+            });
+            avatarImg.alt = `${user.discord_user.username}'s avatar`;
+
+            const statusIndicator = avatarDiv.createEl('div', {
+                cls: 'status-indicator',
+                attr: { style: `background-color: ${statusColor};` }
+            });
+
+            // Info container
+            const infoDiv = wrapper.createEl('div', { cls: 'discord-info' });
+            const usernameDiv = infoDiv.createEl('div', { cls: 'discord-username' });
+            usernameDiv.textContent = user.discord_user.display_name || user.discord_user.username;
+
+            const statusTextDiv = infoDiv.createEl('div', { cls: 'discord-status-text' });
+            statusTextDiv.textContent = user.discord_status.charAt(0).toUpperCase() + user.discord_status.slice(1);
+
+            // Custom status (type 4 activity)
+            const customStatusActivity = user.activities.find((a: any) => a.type === 4);
+            if (customStatusActivity?.state) {
+                const customStatusDiv = infoDiv.createEl('div', { cls: 'custom-status' });
+                customStatusDiv.textContent = customStatusActivity.state;
+            }
+
+            // Remove any existing activity cards
+            const existingActivities = widget.querySelectorAll('.discord-spotify');
+            existingActivities.forEach(card => card.remove());
+
+            // Add activity cards
             if (showActivity && user.activities && user.activities.length > 0) {
                 user.activities.forEach((activity: any) => {
                     const activityType = getActivityType(activity.type);
                     const artworkUrl = getArtworkUrl(activity);
 
-                    // For Spotify activities without separate spotify data, use the activity info
                     let title = activity.name;
                     let subtitle = `${activityType}${activity.details ? ` • ${activity.details}` : ''}${activity.state ? ` • ${activity.state}` : ''}`;
 
                     currentActivities.push(activity);
 
-                    activitiesHtml += `
-                        <div class="discord-spotify">
-                            <div class="activity-artwork ${artworkUrl ? '' : ''}">
-                                ${artworkUrl ? `<img src="${artworkUrl}" alt="${activity.name} artwork">` : ''}
-                            </div>
-                            <div class="spotify-info">
-                                <div class="spotify-track">${title}</div>
-                                <div class="spotify-artist">${subtitle}</div>
-                            </div>
-                            <div class="spotify-controls">
-                                ${activity.timestamps && activity.timestamps.start ? `
-                                    <div class="spotify-time">
-                                        ${formatTime(Date.now() - activity.timestamps.start)}
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>`;
+                    const card = createActivityCard(activity, artworkUrl, title, subtitle);
+                    widget.appendChild(card);
                 });
             }
 
@@ -197,79 +281,9 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
                     currentActivities.push(spotifyActivity);
                 }
 
-                activitiesHtml += `
-                    <div class="discord-spotify">
-                        <div class="activity-artwork ${artworkUrl ? '' : ''}">
-                            ${artworkUrl ? `<img src="${artworkUrl}" alt="${user.spotify.song} artwork">` : ''}
-                        </div>
-                        <div class="spotify-info">
-                            <div class="spotify-track">${user.spotify.song}</div>
-                            <div class="spotify-artist">by ${user.spotify.artist}</div>
-                        </div>
-                        <div class="spotify-controls">
-                            <div class="spotify-time">
-                                ${formatTime(Date.now() - user.spotify.timestamps.start)}
-                            </div>
-                        </div>
-                    </div>`;
-            }
-
-            // Update the main card content
-            const mainContent = widget.querySelector('.discord-status-wrapper') || widget;
-            mainContent.innerHTML = `
-                <div class="discord-status-wrapper">
-                    <div class="discord-avatar">
-                        <img src="https://cdn.discordapp.com/avatars/${userId}/${user.discord_user.avatar}.png?size=128"
-                             alt="${user.discord_user.username}'s avatar">
-                        <div class="status-indicator" style="background-color: ${statusColor};"></div>
-                    </div>
-                    <div class="discord-info">
-                        <div class="discord-username">
-                            ${user.discord_user.display_name || user.discord_user.username}
-                        </div>
-                        <div class="discord-status-text">
-                            ${user.discord_status.charAt(0).toUpperCase() + user.discord_status.slice(1)}
-                        </div>
-                        ${user.activities.find((a: any) => a.type === 4)?.state ?
-                            `<div class="custom-status">${user.activities.find((a: any) => a.type === 4).state}</div>` : ''}
-                    </div>
-                </div>`;
-
-            // Remove any existing activity cards
-            const existingActivities = widget.querySelectorAll('.discord-spotify');
-            existingActivities.forEach(card => card.remove());
-
-            // Add activity cards below if they exist
-            if (activitiesHtml) {
-                widget.insertAdjacentHTML('beforeend', activitiesHtml);
-
-                // Handle image loading for artwork
-                const artworkImages = widget.querySelectorAll('.activity-artwork img');
-                artworkImages.forEach((img: HTMLImageElement) => {
-                    if (img.src) {
-                        img.onload = () => {
-                            img.classList.add('loaded');
-                            const artwork = img.closest('.activity-artwork');
-                            if (artwork) {
-                                artwork.classList.add('has-image');
-                            }
-                        };
-
-                        img.onerror = () => {
-                            // If image fails to load, remove it and keep the placeholder
-                            img.remove();
-                        };
-
-                        // If image is already loaded (cached), handle it immediately
-                        if (img.complete && img.naturalWidth > 0) {
-                            img.classList.add('loaded');
-                            const artwork = img.closest('.activity-artwork');
-                            if (artwork) {
-                                artwork.classList.add('has-image');
-                            }
-                        }
-                    }
-                });
+                const subtitle = `by ${user.spotify.artist}`;
+                const card = createActivityCard(spotifyActivity || { timestamps: user.spotify.timestamps }, artworkUrl, user.spotify.song, subtitle);
+                widget.appendChild(card);
             }
 
             // Start activity timer updates if needed
