@@ -17,6 +17,7 @@ import { analytics } from "components/analytics/analytics";
 import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
 import { gymStats } from "components/gym/gymStats";
+import { progressBar } from "components/progress-bar/progressBar";
 
 // import { calendar } from "components/calendar/calendar";
 // import { map } from "components/map/map";
@@ -288,11 +289,12 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     timeline,
     reminders,
     widgetSpace,
+    progressBar,
 
     //gym group
     gymRoutineMenu,
     gymWorkoutTracker,
-    gymStats, 
+    gymStats,
 ];
 
 
