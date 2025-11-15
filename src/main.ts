@@ -130,8 +130,10 @@ export default class ComponentsPlugin extends Plugin {
                                 await Component.render(component, source, el, ctx, this.app, this.settings.componentSettings[component.keyName] || {});
                             } catch (error) {
                                 el.empty();
-                                const errorEl = el.createEl("pre", { text: `[${component.keyName}] Error:\n${error.message}` });
-                                errorEl.style.color = "var(--text-error)";
+                                el.createEl("pre", {
+                                    text: `[${component.keyName}] Error:\n${error.message}`,
+                                    cls: 'component-error'
+                                });
                                 console.error(`[${component.keyName}] Error:`, error);
                             }
                         }

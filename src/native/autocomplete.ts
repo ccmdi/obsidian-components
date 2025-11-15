@@ -63,21 +63,15 @@ export class ComponentAutoComplete extends EditorSuggest<ComponentSuggestion> {
 
         const title = container.createDiv({ cls: 'component-suggestion-title' });
         title.textContent = suggestion.displayText;
-        title.style.fontWeight = 'bold';
 
         if (suggestion.component.keyName !== suggestion.displayText) {
             const keyName = container.createDiv({ cls: 'component-suggestion-keyname' });
             keyName.textContent = suggestion.component.keyName;
-            keyName.style.fontSize = '0.9em';
-            keyName.style.color = 'var(--text-muted)';
         }
 
         if (suggestion.component.description) {
             const description = container.createDiv({ cls: 'component-suggestion-description' });
             description.textContent = suggestion.component.description;
-            description.style.fontSize = '0.85em';
-            description.style.color = 'var(--text-faint)';
-            description.style.marginTop = '2px';
         }
     }
 

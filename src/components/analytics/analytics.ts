@@ -1,7 +1,7 @@
 import { Component, ComponentInstance, ComponentAction } from "components";
 import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
 import { analyticsStyles } from "./styles";
-import { renderMarkdownLink } from "utils";
+import { renderMarkdownLinkToElement } from "utils";
 
 interface LinkData {
     file: string;
@@ -53,13 +53,15 @@ const renderAnalytics = async (
 
     try {
         const data = await analyzeVault(app, searchFolder);
-        const html = generateAnalyticsHTML(data, searchFolder, colors, showTitle);
-
-        el.innerHTML = html;
+        generateAnalyticsDOM(el, data, searchFolder, colors, showTitle);
 
     } catch (error) {
         console.error('Analytics error:', error);
-        el.innerHTML = `<div style="color: var(--text-error); padding: 12px;">Error generating analytics: ${error.message}</div>`;
+        const errorDiv = el.createEl('div', {
+            attr: { style: 'color: var(--text-error); padding: 12px;' }
+        });
+        errorDiv.appendText('Error generating analytics: ');
+        errorDiv.appendText(error.message);
     }
 };
 
@@ -186,7 +188,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
     };
 }
 
-function generateAnalyticsHTML(data: AnalyticsData, searchFolder: string, colors: string = "colorful", showTitle: boolean = true): string {
+function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, colors: string = "colorful", showTitle: boolean = true): void {
     const {
         totalPages, islands, wellConnected, substantialNotes, totalInternalLinks,
         totalExternalLinks, recentlyActive, staleNotes, taggedNotes, totalTags,
@@ -227,95 +229,111 @@ function generateAnalyticsHTML(data: AnalyticsData, searchFolder: string, colors
         }
     };
 
-    return `
-        ${showTitle ? `<h2>${searchFolder ? `Analytics: ${searchFolder}` : "Vault Analytics"}</h2>` : ''}
+    const createCard = (container: HTMLElement, titleText: string, titleColor: string, mainValue: string, mainSuffix: string, subtitleText: string) => {
+        const card = container.createEl('div', {
+            attr: { style: `${getCardStyle()} ${getBorderStyle(titleColor)}` }
+        });
+        const title = card.createEl('strong', { attr: { style: getTitleStyle(titleColor) }, text: titleText });
+        card.appendChild(document.createElement('br'));
+        const valueSpan = card.createEl('span', {
+            attr: { style: 'font-size: 1.4em; font-weight: 600;' },
+            text: mainValue
+        });
+        card.appendText(` ${mainSuffix}`);
+        card.appendChild(document.createElement('br'));
+        card.createEl('small', {
+            attr: { style: 'color: var(--text-muted);' },
+            text: subtitleText
+        });
+        return card;
+    };
 
-        <div class="vault-analytics-grid">
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-accent)')}">
-                <strong style="${getTitleStyle('var(--color-accent)')}">CONNECTION HEALTH</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${Math.round((totalPages - islands.length) / totalPages * 100)}%</span> connected<br>
-                <small style="color: var(--text-muted);">${islands.length} islands, ${wellConnected.length} bridges</small>
-            </div>
+    // Title
+    if (showTitle) {
+        el.createEl('h2', { text: searchFolder ? `Analytics: ${searchFolder}` : "Vault Analytics" });
+    }
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-green)')}">
-                <strong style="${getTitleStyle('var(--color-green)')}">KNOWLEDGE DEPTH</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${totalPages > 0 ? Math.round(substantialNotes / totalPages * 100) : 0}%</span> substantial<br>
-                <small style="color: var(--text-muted);">${substantialNotes} notes >1k chars</small>
-            </div>
+    // Grid
+    const grid = el.createEl('div', { cls: 'vault-analytics-grid' });
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-purple)')}">
-                <strong style="${getTitleStyle('var(--color-purple)')}">INTERNAL LINKS</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${(totalInternalLinks / totalPages).toFixed(1)}</span> per note<br>
-                <small style="color: var(--text-muted);">${totalInternalLinks} note-to-note</small>
-            </div>
+    createCard(grid, 'CONNECTION HEALTH', 'var(--color-accent)',
+        `${Math.round((totalPages - islands.length) / totalPages * 100)}%`, 'connected',
+        `${islands.length} islands, ${wellConnected.length} bridges`);
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-blue)')}">
-                <strong style="${getTitleStyle('var(--color-blue)')}">EXTERNAL LINKS</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${(totalExternalLinks / totalPages).toFixed(1)}</span> per note<br>
-                <small style="color: var(--text-muted);">${totalExternalLinks} outside links</small>
-            </div>
+    createCard(grid, 'KNOWLEDGE DEPTH', 'var(--color-green)',
+        `${totalPages > 0 ? Math.round(substantialNotes / totalPages * 100) : 0}%`, 'substantial',
+        `${substantialNotes} notes >1k chars`);
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-orange)')}">
-                <strong style="${getTitleStyle('var(--color-orange)')}">FRESHNESS</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${Math.round(recentlyActive / totalPages * 100)}%</span> active<br>
-                <small style="color: var(--text-muted);">${recentlyActive} updated this week</small>
-            </div>
+    createCard(grid, 'INTERNAL LINKS', 'var(--color-purple)',
+        `${(totalInternalLinks / totalPages).toFixed(1)}`, 'per note',
+        `${totalInternalLinks} note-to-note`);
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-red)')}">
-                <strong style="${getTitleStyle('var(--color-red)')}">MAINTENANCE</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${Math.round(staleNotes / totalPages * 100)}%</span> stale<br>
-                <small style="color: var(--text-muted);">${staleNotes} notes >90 days old</small>
-            </div>
+    createCard(grid, 'EXTERNAL LINKS', 'var(--color-blue)',
+        `${(totalExternalLinks / totalPages).toFixed(1)}`, 'per note',
+        `${totalExternalLinks} outside links`);
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-yellow)')}">
-                <strong style="${getTitleStyle('var(--color-yellow)')}">ORGANIZATION</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${Math.round(taggedNotes / totalPages * 100)}%</span> tagged<br>
-                <small style="color: var(--text-muted);">${totalTags} tags total</small>
-            </div>
+    createCard(grid, 'FRESHNESS', 'var(--color-orange)',
+        `${Math.round(recentlyActive / totalPages * 100)}%`, 'active',
+        `${recentlyActive} updated this week`);
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-cyan)')}">
-                <strong style="${getTitleStyle('var(--color-cyan)')}">CONTENT QUALITY</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${notesWithContent.length > 0 ? Math.round(developedNotes / notesWithContent.length * 100) : 0}%</span> developed<br>
-                <small style="color: var(--text-muted);">${shortNotes} stub notes <200 chars</small>
-            </div>
+    createCard(grid, 'MAINTENANCE', 'var(--color-red)',
+        `${Math.round(staleNotes / totalPages * 100)}%`, 'stale',
+        `${staleNotes} notes >90 days old`);
 
-            <div style="${getCardStyle()} ${getBorderStyle('var(--color-pink)')}">
-                <strong style="${getTitleStyle('var(--color-pink)')}">KNOWLEDGE SIZE</strong><br>
-                <span style="font-size: 1.4em; font-weight: 600;">${totalPages}</span> notes<br>
-                <small style="color: var(--text-muted);">${Math.round(totalSize / 1000)}k chars, ${Math.round(avgSize)} avg</small>
-            </div>
-        </div>
+    createCard(grid, 'ORGANIZATION', 'var(--color-yellow)',
+        `${Math.round(taggedNotes / totalPages * 100)}%`, 'tagged',
+        `${totalTags} tags total`);
 
-        ${generateSectionHTML('Authorities', authorities.slice(0, 3), (a) => `[[${a.link}]] (${a.inlinks})`)}
-        ${generateSectionHTML('Hubs', hubs.slice(0, 3), (h) => `[[${h.link}]] (${h.internalOutlinks})`)}
-        ${generateSectionHTML('Bridges', wellConnected.slice(0, 3), (w) => `[[${w.link}]] (${w.inlinks}↔${w.internalOutlinks})`)}
-        ${generateSectionHTML('Islands', islands.slice(0, 3), (i) => `[[${i.link}]]`)}
-        ${generateSectionHTML('Dead-ends', deadEnds.slice(0, 3), (d) => `[[${d.link}]] (${d.inlinks}→)`)}
-        ${generateSectionHTML('Orphans', orphans.slice(0, 3), (o) => `[[${o.link}]] (→${o.outlinks})`)}
-        ${generateMissingLinksHTML(topMissingLinks)}
-    `;
+    createCard(grid, 'CONTENT QUALITY', 'var(--color-cyan)',
+        `${notesWithContent.length > 0 ? Math.round(developedNotes / notesWithContent.length * 100) : 0}%`, 'developed',
+        `${shortNotes} stub notes <200 chars`);
+
+    createCard(grid, 'KNOWLEDGE SIZE', 'var(--color-pink)',
+        `${totalPages}`, 'notes',
+        `${Math.round(totalSize / 1000)}k chars, ${Math.round(avgSize)} avg`);
+
+    // Sections
+    generateSectionDOM(el, 'Authorities', authorities.slice(0, 3), (a) => `[[${a.link}]] (${a.inlinks})`);
+    generateSectionDOM(el, 'Hubs', hubs.slice(0, 3), (h) => `[[${h.link}]] (${h.internalOutlinks})`);
+    generateSectionDOM(el, 'Bridges', wellConnected.slice(0, 3), (w) => `[[${w.link}]] (${w.inlinks}↔${w.internalOutlinks})`);
+    generateSectionDOM(el, 'Islands', islands.slice(0, 3), (i) => `[[${i.link}]]`);
+    generateSectionDOM(el, 'Dead-ends', deadEnds.slice(0, 3), (d) => `[[${d.link}]] (${d.inlinks}→)`);
+    generateSectionDOM(el, 'Orphans', orphans.slice(0, 3), (o) => `[[${o.link}]] (→${o.outlinks})`);
+    generateMissingLinksDOM(el, topMissingLinks);
 }
 
-function generateSectionHTML<T>(title: string, items: T[], formatter: (item: T) => string): string {
-    if (items.length === 0) return '';
+function generateSectionDOM<T>(el: HTMLElement, title: string, items: T[], formatter: (item: T) => string): void {
+    if (items.length === 0) return;
 
-    const formattedItems = items.map(item => {
+    const p = el.createEl('p');
+    p.createEl('strong', { text: `${title}: ` });
+
+    items.forEach((item, index) => {
+        if (index > 0) {
+            p.appendText(' • ');
+        }
         const text = formatter(item);
-        return renderMarkdownLink(text);
-    }).join(' • ');
-
-    return `<p><strong>${title}:</strong> ${formattedItems}</p>`;
+        renderMarkdownLinkToElement(text, p);
+    });
 }
 
-function generateMissingLinksHTML(topMissingLinks: [string, number][]): string {
-    if (topMissingLinks.length === 0) return '';
+function generateMissingLinksDOM(el: HTMLElement, topMissingLinks: [string, number][]): void {
+    if (topMissingLinks.length === 0) return;
 
-    const missingLinksFormatted = topMissingLinks.map(([name, count]) => {
+    const p = el.createEl('p');
+    p.createEl('strong', { text: 'Missing Notes: ' });
+
+    topMissingLinks.forEach(([name, count], index) => {
+        if (index > 0) {
+            p.appendText(' • ');
+        }
         const searchQuery = `/\\[\\[${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]\\]/`;
-        return `<a href="obsidian://search?query=${encodeURIComponent(searchQuery)}">${name}</a> (${count})`;
-    }).join(' • ');
-
-    return `<p><strong>Missing Notes:</strong> ${missingLinksFormatted}</p>`;
+        const link = p.createEl('a', {
+            attr: { href: `obsidian://search?query=${encodeURIComponent(searchQuery)}` },
+            text: name
+        });
+        p.appendText(` (${count})`);
+    });
 }
 
 export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {

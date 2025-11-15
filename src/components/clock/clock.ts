@@ -52,16 +52,10 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
         const showSeconds = parseBoolean(args.showSeconds, true);
         const showDate = parseBoolean(args.showDate, false);
 
-        el.style.textAlign = 'center';
-        el.style.maxWidth = '100%';
-        el.style.width = 'fit-content';
-        el.style.margin = '0 auto';
-        el.style.padding = '0.25em';
+        el.addClass('clock-container');
 
         const createDigitalClock = () => {
-            el.style.fontSize = '2em';
-            el.style.fontFamily = 'monospace';
-            el.style.fontWeight = 'bold';
+            el.addClass('clock-digital');
 
             const updateDigital = () => {
                 const now = new Date();
@@ -212,8 +206,24 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
         };
 
         const createBinaryClock = () => {
-            el.style.fontFamily = 'monospace';
-            el.style.fontSize = '1.2em';
+            el.addClass('clock-binary');
+
+            const createBinaryRow = (label: string, value: number) => {
+                const row = el.createEl('div');
+                row.appendText(`${label}: `);
+                const binary = value.toString(2).padStart(8, '0');
+                for (const bit of binary) {
+                    const span = row.createEl('span', {
+                        attr: {
+                            style: `color: ${bit === '1' ? 'var(--text-accent)' : 'var(--text-muted)'}; font-weight: bold;`
+                        },
+                        text: bit
+                    });
+                }
+                return row;
+            };
+
+            let hoursRow: HTMLElement, minutesRow: HTMLElement, secondsRow: HTMLElement | null = null;
 
             const updateBinary = () => {
                 const now = new Date();
@@ -221,33 +231,20 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
                 const minutes = now.getMinutes();
                 const seconds = now.getSeconds();
 
-                const toBinary = (num: number, padding: number) =>
-                    num.toString(2).padStart(padding, '0').split('').map(bit =>
-                        `<span style="color: ${bit === '1' ? 'var(--text-accent)' : 'var(--text-muted)'}; font-weight: bold;">${bit}</span>`
-                    ).join('');
-
-                let html = `
-                    <div>H: ${toBinary(hours, 8)}</div>
-                    <div>M: ${toBinary(minutes, 8)}</div>
-                `;
-
+                // Clear and recreate rows
+                el.empty();
+                hoursRow = createBinaryRow('H', hours);
+                minutesRow = createBinaryRow('M', minutes);
                 if (showSeconds) {
-                    html += `<div>S: ${toBinary(seconds, 8)}</div>`;
+                    secondsRow = createBinaryRow('S', seconds);
                 }
-
-                el.innerHTML = html;
             };
 
             ComponentInstance.createUpdateLoop(instance, updateBinary, 1000, true);
         };
 
         const createMatrixClock = () => {
-            el.style.fontFamily = 'Courier New, monospace';
-            el.style.backgroundColor = 'black';
-            el.style.color = '#00ff00';
-            el.style.padding = '10px';
-            el.style.borderRadius = '5px';
-            el.style.fontSize = '1.5em';
+            el.addClass('clock-matrix');
 
             const updateMatrix = () => {
                 const now = new Date();
@@ -263,11 +260,19 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
                 const chars = '01';
                 const noise = Array(20).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join(' ');
 
-                el.innerHTML = `
-                    <div style="opacity: 0.3; font-size: 0.8em;">${noise}</div>
-                    <div style="text-shadow: 0 0 10px #00ff00;">${timeStr}</div>
-                    <div style="opacity: 0.3; font-size: 0.8em;">${noise.split('').reverse().join('')}</div>
-                `;
+                el.empty();
+                el.createEl('div', {
+                    attr: { style: 'opacity: 0.3; font-size: 0.8em;' },
+                    text: noise
+                });
+                el.createEl('div', {
+                    attr: { style: 'text-shadow: 0 0 10px #00ff00;' },
+                    text: timeStr
+                });
+                el.createEl('div', {
+                    attr: { style: 'opacity: 0.3; font-size: 0.8em;' },
+                    text: noise.split('').reverse().join('')
+                });
             };
 
             ComponentInstance.createUpdateLoop(instance, updateMatrix, 1000, true);

@@ -164,8 +164,8 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
                         ? 'rgba(75, 192, 192, 0.8)' 
                         : 'rgba(54, 162, 235, 0.8)')
                 : 'rgba(54, 162, 235, 0.8)';
-            
-            chartContainer.innerHTML = '';
+
+            chartContainer.empty();
             const canvas = el.createEl('canvas');
             chartContainer.append(canvas);
             

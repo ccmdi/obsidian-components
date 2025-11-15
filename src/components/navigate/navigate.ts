@@ -63,8 +63,6 @@ const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: Markdow
     };
 
     const container = el.createEl('div', { cls: 'daily-nav-container' });
-    container.style.display = 'flex';
-    container.style.gap = '0';
 
     const yesterdayBtn = createNavigationButton(-1, 'Yesterday');
     const tomorrowBtn = createNavigationButton(1, 'Tomorrow');

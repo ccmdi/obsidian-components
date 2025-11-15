@@ -126,7 +126,11 @@ export class MapSettingTab extends PluginSettingTab {
             margin-right: 12px;
             font-weight: 500;
         `;
-        tagLabel.innerHTML = `#${tag} <span style="color: var(--text-muted); font-size: 12px;">#${index + 1}</span>`;
+        tagLabel.appendText(`#${tag} `);
+        tagLabel.createEl('span', {
+            attr: { style: 'color: var(--text-muted); font-size: 12px;' },
+            text: `#${index + 1}`
+        });
 
         // Color input
         const colorInput = settingEl.createEl('input', { type: 'color' });

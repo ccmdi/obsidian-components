@@ -206,8 +206,8 @@ export const map: Component<['query', 'latKey', 'lngKey', 'titleKey', 'descripti
         let isDestroyed = false;
 
         const updateTooltip = async (point: MapPoint, x: number, y: number) => {
-            tooltip.innerHTML = '';
-        
+            tooltip.empty();
+
             const renderPromises: Promise<void>[] = [];
         
             if (point.cover && point.file) {
