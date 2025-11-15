@@ -129,6 +129,8 @@ export interface ComponentSetting {
     options?: { value: string; text: string }[];
 }
 
+export type ComponentSettingsData = Record<string, string | number | boolean>;
+
 export enum ComponentAction {
     READ = 'READ',
     WRITE = 'WRITE',
@@ -155,7 +157,7 @@ export interface Component<TArgs extends readonly string[]> {
     description?: string;
     args: Partial<Record<TArgs[number], ComponentArg>>;
     aliases?: string[];
-    render: (args: ComponentArgs, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: Record<string, any>) => Promise<void>;
+    render: (args: ComponentArgs, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: ComponentSettingsData) => Promise<void>;
     refresh?: boolean;
     isMountable: boolean;
     settings?: {
@@ -202,7 +204,7 @@ export namespace Component {
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
         app: App,
-        componentSettings?: Component<readonly string[]>['settings']
+        componentSettings?: ComponentSettingsData
     ): Promise<void> {
         const originalArgs = parseArguments(source);
         let args = { ...originalArgs };

@@ -1,12 +1,12 @@
-import { Component, ComponentArgs, ComponentAction, ComponentInstance } from "components";
+import { Component, ComponentArgs, ComponentAction, ComponentInstance, ComponentSettingsData } from "components";
 import { formatDate, useTemplate } from "utils";
 import navigateStyles from "./styles";
 import { App, MarkdownPostProcessorContext } from "obsidian";
 
-const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings: Record<string, any> = {}) => {
+const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings: ComponentSettingsData = {}) => {
     const folderPath = args.folder || ctx.sourcePath?.split('/').slice(0, -1).join('/') || '';
     const templatePath = args.template;
-    const dateFormat = args.dateFormat || componentSettings.dateFormat;
+    const dateFormat = args.dateFormat || (componentSettings.dateFormat as string | undefined);
 
     const initiator = app.workspace.getActiveFile();
     if (!initiator) {
