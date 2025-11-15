@@ -18,6 +18,8 @@ Adds custom components to Obsidian notes and sidebars.
 * **Timeline** - timeline of periodic notes
 * **Widget space** - a customizable container for multiple components
 
+> The Map component has been replaced by its own [dedicated plugin](https://github.com/ccmdi/obsidian-map-plus). 
+
 ## Usage
 The easiest way to get started is by typing a codeblock and whichever component you want to use inside a note (e.g. \`\`\`reminders). This will prompt autocomplete by default, which will guide you through all the possible arguments for that component.
 
@@ -37,5 +39,3 @@ Some components make use of templates, and thus integrate with the very popular 
 
 [^1]: If you want to be more declarative or if there is future namespace collision.
 [^2]: It works now, but a few components require the Node API.
-
-> **Note:** The Map component has been replaced by its own dedicated plugin: [Obsidian Map Plus](https://github.com/ccmdi/obsidian-map-plus) 
