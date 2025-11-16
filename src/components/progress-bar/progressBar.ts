@@ -46,11 +46,9 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		app: App,
 		instance: ComponentInstance,
 	) => {
-		// Get progress value and ensure it's between 0 and 100
 		let progress = parseFloat(args.progress) || 0;
 		progress = Math.max(0, Math.min(100, progress));
 
-		// Get other parameters
 		const height = args.height;
 		const backgroundColor = args.backgroundColor;
 		const barColor = args.barColor;
@@ -58,7 +56,6 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		const borderRadius = args.borderRadius;
 		const showLabel = args.showLabel === 'true';
 
-		// Create container
 		const container = el.createDiv({ cls: 'progress-bar-container' });
 		container.style.position = 'relative';
 		container.style.width = '100%';
@@ -67,7 +64,6 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		container.style.borderRadius = `${borderRadius}px`;
 		container.style.overflow = 'hidden';
 
-		// Create progress fill
 		const progressFill = container.createDiv({ cls: 'progress-bar-fill' });
 		progressFill.style.position = 'absolute';
 		progressFill.style.left = '0';
@@ -76,14 +72,12 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		progressFill.style.height = '100%';
 		progressFill.style.transition = 'width 0.5s ease-in-out';
 
-		// Check if barColor is a CSS class or a color value
 		if (barColor.startsWith('var(') || barColor.startsWith('#') || barColor.startsWith('rgb')) {
 			progressFill.style.backgroundColor = barColor;
 		} else {
 			progressFill.style.backgroundColor = barColor;
 		}
 
-		// Create label overlay
 		if (showLabel) {
 			const labelOverlay = container.createDiv({ cls: 'progress-bar-label' });
 			labelOverlay.style.position = 'absolute';
