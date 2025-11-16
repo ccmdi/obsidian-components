@@ -178,7 +178,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
             spotifyTimes.forEach((timeElement, index) => {
                 if (currentActivities[index] && currentActivities[index].timestamps?.start) {
-                    const elapsed = Date.now() - currentActivities[index].timestamps.start;
+                    const elapsed = Date.now() - (currentActivities[index].timestamps?.start || 0);
                     (timeElement as HTMLElement).textContent = formatTime(elapsed);
                 }
             });

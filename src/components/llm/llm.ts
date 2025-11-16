@@ -235,7 +235,7 @@ The user can ask you questions about this note, request summaries, or general as
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
+                        'x-api-key': String(apiKey),
                         'anthropic-version': '2023-06-01',
                         'Content-Length': Buffer.byteLength(postData)
                     }

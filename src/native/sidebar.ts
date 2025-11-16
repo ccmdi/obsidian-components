@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext } from "obsidian";
+import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext, ViewStateResult } from "obsidian";
 import { COMPONENTS, Component, componentInstances } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 
@@ -73,7 +73,7 @@ export default class ComponentSidebarView extends ItemView {
         );
     }
 
-    async setState(state: { componentKey?: string; args?: Record<string, string> }, result: unknown) {
+    async setState(state: { componentKey?: string; args?: Record<string, string> }, result: ViewStateResult) {
         await super.setState(state, result);
 
         if (state?.componentKey) {
@@ -116,7 +116,8 @@ export default class ComponentSidebarView extends ItemView {
                 sourcePath: activeFile?.path || '',
                 frontmatter: activeFile ? (this.app.metadataCache.getFileCache(activeFile)?.frontmatter || {}) : {},
                 addChild: () => {},
-                getSectionInfo: () => null
+                getSectionInfo: () => null,
+                docId: ''
             } as MarkdownPostProcessorContext;
 
             await Component.render(
