@@ -115,10 +115,10 @@ const renderPropertyAdder = async (
     el.appendChild(container);
 };
 
-export const propertyAdder: Component<['property', 'action', 'value', 'buttonText', 'increment']> = {
-    name: 'Property Adder',
+export const propertyButton: Component<['property', 'action', 'value', 'buttonText', 'increment']> = {
+    name: 'Property Button',
     description: 'Add or modify frontmatter properties',
-    keyName: 'property-adder',
+    keyName: 'property-button',
     args: {
         property: {
             description: 'The property name to modify',
@@ -134,7 +134,7 @@ export const propertyAdder: Component<['property', 'action', 'value', 'buttonTex
         },
         buttonText: {
             description: 'Text to display on the button',
-            default: 'Add Property'
+            default: 'Add property'
         },
         increment: {
             description: 'Amount to increment by (for increment action)',
@@ -145,5 +145,6 @@ export const propertyAdder: Component<['property', 'action', 'value', 'buttonTex
     render: renderPropertyAdder,
     refresh: false,
     does: [ComponentAction.READ, ComponentAction.WRITE],
+    aliases: ['property-adder', 'prop-button'],
     styles: propertyAdderStyles
 };
