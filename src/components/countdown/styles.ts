@@ -1,4 +1,4 @@
-export const countdownStyles = `
+export const countdownStyles = /*css*/`
 .countdown-container {
 	display: flex;
 	flex-direction: column;

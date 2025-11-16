@@ -1,5 +1,5 @@
 import type { App, MarkdownPostProcessorContext } from 'obsidian';
-import { MarkdownRenderer, TFile } from 'obsidian';
+import { MarkdownRenderer, MarkdownRenderChild, TFile } from 'obsidian';
 import type { Component } from 'components';
 import { ComponentInstance, ComponentAction } from 'components';
 import { noteEmbedStyles } from './styles';
@@ -62,13 +62,18 @@ export const noteEmbed: Component<['target']> = {
 		// Read the file content
 		const content = await app.vault.read(file);
 
+		// Create a MarkdownRenderChild for proper lifecycle management
+		// This allows nested components, wikilinks, embeds, etc. to work properly
+		const embedComponent = new MarkdownRenderChild(container);
+		ctx.addChild(embedComponent);
+
 		// Use Obsidian's native markdown renderer to render the content
 		// This provides full Obsidian context including wikilinks, embeds, etc.
 		await MarkdownRenderer.renderMarkdown(
 			content,
 			container,
 			file.path,
-			instance as any // MarkdownRenderer expects a Component, but ComponentInstance works
+			embedComponent
 		);
 	},
 };

@@ -81,7 +81,8 @@ export const countdown: Component<['date', 'name', 'showTime']> = {
 		updateCountdown();
 
 		// Update every second if showing time, otherwise every minute
+		// Sync to interval for cleaner updates (like the clock component)
 		const updateInterval = showTime ? 1000 : 60000;
-		ComponentInstance.createUpdateLoop(instance, updateCountdown, updateInterval);
+		ComponentInstance.createUpdateLoop(instance, updateCountdown, updateInterval, true);
 	},
 };

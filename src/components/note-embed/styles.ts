@@ -1,4 +1,4 @@
-export const noteEmbedStyles = `
+export const noteEmbedStyles = /*css*/`
 .note-embed-container {
 	padding: 1rem;
 	border: 1px solid var(--background-modifier-border);
