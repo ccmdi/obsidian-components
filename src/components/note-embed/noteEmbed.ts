@@ -75,5 +75,34 @@ export const noteEmbed: Component<['target']> = {
 			file.path,
 			embedComponent
 		);
+
+		// Wait for DOM to settle before showing the container (prevents layout shift)
+		const waitForSettle = new Promise<void>((resolve) => {
+			let timeoutId: NodeJS.Timeout;
+
+			const observer = new MutationObserver(() => {
+				// Reset timeout every time DOM changes
+				clearTimeout(timeoutId);
+				timeoutId = setTimeout(() => {
+					observer.disconnect();
+					resolve();
+				}, 50); // No mutations for 50ms = settled
+			});
+
+			observer.observe(container, {
+				childList: true,
+				subtree: true,
+				attributes: true
+			});
+
+			// Trigger initial timeout in case there are no mutations
+			timeoutId = setTimeout(() => {
+				observer.disconnect();
+				resolve();
+			}, 50);
+		});
+
+		await waitForSettle;
+		container.addClass('note-embed-ready');
 	},
 };

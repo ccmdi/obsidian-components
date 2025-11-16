@@ -5,6 +5,12 @@ export const noteEmbedStyles = /*css*/`
 	border-radius: 4px;
 	background: var(--background-secondary);
 	overflow: auto;
+	opacity: 0;
+	transition: opacity 0.15s ease-in;
+}
+
+.note-embed-container.note-embed-ready {
+	opacity: 1;
 }
 
 .note-embed-error {
