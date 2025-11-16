@@ -1,7 +1,6 @@
 import { Component, ComponentArgs, ComponentAction, ComponentInstance } from "components";
 import propertyAdderStyles from "./styles";
 import { App, MarkdownPostProcessorContext } from "obsidian";
-import { resolveSpecialVariables } from "utils";
 
 const renderPropertyAdder = async (
     args: ComponentArgs<['property', 'action', 'value', 'buttonText', 'increment']>,
@@ -58,9 +57,6 @@ const renderPropertyAdder = async (
 
         try {
             await app.fileManager.processFrontMatter(currentFile, (frontmatter) => {
-                // Resolve special variables dynamically at click time
-                const resolvedValue = resolveSpecialVariables({ value })['value'];
-
                 switch (action) {
                     case 'push':
                         // Add to array
@@ -70,7 +66,7 @@ const renderPropertyAdder = async (
                         if (!Array.isArray(frontmatter[propertyName])) {
                             frontmatter[propertyName] = [frontmatter[propertyName]];
                         }
-                        frontmatter[propertyName].push(resolvedValue);
+                        frontmatter[propertyName].push(value);
                         break;
 
                     case 'pushUnique':
@@ -81,8 +77,8 @@ const renderPropertyAdder = async (
                         if (!Array.isArray(frontmatter[propertyName])) {
                             frontmatter[propertyName] = [frontmatter[propertyName]];
                         }
-                        if (!frontmatter[propertyName].includes(resolvedValue)) {
-                            frontmatter[propertyName].push(resolvedValue);
+                        if (!frontmatter[propertyName].includes(value)) {
+                            frontmatter[propertyName].push(value);
                         }
                         break;
 
@@ -97,7 +93,7 @@ const renderPropertyAdder = async (
 
                     case 'set':
                         // Set value directly
-                        frontmatter[propertyName] = resolvedValue;
+                        frontmatter[propertyName] = value;
                         break;
 
                     case 'toggle':
