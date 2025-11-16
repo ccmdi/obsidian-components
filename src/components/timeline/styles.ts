@@ -1,4 +1,4 @@
-export const timelineStyles = `
+export const timelineStyles = /*css*/`
     .timeline-container .dropdown-button::after {
     content: '▼';
     font-size: 0.8em;

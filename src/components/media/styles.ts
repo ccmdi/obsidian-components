@@ -1,4 +1,5 @@
-export const mediaStyles = `/* Media component styles */
+export const mediaStyles = /*css*/`
+    /* Media component styles */
     .media-container {
         position: relative;
         border-radius: 8px;

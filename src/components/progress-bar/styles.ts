@@ -1,4 +1,4 @@
-export const progressBarStyles = `
+export const progressBarStyles = /*css*/`
 .progress-bar-container {
 	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }

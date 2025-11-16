@@ -1,4 +1,4 @@
-export const gymRoutineMenuStyles = `
+export const gymRoutineMenuStyles = /*css*/`
 /* Fix empty cell height issues */
 td > span > ul {
     margin: 0 !important;

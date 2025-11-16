@@ -2,7 +2,7 @@ import { Component, ComponentAction, ComponentGroup, ComponentInstance } from "c
 import { gymRoutineMenuStyles } from "./styles";
 import { matchesQuery } from "utils";
 
-export const gymStats: Component<[]> = {
+export const gymStats: Component<['query']> = {
     keyName: 'gym-stats',
     name: 'Gym Stats',
     description: 'Display stats for your workouts',
