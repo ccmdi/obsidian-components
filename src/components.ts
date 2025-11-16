@@ -18,6 +18,7 @@ import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
 import { gymStats } from "components/gym/gymStats";
 import { progressBar } from "components/progress-bar/progressBar";
+import { propertyAdder } from "components/property-adder/propertyAdder";
 
 // import { llm } from "components/llm/llm";
 
@@ -289,6 +290,7 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     reminders,
     widgetSpace,
     progressBar,
+    propertyAdder,
 
     //gym group
     gymRoutineMenu,
