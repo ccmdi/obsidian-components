@@ -1,4 +1,4 @@
-import { Component, ComponentInstance, ComponentAction } from "components";
+import { Component, ComponentInstance, ComponentAction, ComponentSettingsData } from "components";
 import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
 import { analyticsStyles } from "./styles";
 import { renderMarkdownLinkToElement } from "utils";
@@ -45,10 +45,10 @@ const renderAnalytics = async (
     ctx: MarkdownPostProcessorContext,
     app: App,
     instance: ComponentInstance,
-    componentSettings: Record<string, any> = {}
+    componentSettings: ComponentSettingsData = {}
 ): Promise<void> => {
     const searchFolder = args.searchFolder || "";
-    const colors = args.colors || componentSettings.colors;
+    const colors = args.colors || (componentSettings.colors as string | undefined);
     const showTitle = args.showTitle === 'true' && componentSettings.showTitle !== false;
 
     try {

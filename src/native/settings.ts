@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
 import { COMPONENTS, Component, ComponentAction, ComponentSetting, ComponentGroup, GROUPS, ComponentGroupMetadata } from "components";
 import ComponentsPlugin from "main";
 import { renderExternalLinkToElement } from "utils";
@@ -60,7 +60,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
         // Autocomplete modal sub-option (will be updated dynamically)
         let modalSetting: Setting;
-        let modalToggle: any;
+        let modalToggle: ToggleComponent;
 
         // Autocomplete setting
         new Setting(containerEl)
@@ -122,7 +122,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
             );
     }
 
-    updateComponentClickabilityInPlace(component: any, nameEl: HTMLElement, isEnabled: boolean): void {
+    updateComponentClickabilityInPlace(component: Component<readonly string[]>, nameEl: HTMLElement, isEnabled: boolean): void {
         const hasSettings = component.settings && Object.keys(component.settings).length > 0;
         const hasArgs = Component.hasArgs(component);
         const hasSubmenu = hasSettings || hasArgs;

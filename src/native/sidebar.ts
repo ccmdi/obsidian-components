@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext } from "obsidian";
 import { COMPONENTS, Component, componentInstances } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 
@@ -73,7 +73,7 @@ export default class ComponentSidebarView extends ItemView {
         );
     }
 
-    async setState(state: any, result: any) {
+    async setState(state: { componentKey?: string; args?: Record<string, string> }, result: unknown) {
         await super.setState(state, result);
 
         if (state?.componentKey) {
@@ -112,16 +112,18 @@ export default class ComponentSidebarView extends ItemView {
 
             // Use active note context for components that need it
             const activeFile = this.app.workspace.getActiveFile();
-            const mockContext = {
+            const mockContext: MarkdownPostProcessorContext = {
                 sourcePath: activeFile?.path || '',
-                frontmatter: activeFile ? (this.app.metadataCache.getFileCache(activeFile)?.frontmatter || {}) : {}
-            };
+                frontmatter: activeFile ? (this.app.metadataCache.getFileCache(activeFile)?.frontmatter || {}) : {},
+                addChild: () => {},
+                getSectionInfo: () => null
+            } as MarkdownPostProcessorContext;
 
             await Component.render(
                 this.currentComponent,
                 argsSource,
                 container as HTMLElement,
-                mockContext as any,
+                mockContext,
                 this.app,
                 this.plugin.settings.componentSettings[this.currentComponent.keyName] || {}
             );

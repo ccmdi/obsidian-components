@@ -2,6 +2,48 @@ import { Component, ComponentAction, ComponentInstance } from "components";
 import { discordStatusStyles } from './styles';
 import { parseBoolean } from "utils";
 
+interface DiscordActivityAssets {
+    large_image?: string;
+    large_text?: string;
+    small_image?: string;
+    small_text?: string;
+}
+
+interface DiscordActivityTimestamps {
+    start?: number;
+    end?: number;
+}
+
+interface DiscordActivity {
+    type: number;
+    name: string;
+    details?: string;
+    state?: string;
+    assets?: DiscordActivityAssets;
+    application_id?: string;
+    timestamps?: DiscordActivityTimestamps;
+}
+
+interface DiscordUser {
+    username: string;
+    display_name?: string;
+    avatar: string;
+    id: string;
+}
+
+interface SpotifyData {
+    song: string;
+    artist: string;
+    timestamps?: DiscordActivityTimestamps;
+}
+
+interface LanyardData {
+    discord_user: DiscordUser;
+    discord_status: string;
+    activities: DiscordActivity[];
+    spotify?: SpotifyData;
+}
+
 export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hideProfile']> = {
     name: 'Discord Status',
     keyName: 'discord-status',
@@ -70,7 +112,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         let heartbeatInterval: NodeJS.Timeout;
         let activityUpdateInterval: NodeJS.Timeout;
         let isDestroyed = false;
-        let currentActivities: any[] = [];
+        let currentActivities: DiscordActivity[] = [];
 
         const getStatusColor = (status: string) => {
             switch (status) {
@@ -93,7 +135,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             }
         };
 
-        const getArtworkUrl = (activity: any) => {
+        const getArtworkUrl = (activity: DiscordActivity) => {
             if (!activity.assets) return null;
 
             const largeImage = activity.assets.large_image;
@@ -162,7 +204,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             errorDiv.appendText(message);
         };
 
-        const createActivityCard = (activity: any, artworkUrl: string | null, title: string, subtitle: string) => {
+        const createActivityCard = (activity: DiscordActivity, artworkUrl: string | null, title: string, subtitle: string) => {
             const card = document.createElement('div');
             card.classList.add('discord-spotify');
 
@@ -210,7 +252,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             return card;
         };
 
-        const updateUI = (user: any) => {
+        const updateUI = (user: LanyardData) => {
             const statusColor = getStatusColor(user.discord_status);
 
             currentActivities = [];
@@ -245,7 +287,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             statusTextDiv.textContent = user.discord_status.charAt(0).toUpperCase() + user.discord_status.slice(1);
 
             // Custom status (type 4 activity)
-            const customStatusActivity = user.activities.find((a: any) => a.type === 4);
+            const customStatusActivity = user.activities.find((a) => a.type === 4);
             if (customStatusActivity?.state) {
                 const customStatusDiv = infoDiv.createEl('div', { cls: 'custom-status' });
                 customStatusDiv.textContent = customStatusActivity.state;
@@ -257,7 +299,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
             // Add activity cards
             if (showActivity && user.activities && user.activities.length > 0) {
-                user.activities.forEach((activity: any) => {
+                user.activities.forEach((activity) => {
                     const activityType = getActivityType(activity.type);
                     const artworkUrl = getArtworkUrl(activity);
 
@@ -273,7 +315,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
             // Add separate Spotify card if showSpotify is enabled and we have spotify data
             if (user.spotify) {
-                const spotifyActivity = user.activities?.find((a: any) => a.name === 'Spotify');
+                const spotifyActivity = user.activities?.find((a) => a.name === 'Spotify');
                 const artworkUrl = spotifyActivity ? getArtworkUrl(spotifyActivity) : null;
 
                 // Add spotify activity to our tracking array
@@ -282,7 +324,12 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
                 }
 
                 const subtitle = `by ${user.spotify.artist}`;
-                const card = createActivityCard(spotifyActivity || { timestamps: user.spotify.timestamps }, artworkUrl, user.spotify.song, subtitle);
+                const activityForCard = spotifyActivity || {
+                    type: 2, // Listening to
+                    name: 'Spotify',
+                    timestamps: user.spotify.timestamps
+                };
+                const card = createActivityCard(activityForCard, artworkUrl, user.spotify.song, subtitle);
                 widget.appendChild(card);
             }
 

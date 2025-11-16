@@ -56,7 +56,7 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
         let pollInterval: NodeJS.Timeout;
         let isDestroyed = false;
 
-        const ankiConnectRequest = async (action: string, params: Record<string, any> = {}) => {
+        const ankiConnectRequest = async (action: string, params: Record<string, unknown> = {}) => {
             try {
                 const response = await requestUrl({
                     url: 'http://localhost:8765',
