@@ -68,6 +68,44 @@ export function resolvePath(pathArg: string, path: string): string {
 }
 
 
+/**
+ * Resolves date special variables to their string values.
+ * Can be called without context for dynamic resolution (e.g., on button click).
+ */
+export function resolveDateVariables(value: string): string {
+    if (!value) return value;
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const formatDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const formatTime = (date: Date) => {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    };
+
+    let resolved = value;
+    resolved = resolved.replace(/__TODAY__/g, formatDate(today));
+    resolved = resolved.replace(/__YESTERDAY__/g, formatDate(yesterday));
+    resolved = resolved.replace(/__TOMORROW__/g, formatDate(tomorrow));
+    resolved = resolved.replace(/__NOW__/g, `${formatDate(today)} ${formatTime(today)}`);
+    resolved = resolved.replace(/__TIME__/g, formatTime(today));
+    resolved = resolved.replace(/__TIMESTAMP__/g, String(Date.now()));
+
+    return resolved;
+}
+
 export function resolveSpecialVariables(args: Record<string, string>, ctx: MarkdownPostProcessorContext): Record<string, string> {
     const resolved = { ...args };
 
@@ -80,6 +118,9 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx: Markd
         } else if (value === '__ROOT__') {
             resolved[key] = '';
         }
+
+        // Resolve date variables
+        resolved[key] = resolveDateVariables(resolved[key]);
     });
 
     return resolved;

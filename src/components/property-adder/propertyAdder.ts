@@ -1,6 +1,7 @@
 import { Component, ComponentArgs, ComponentAction, ComponentInstance } from "components";
 import propertyAdderStyles from "./styles";
 import { App, MarkdownPostProcessorContext } from "obsidian";
+import { resolveDateVariables } from "utils";
 
 const renderPropertyAdder = async (
     args: ComponentArgs<['property', 'action', 'value', 'buttonText', 'increment']>,
@@ -57,6 +58,9 @@ const renderPropertyAdder = async (
 
         try {
             await app.fileManager.processFrontMatter(currentFile, (frontmatter) => {
+                // Resolve date variables dynamically at click time
+                const resolvedValue = resolveDateVariables(value);
+
                 switch (action) {
                     case 'push':
                         // Add to array
@@ -66,7 +70,7 @@ const renderPropertyAdder = async (
                         if (!Array.isArray(frontmatter[propertyName])) {
                             frontmatter[propertyName] = [frontmatter[propertyName]];
                         }
-                        frontmatter[propertyName].push(value);
+                        frontmatter[propertyName].push(resolvedValue);
                         break;
 
                     case 'pushUnique':
@@ -77,8 +81,8 @@ const renderPropertyAdder = async (
                         if (!Array.isArray(frontmatter[propertyName])) {
                             frontmatter[propertyName] = [frontmatter[propertyName]];
                         }
-                        if (!frontmatter[propertyName].includes(value)) {
-                            frontmatter[propertyName].push(value);
+                        if (!frontmatter[propertyName].includes(resolvedValue)) {
+                            frontmatter[propertyName].push(resolvedValue);
                         }
                         break;
 
@@ -93,7 +97,7 @@ const renderPropertyAdder = async (
 
                     case 'set':
                         // Set value directly
-                        frontmatter[propertyName] = value;
+                        frontmatter[propertyName] = resolvedValue;
                         break;
 
                     case 'toggle':
@@ -129,7 +133,7 @@ export const propertyAdder: Component<['property', 'action', 'value', 'buttonTex
             default: 'push'
         },
         value: {
-            description: 'Value to add or set (required for push, pushUnique, set)',
+            description: 'Value to add or set (required for push, pushUnique, set). Supports: __TODAY__, __YESTERDAY__, __TOMORROW__, __NOW__, __TIME__, __TIMESTAMP__',
             default: ''
         },
         buttonText: {
