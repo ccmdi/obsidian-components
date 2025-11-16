@@ -4,6 +4,7 @@ import { widgetSpaceStyles } from "./styles";
 import ConfirmationModal from "../../native/confirmation";
 import { COMPONENTS } from "../../components";
 import { componentInstances } from "../../components";
+import ComponentSidebarView from "../../native/sidebar";
 interface WidgetConfig {
     id: string;
     componentKey: string;
@@ -115,7 +116,7 @@ export const widgetSpace: Component<['layout']> = {
 
         const showComponentSelector = () => {
             class ComponentSelectorModal extends Modal {
-                constructor(app: any) {
+                constructor(app: App) {
                     super(app);
                 }
 
@@ -164,8 +165,7 @@ export const widgetSpace: Component<['layout']> = {
                 async openWidgetSpaceSidebar() {
                     // Check if widget-space view already exists
                     const existingLeaf = app.workspace.getLeavesOfType('component-sidebar').find(leaf => {
-                        //TODO type
-                        return (leaf.view as any).componentKey === 'widget-space';
+                        return (leaf.view as ComponentSidebarView).componentKey === 'widget-space';
                     });
 
                     if (existingLeaf) {
@@ -382,7 +382,7 @@ export const widgetSpace: Component<['layout']> = {
             // widget args
             widgetConfigs.set(widgetId, componentArgs);
             // Track in our state (will add componentInstance after creation)
-            activeWidgets.set(widgetId, { element: widget, componentKey, args: componentArgs, componentInstance: null as any });
+            activeWidgets.set(widgetId, { element: widget, componentKey, args: componentArgs, componentInstance: null });
 
             widget.addEventListener('contextmenu', async (e) => {
                 e.preventDefault();
@@ -488,7 +488,7 @@ export const widgetSpace: Component<['layout']> = {
 
         // widget configs
         const widgetConfigs = new Map<string, Record<string, string>>();
-        const activeWidgets = new Map<string, { element: HTMLElement, componentKey: string, args: Record<string, string>, componentInstance: ComponentInstance }>();
+        const activeWidgets = new Map<string, { element: HTMLElement, componentKey: string, args: Record<string, string>, componentInstance: ComponentInstance | null }>();
 
         const saveLayout = async () => {
             const widgets: WidgetConfig[] = [];
