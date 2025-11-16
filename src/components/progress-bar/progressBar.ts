@@ -38,9 +38,10 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		},
 	},
 	isMountable: true,
+	aliases: ['progress'],
 	styles: progressBarStyles,
 	render: async (
-		args: Record<string, string>,
+		args,
 		el: HTMLElement,
 		ctx: MarkdownPostProcessorContext,
 		app: App,

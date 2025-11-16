@@ -40,7 +40,7 @@ interface AnalyticsData {
 }
 
 const renderAnalytics = async (
-    args: Record<string, string>,
+    args,
     el: HTMLElement,
     ctx: MarkdownPostProcessorContext,
     app: App,

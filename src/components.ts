@@ -144,7 +144,8 @@ export type ComponentGroupMetadata = {
     members?: Component<readonly string[]>[];
 };
 
-export type ComponentArgs = Record<string, string> & {
+export type ComponentArgs<TArgs extends readonly string[] = readonly string[]> = 
+Record<TArgs[number], string> & {
     original: Record<string, string>;
 };
 
@@ -154,7 +155,7 @@ export interface Component<TArgs extends readonly string[]> {
     description?: string;
     args: Partial<Record<TArgs[number], ComponentArg>>;
     aliases?: string[];
-    render: (args: ComponentArgs, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: Record<string, any>) => Promise<void>;
+    render: (args: ComponentArgs<TArgs>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: Record<string, any>) => Promise<void>;
     refresh?: boolean;
     isMountable: boolean;
     settings?: {
