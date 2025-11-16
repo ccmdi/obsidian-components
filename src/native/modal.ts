@@ -48,7 +48,11 @@ export default class ComponentSelectorModal extends Modal {
 
             option.addEventListener('click', () => {
                 this.close();
-                new ComponentArgsModal(this.app, component, this.plugin).open();
+                if (Component.hasArgs(component)) {
+                    new ComponentArgsModal(this.app, component, this.plugin).open();
+                } else {
+                    this.openComponentSidebar(component);
+                }
             });
         });
     }
@@ -238,17 +242,22 @@ export class PlaceComponentModal extends Modal {
 
             option.addEventListener('click', () => {
                 this.close();
-                new ComponentArgsModal(this.app, component, this.plugin, {
-                    mode: 'insert',
-                    onSubmit: (args) => {
-                        const argsLines = Object.entries(args)
-                            .filter(([, value]) => value && value.trim() !== '')
-                            .map(([key, value]) => `${key}="${value}"`)
-                            .join('\n');
-                        const codeBlock = `\`\`\`${component.keyName}\n${argsLines}\n\`\`\``;
-                        this.editor.replaceSelection(codeBlock);
-                    }
-                }).open();
+                if (Component.hasArgs(component)) {
+                    new ComponentArgsModal(this.app, component, this.plugin, {
+                        mode: 'insert',
+                        onSubmit: (args) => {
+                            const argsLines = Object.entries(args)
+                                .filter(([, value]) => value && value.trim() !== '')
+                                .map(([key, value]) => `${key}="${value}"`)
+                                .join('\n');
+                            const codeBlock = `\`\`\`${component.keyName}\n${argsLines}\n\`\`\``;
+                            this.editor.replaceSelection(codeBlock);
+                        }
+                    }).open();
+                } else {
+                    const codeBlock = `\`\`\`${component.keyName}\n\`\`\``;
+                    this.editor.replaceSelection(codeBlock);
+                }
             });
         });
     }
