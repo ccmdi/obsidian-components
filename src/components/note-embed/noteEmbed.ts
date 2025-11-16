@@ -57,7 +57,24 @@ export const noteEmbed: Component<['target']> = {
 			return;
 		}
 
+		// Check for circular references by traversing up the DOM tree
+		let parent = el.parentElement;
+		const targetFilePath = file.path;
+		while (parent) {
+			if (parent.hasClass('note-embed-container')) {
+				const parentTarget = parent.dataset.embedTarget;
+				if (parentTarget === targetFilePath) {
+					const errorEl = el.createDiv({ cls: 'note-embed-error' });
+					errorEl.textContent = `Circular embed detected: ${file.basename}`;
+					return;
+				}
+			}
+			parent = parent.parentElement;
+		}
+
 		const container = el.createDiv({ cls: 'note-embed-container' });
+		// Store the target path for circular reference detection in children
+		container.dataset.embedTarget = targetFilePath;
 
 		// Read the file content
 		const content = await app.vault.read(file);
