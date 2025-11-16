@@ -25,12 +25,12 @@ export default `
 }
 
 .calendar-nav-button {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    color: var(--text-normal);
     cursor: pointer;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: 2px;
     font-size: 18px;
     transition: all 0.2s ease;
     line-height: 1;
