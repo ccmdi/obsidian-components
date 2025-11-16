@@ -102,15 +102,6 @@ const renderPropertyAdder = async (
                         break;
                 }
             });
-
-            // Visual feedback
-            const originalText = btn.textContent;
-            btn.textContent = '✓';
-            btn.style.backgroundColor = 'var(--interactive-success)';
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.style.backgroundColor = '';
-            }, 500);
         } catch (error) {
             console.error('Failed to modify property:', error);
             container.empty();
