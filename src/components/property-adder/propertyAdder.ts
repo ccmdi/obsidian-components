@@ -111,11 +111,6 @@ const renderPropertyAdder = async (
     };
 
     btn.addEventListener('click', handleClick);
-    // Prevent mousedown from stealing focus
-    btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        handleClick(e);
-    });
 
     el.appendChild(container);
 };
