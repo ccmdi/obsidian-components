@@ -1,4 +1,4 @@
-export const llmStyles = `
+export const llmStyles = /*css*/`
     .llm-container {
         display: flex;
         flex-direction: column;

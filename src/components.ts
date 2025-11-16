@@ -17,9 +17,9 @@ import { analytics } from "components/analytics/analytics";
 import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
 import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
 import { gymStats } from "components/gym/gymStats";
+import { progressBar } from "components/progress-bar/progressBar";
+import { propertyAdder } from "components/property-adder/propertyAdder";
 
-// import { calendar } from "components/calendar/calendar";
-// import { map } from "components/map/map";
 // import { llm } from "components/llm/llm";
 
 import { applyCssFromArgs } from "utils";
@@ -147,7 +147,8 @@ export type ComponentGroupMetadata = {
     members?: Component<readonly string[]>[];
 };
 
-export type ComponentArgs = Record<string, string> & {
+export type ComponentArgs<TArgs extends readonly string[] = readonly string[]> = 
+Record<TArgs[number], string> & {
     original: Record<string, string>;
 };
 
@@ -157,7 +158,7 @@ export interface Component<TArgs extends readonly string[]> {
     description?: string;
     args: Partial<Record<TArgs[number], ComponentArg>>;
     aliases?: string[];
-    render: (args: ComponentArgs, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: ComponentSettingsData) => Promise<void>;
+    render: (args: ComponentArgs<TArgs>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: ComponentSettingsData) => Promise<void>;
     refresh?: boolean;
     isMountable: boolean;
     settings?: {
@@ -290,11 +291,13 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     timeline,
     reminders,
     widgetSpace,
+    progressBar,
+    propertyAdder,
 
     //gym group
     gymRoutineMenu,
     gymWorkoutTracker,
-    gymStats, 
+    gymStats,
 ];
 
 

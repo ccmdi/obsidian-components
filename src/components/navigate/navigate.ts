@@ -3,7 +3,7 @@ import { formatDate, useTemplate } from "utils";
 import navigateStyles from "./styles";
 import { App, MarkdownPostProcessorContext } from "obsidian";
 
-const renderNavigate = async (args: ComponentArgs, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings: ComponentSettingsData = {}) => {
+const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date', 'dateFormat']>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings: ComponentSettingsData = {}) => {
     const folderPath = args.folder || ctx.sourcePath?.split('/').slice(0, -1).join('/') || '';
     const templatePath = args.template;
     const dateFormat = args.dateFormat || (componentSettings.dateFormat as string | undefined);

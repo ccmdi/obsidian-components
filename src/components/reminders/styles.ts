@@ -1,4 +1,4 @@
-export const remindersStyles = `
+export const remindersStyles = /*css*/`
     .reminders-container {
         background: var(--background-secondary);
         border: 1px solid var(--background-modifier-border);

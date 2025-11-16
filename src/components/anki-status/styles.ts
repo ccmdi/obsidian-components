@@ -1,4 +1,4 @@
-export const ankiStatusStyles = `
+export const ankiStatusStyles = /*css*/`
     .anki-status-container {
         background: var(--background-secondary);
         border: 1px solid var(--background-modifier-border);
