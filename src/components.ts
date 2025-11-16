@@ -21,6 +21,7 @@ import { progressBar } from "components/progress-bar/progressBar";
 import { propertyButton } from "components/property-adder/propertyAdder";
 import { countdown } from "components/countdown/countdown";
 import { noteEmbed } from "components/note-embed/noteEmbed";
+import { calendar } from "components/calendar/calendar";
 
 // import { llm } from "components/llm/llm";
 
@@ -284,6 +285,7 @@ export namespace Component {
 export const COMPONENTS: Component<readonly string[]>[] = [
     analytics,
     ankiStatus,
+    calendar,
     githubStats,
     media,
     navigate,
