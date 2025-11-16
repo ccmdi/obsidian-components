@@ -66,7 +66,7 @@ export default class ComponentSidebarView extends ItemView {
         // Refresh component when active leaf changes
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', (leaf) => {
-                if (this.currentComponent && this.currentComponent.keyName !== 'widget-space' && leaf?.view.getViewType() !== COMPONENT_SIDEBAR_VIEW_TYPE) {
+                if (this.currentComponent && this.currentComponent.refresh && leaf?.view.getViewType() !== COMPONENT_SIDEBAR_VIEW_TYPE) {
                     this.renderComponent();
                 }
             })

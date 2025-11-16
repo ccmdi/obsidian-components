@@ -211,7 +211,14 @@ export async function useTemplate(
     folderPath: string,
     targetName: string
 ): Promise<void> {
-    const fullPath = `${folderPath}/${targetName}.md`;
+    let fullPath: string;
+    //TODO
+    if(folderPath) {
+        fullPath = `${folderPath}/${targetName}.md`;
+    }
+     else {
+        fullPath = `${targetName}.md`;
+     }
     const fileExists = app.vault.getAbstractFileByPath(fullPath);
 
     if (!fileExists) {
