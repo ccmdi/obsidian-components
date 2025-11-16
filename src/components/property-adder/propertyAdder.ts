@@ -1,7 +1,7 @@
 import { Component, ComponentArgs, ComponentAction, ComponentInstance } from "components";
 import propertyAdderStyles from "./styles";
 import { App, MarkdownPostProcessorContext } from "obsidian";
-import { resolveDateVariables } from "utils";
+import { resolveSpecialVariables } from "utils";
 
 const renderPropertyAdder = async (
     args: ComponentArgs<['property', 'action', 'value', 'buttonText', 'increment']>,
@@ -58,8 +58,8 @@ const renderPropertyAdder = async (
 
         try {
             await app.fileManager.processFrontMatter(currentFile, (frontmatter) => {
-                // Resolve date variables dynamically at click time
-                const resolvedValue = resolveDateVariables(value);
+                // Resolve special variables dynamically at click time
+                const resolvedValue = resolveSpecialVariables({ value })['value'];
 
                 switch (action) {
                     case 'push':
