@@ -199,3 +199,20 @@
 .component-error {
   color: var(--text-error);
 }
+
+.view-content.component {
+  & .note-embed-container {
+    padding: 0 !important;
+    & * {
+      border-radius: 0 !important;
+    }
+    & .component {
+      margin: 0 !important;
+    }
+  }
+
+  &.clock-container {
+    width: 100% !important;
+    padding: 6px !important;
+  }
+}

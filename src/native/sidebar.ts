@@ -55,6 +55,14 @@ export default class ComponentSidebarView extends ItemView {
                 return 'dumbbell';
             case 'gym-stats':
                 return 'dumbbell';
+            case 'progress-bar':
+                return 'bar-chart-2';
+            case 'property-button':
+                return 'plus-circle';
+            case 'countdown':
+                return 'timer';
+            case 'note-embed':
+                return 'file-text';
             default:
                 return 'puzzle';
         }

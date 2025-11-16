@@ -6,7 +6,7 @@ import { progressBarStyles } from './styles';
 export const progressBar: Component<['progress', 'height', 'backgroundColor', 'barColor', 'textColor', 'borderRadius', 'showLabel']> = {
 	keyName: 'progress-bar',
 	name: 'Progress Bar',
-	description: 'Display a progress bar with percentage. Reads progress value from frontmatter or arguments.',
+	description: 'Display a progress bar with percentage.',
 	args: {
 		progress: {
 			description: 'Progress value (0-100). Can use frontmatter: progress=fm.progress',
