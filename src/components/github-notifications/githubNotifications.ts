@@ -1,6 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from 'components';
-import { getAccentColorHex } from 'utils';
+import { getAccentColorHex, parseBoolean } from 'utils';
 import { githubNotificationsStyles } from './styles';
+import { setIcon } from 'obsidian';
 
 interface GithubNotification {
     id: string;
@@ -20,13 +21,13 @@ interface GithubNotification {
 }
 
 const TYPE_ICONS: Record<string, string> = {
-    'PullRequest': 'PR',
-    'Issue': 'ISS',
-    'Commit': 'COM',
-    'Release': 'REL',
-    'Discussion': 'DIS',
-    'CheckSuite': 'CI',
-    'SecurityAdvisory': 'SEC',
+    'PullRequest': 'git-pull-request',
+    'Issue': 'circle-dot',
+    'Commit': 'git-commit',
+    'Release': 'tag',
+    'Discussion': 'message-circle',
+    'CheckSuite': 'check-circle',
+    'SecurityAdvisory': 'shield-alert',
 };
 
 const REASON_LABELS: Record<string, string> = {
@@ -56,7 +57,7 @@ function getTimeAgo(dateString: string): string {
     return `${weeks}w ago`;
 }
 
-export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refresh', 'show_read']> = {
+export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'autoRefresh', 'showRead', 'showRefreshButton']> = {
     name: 'GitHub Notifications',
     description: 'Display your GitHub notification inbox',
     keyName: 'github-notifications',
@@ -70,13 +71,17 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
             description: 'Maximum number of notifications to display',
             default: '10'
         },
-        auto_refresh: {
+        autoRefresh: {
             description: 'Auto-refresh interval in seconds (0 to disable)',
             default: '300'
         },
-        show_read: {
+        showRead: {
             description: 'Show read notifications (true/false)',
             default: 'true'
+        },
+        showRefreshButton: {
+            description: 'Show refresh button (true/false)',
+            default: 'false'
         }
     },
     isMountable: true,
@@ -85,8 +90,9 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
     render: async (args, el, ctx, app, instance: ComponentInstance) => {
         const GITHUB_TOKEN = args.GITHUB_TOKEN;
         const limit = parseInt(args.limit) || 10;
-        const autoRefresh = parseInt(args.auto_refresh) || 0;
-        const showRead = args.show_read !== 'false';
+        const autoRefresh = parseInt(args.autoRefresh) || 0;
+        const showRead = parseBoolean(args.showRead);
+        const showRefreshButton = parseBoolean(args.showRefreshButton);
 
         const container = el.createEl('div', { cls: 'github-notifications-container' });
 
@@ -125,16 +131,25 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
                 }
             });
 
-            titleWrapper.createEl('span', { text: 'Notifications' });
+            const notificationLink = titleWrapper.createEl('a', {
+                text: 'Notifications',
+                attr: {
+                    href: 'https://github.com/notifications',
+                    target: '_blank',
+                    style: 'color: inherit; text-decoration: none;'
+                }
+            });
 
+            if (showRefreshButton) {
             const refreshBtn = header.createEl('button', {
-                cls: 'github-notifications-refresh',
-                text: '↻'
-            });
-            refreshBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                render();
-            });
+                    cls: 'github-notifications-refresh',
+                    text: '↻'
+                });
+                refreshBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    render();
+                });
+            }
 
             // Loading state
             const listContainer = container.createEl('div', { cls: 'github-notifications-list' });
@@ -193,8 +208,9 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
                             });
 
                             const itemHeader = item.createEl('div', { cls: 'github-notification-header' });
-                            const icon = TYPE_ICONS[notification.subject.type] || 'NOT';
-                            itemHeader.createEl('span', { cls: 'github-notification-type-icon', text: icon });
+                            const iconName = TYPE_ICONS[notification.subject.type] || 'bell';
+                            const iconEl = itemHeader.createEl('span', { cls: 'github-notification-type-icon' });
+                            setIcon(iconEl, iconName);
 
                             // Fix capitalization for common GitHub titles
                             let title = notification.subject.title;

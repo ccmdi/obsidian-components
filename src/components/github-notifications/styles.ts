@@ -4,6 +4,7 @@ export const githubNotificationsStyles = /*css*/`
         border: 1px solid var(--background-modifier-border);
         border-radius: 8px;
         padding: 12px;
+        padding-right: 6px;
         box-sizing: border-box;
         width: 100%;
         max-width: 100%;
@@ -64,6 +65,12 @@ export const githubNotificationsStyles = /*css*/`
         gap: 16px;
         max-height: 600px;
         overflow-y: auto;
+        padding-right: 6px;
+        cursor: default;
+    }
+
+    .github-notifications-list::-webkit-scrollbar {
+        cursor: pointer;
     }
 
     .github-notifications-repo-group {
@@ -125,14 +132,19 @@ export const githubNotificationsStyles = /*css*/`
     }
 
     .github-notification-type-icon {
-        font-size: 10px;
-        font-weight: 700;
         flex-shrink: 0;
-        background: var(--background-secondary);
-        padding: 3px 5px;
-        border-radius: 3px;
-        font-family: monospace;
-        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+    }
+
+    .github-notification-type-icon svg {
+        width: 14px;
+        height: 14px;
+        color: var(--text-accent);
+        fill: var(--text-accent);
     }
 
     .github-notification-title {
