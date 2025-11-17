@@ -20,12 +20,13 @@ interface GithubNotification {
 }
 
 const TYPE_ICONS: Record<string, string> = {
-    'PullRequest': '🔀',
-    'Issue': '⚠️',
-    'Commit': '📝',
-    'Release': '🚀',
-    'Discussion': '💬',
-    'SecurityAdvisory': '🔒',
+    'PullRequest': 'PR',
+    'Issue': 'ISS',
+    'Commit': 'COM',
+    'Release': 'REL',
+    'Discussion': 'DIS',
+    'CheckSuite': 'CI',
+    'SecurityAdvisory': 'SEC',
 };
 
 const REASON_LABELS: Record<string, string> = {
@@ -144,75 +145,102 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
 
             try {
                 const notifications = await fetchNotifications();
-                const limited = notifications.slice(0, limit);
+                const unreadCount = notifications.filter(n => n.unread).length;
 
                 listContainer.empty();
 
-                // Update count in header
-                if (notifications.length > 0) {
+                // Update count in header - show unread count
+                if (unreadCount > 0) {
                     titleWrapper.createEl('span', {
                         cls: 'github-notifications-count',
-                        text: notifications.length.toString()
+                        text: unreadCount.toString()
                     });
                 }
 
-                if (limited.length === 0) {
+                if (notifications.length === 0) {
                     const emptyState = listContainer.createEl('div', { cls: 'github-notifications-empty' });
-                    emptyState.createEl('div', { cls: 'github-notifications-empty-icon', text: '✓' });
                     emptyState.createEl('div', { text: 'All caught up!' });
                 } else {
-                    limited.forEach(notification => {
-                        const item = listContainer.createEl('div', {
-                            cls: notification.unread
-                                ? 'github-notification-item github-notification-unread'
-                                : 'github-notification-item'
-                        });
+                    // Group by repository
+                    const grouped = new Map<string, GithubNotification[]>();
+                    notifications.slice(0, limit).forEach(notification => {
+                        const repo = notification.repository.full_name;
+                        if (!grouped.has(repo)) {
+                            grouped.set(repo, []);
+                        }
+                        grouped.get(repo)!.push(notification);
+                    });
 
-                        const itemHeader = item.createEl('div', { cls: 'github-notification-header' });
-                        const icon = TYPE_ICONS[notification.subject.type] || '📬';
-                        itemHeader.createEl('span', { cls: 'github-notification-type-icon', text: icon });
-                        itemHeader.createEl('span', {
-                            cls: 'github-notification-title',
-                            text: notification.subject.title
-                        });
+                    // Render each repository group
+                    grouped.forEach((repoNotifications, repoName) => {
+                        const repoGroup = listContainer.createEl('div', { cls: 'github-notifications-repo-group' });
 
-                        const meta = item.createEl('div', { cls: 'github-notification-meta' });
-                        meta.createEl('span', {
-                            cls: 'github-notification-repo',
-                            text: notification.repository.full_name
-                        });
+                        const repoHeader = repoGroup.createEl('div', { cls: 'github-notifications-repo-header' });
+                        repoHeader.createEl('span', { text: repoName });
+                        const repoUnreadCount = repoNotifications.filter(n => n.unread).length;
+                        if (repoUnreadCount > 0) {
+                            repoHeader.createEl('span', {
+                                cls: 'github-notifications-repo-count',
+                                text: repoUnreadCount.toString()
+                            });
+                        }
 
-                        const reasonText = REASON_LABELS[notification.reason] || notification.reason.replace(/_/g, ' ');
-                        meta.createEl('span', {
-                            cls: 'github-notification-reason',
-                            text: reasonText
-                        });
+                        repoNotifications.forEach(notification => {
+                            const item = repoGroup.createEl('div', {
+                                cls: notification.unread
+                                    ? 'github-notification-item github-notification-unread'
+                                    : 'github-notification-item'
+                            });
 
-                        meta.createEl('span', {
-                            cls: 'github-notification-time',
-                            text: getTimeAgo(notification.updated_at)
-                        });
+                            const itemHeader = item.createEl('div', { cls: 'github-notification-header' });
+                            const icon = TYPE_ICONS[notification.subject.type] || 'NOT';
+                            itemHeader.createEl('span', { cls: 'github-notification-type-icon', text: icon });
 
-                        // Click to open
-                        item.addEventListener('click', () => {
-                            // Try to get the HTML URL from the subject URL
-                            // GitHub API subject URLs are API endpoints, we need to convert them
-                            let htmlUrl = notification.repository.html_url;
-
-                            if (notification.subject.url) {
-                                // Convert API URL to HTML URL
-                                // e.g., https://api.github.com/repos/owner/repo/pulls/123
-                                // to https://github.com/owner/repo/pull/123
-                                const apiUrl = notification.subject.url;
-                                const match = apiUrl.match(/repos\/([^\/]+\/[^\/]+)\/(pulls|issues)\/(\d+)/);
-                                if (match) {
-                                    const [, repo, type, number] = match;
-                                    const htmlType = type === 'pulls' ? 'pull' : 'issue';
-                                    htmlUrl = `https://github.com/${repo}/${htmlType}/${number}`;
-                                }
+                            // Fix capitalization for common GitHub titles
+                            let title = notification.subject.title;
+                            if (title.startsWith('Ci ')) {
+                                title = 'CI' + title.slice(2);
                             }
 
-                            window.open(htmlUrl, '_blank');
+                            itemHeader.createEl('span', {
+                                cls: 'github-notification-title',
+                                text: title
+                            });
+
+                            const meta = item.createEl('div', { cls: 'github-notification-meta' });
+
+                            const reasonText = REASON_LABELS[notification.reason] || notification.reason.replace(/_/g, ' ');
+                            meta.createEl('span', {
+                                cls: 'github-notification-reason',
+                                text: reasonText
+                            });
+
+                            meta.createEl('span', {
+                                cls: 'github-notification-time',
+                                text: getTimeAgo(notification.updated_at)
+                            });
+
+                            // Click to open
+                            item.addEventListener('click', () => {
+                                // Try to get the HTML URL from the subject URL
+                                // GitHub API subject URLs are API endpoints, we need to convert them
+                                let htmlUrl = notification.repository.html_url;
+
+                                if (notification.subject.url) {
+                                    // Convert API URL to HTML URL
+                                    // e.g., https://api.github.com/repos/owner/repo/pulls/123
+                                    // to https://github.com/owner/repo/pull/123
+                                    const apiUrl = notification.subject.url;
+                                    const match = apiUrl.match(/repos\/([^\/]+\/[^\/]+)\/(pulls|issues)\/(\d+)/);
+                                    if (match) {
+                                        const [, repo, type, number] = match;
+                                        const htmlType = type === 'pulls' ? 'pull' : 'issue';
+                                        htmlUrl = `https://github.com/${repo}/${htmlType}/${number}`;
+                                    }
+                                }
+
+                                window.open(htmlUrl, '_blank');
+                            });
                         });
                     });
                 }

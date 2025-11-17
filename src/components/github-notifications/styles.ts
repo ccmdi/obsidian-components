@@ -61,9 +61,39 @@ export const githubNotificationsStyles = /*css*/`
     .github-notifications-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 16px;
         max-height: 600px;
         overflow-y: auto;
+    }
+
+    .github-notifications-repo-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .github-notifications-repo-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0 4px 4px 4px;
+        border-bottom: 1px solid var(--background-modifier-border);
+        font-family: monospace;
+    }
+
+    .github-notifications-repo-count {
+        background: var(--text-accent);
+        color: var(--text-on-accent);
+        border-radius: 8px;
+        padding: 1px 6px;
+        font-size: 10px;
+        font-weight: 600;
     }
 
     .github-notification-item {
@@ -95,8 +125,14 @@ export const githubNotificationsStyles = /*css*/`
     }
 
     .github-notification-type-icon {
-        font-size: 16px;
+        font-size: 10px;
+        font-weight: 700;
         flex-shrink: 0;
+        background: var(--background-secondary);
+        padding: 3px 5px;
+        border-radius: 3px;
+        font-family: monospace;
+        color: var(--text-muted);
     }
 
     .github-notification-title {
@@ -138,12 +174,6 @@ export const githubNotificationsStyles = /*css*/`
         padding: 40px 20px;
         color: var(--text-muted);
         font-size: 13px;
-    }
-
-    .github-notifications-empty-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
-        opacity: 0.3;
     }
 
     .github-notifications-error {
