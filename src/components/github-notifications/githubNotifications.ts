@@ -55,7 +55,7 @@ function getTimeAgo(dateString: string): string {
     return `${weeks}w ago`;
 }
 
-export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refresh']> = {
+export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refresh', 'show_read']> = {
     name: 'GitHub Notifications',
     description: 'Display your GitHub notification inbox',
     keyName: 'github-notifications',
@@ -72,6 +72,10 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
         auto_refresh: {
             description: 'Auto-refresh interval in seconds (0 to disable)',
             default: '300'
+        },
+        show_read: {
+            description: 'Show read notifications (true/false)',
+            default: 'true'
         }
     },
     isMountable: true,
@@ -81,11 +85,16 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
         const GITHUB_TOKEN = args.GITHUB_TOKEN;
         const limit = parseInt(args.limit) || 10;
         const autoRefresh = parseInt(args.auto_refresh) || 0;
+        const showRead = args.show_read !== 'false';
 
         const container = el.createEl('div', { cls: 'github-notifications-container' });
 
         async function fetchNotifications(): Promise<GithubNotification[]> {
-            const response = await fetch('https://api.github.com/notifications?per_page=50', {
+            const url = showRead
+                ? 'https://api.github.com/notifications?all=true&per_page=50'
+                : 'https://api.github.com/notifications?per_page=50';
+
+            const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${GITHUB_TOKEN}`,
                     'Accept': 'application/vnd.github.v3+json'
@@ -153,7 +162,11 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
                     emptyState.createEl('div', { text: 'All caught up!' });
                 } else {
                     limited.forEach(notification => {
-                        const item = listContainer.createEl('div', { cls: 'github-notification-item' });
+                        const item = listContainer.createEl('div', {
+                            cls: notification.unread
+                                ? 'github-notification-item github-notification-unread'
+                                : 'github-notification-item'
+                        });
 
                         const itemHeader = item.createEl('div', { cls: 'github-notification-header' });
                         const icon = TYPE_ICONS[notification.subject.type] || '📬';

@@ -83,6 +83,11 @@ export const githubNotificationsStyles = /*css*/`
         border-color: var(--text-accent);
     }
 
+    .github-notification-unread {
+        border-left: 3px solid var(--text-accent);
+        background: var(--background-primary-alt);
+    }
+
     .github-notification-header {
         display: flex;
         align-items: center;
