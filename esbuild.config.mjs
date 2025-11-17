@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import { autoRegisterComponents } from "./scripts/auto-register-plugin.mjs";
 
 const banner =
 `/*
@@ -39,6 +40,7 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	plugins: [autoRegisterComponents],
 });
 
 if (prod) {

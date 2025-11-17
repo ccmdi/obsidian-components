@@ -1,6 +1,7 @@
 import * as esbuild from 'esbuild';
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { autoRegisterComponents } from './auto-register-plugin.mjs';
 
 // Auto-discover all obsidian imports used in the codebase
 const getObsidianExports = () => {
@@ -62,6 +63,6 @@ await esbuild.build({
 	platform: 'node',
 	format: 'esm',
 	outfile: 'scripts/.components-bundle.mjs',
-	plugins: [obsidianStubPlugin],
+	plugins: [autoRegisterComponents, obsidianStubPlugin],
 	logLevel: 'warning'
 });

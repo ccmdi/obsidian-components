@@ -40,7 +40,7 @@ function validateComponentIcons() {
 	for (const component of COMPONENTS) {
 		if (!component.icon) {
 			warnings.push({
-				message: `Component "${component.id}" is missing an icon property`,
+				message: `Component "${component.keyName}" is missing an icon property`,
 				file: 'src/components.ts',
 				line: 1
 			});
