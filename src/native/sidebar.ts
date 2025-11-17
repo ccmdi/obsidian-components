@@ -2,6 +2,11 @@ import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext, ViewStateResult 
 import { COMPONENTS, Component, componentInstances } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 
+export interface ComponentSidebarState {
+    componentKey?: string;
+    args?: Record<string, string>;
+}
+
 export default class ComponentSidebarView extends ItemView {
     plugin: ComponentsPlugin;
     currentComponent: Component<readonly string[]> | null = null;
@@ -83,7 +88,7 @@ export default class ComponentSidebarView extends ItemView {
         );
     }
 
-    async setState(state: { componentKey?: string; args?: Record<string, string> }, result: ViewStateResult) {
+    async setState(state: ComponentSidebarState, result: ViewStateResult) {
         await super.setState(state, result);
 
         if (state?.componentKey) {
@@ -94,7 +99,7 @@ export default class ComponentSidebarView extends ItemView {
         }
     }
 
-    getState() {
+    getState(): ComponentSidebarState {
         return {
             componentKey: this.currentComponent?.keyName,
             args: this.componentArgs
