@@ -234,7 +234,7 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refr
                                     const match = apiUrl.match(/repos\/([^\/]+\/[^\/]+)\/(pulls|issues)\/(\d+)/);
                                     if (match) {
                                         const [, repo, type, number] = match;
-                                        const htmlType = type === 'pulls' ? 'pull' : 'issue';
+                                        const htmlType = type === 'pulls' ? 'pull' : 'issues';
                                         htmlUrl = `https://github.com/${repo}/${htmlType}/${number}`;
                                     }
                                 }
