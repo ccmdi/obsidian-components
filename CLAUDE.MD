@@ -317,7 +317,6 @@ Some components support Templater integration for template creation. This is opt
 
 ### Runtime
 - `obsidian`: Obsidian API
-- `@deck.gl/*`: Map rendering (for deprecated map component)
 
 ### Development
 - `typescript`: Type checking
