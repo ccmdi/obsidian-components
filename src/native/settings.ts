@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
-import { COMPONENTS, Component, ComponentAction, ComponentSetting, ComponentGroup, GROUPS, ComponentGroupMetadata } from "components";
+import { COMPONENTS, Component, ComponentAction, ComponentSetting, GROUPS } from "components";
 import ComponentsPlugin from "main";
+import { ComponentGroup, initializeGroups } from "groups";
 import { renderExternalLinkToElement } from "utils";
 
 export default class ComponentsSettingTab extends PluginSettingTab {
@@ -15,6 +16,9 @@ export default class ComponentsSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
+
+        // Initialize groups lazily (populates GROUPS.members)
+        initializeGroups();
 
         // Create tab navigation
         this.createTabNavigation();

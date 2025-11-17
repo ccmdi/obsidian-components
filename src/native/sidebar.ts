@@ -2,7 +2,7 @@ import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext, ViewStateResult 
 import { COMPONENTS, Component, componentInstances } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 
-export interface ComponentSidebarState {
+export interface ComponentSidebarState extends Record<string, unknown> {
     componentKey?: string;
     args?: Record<string, string>;
 }

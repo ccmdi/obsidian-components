@@ -1,4 +1,5 @@
-import { Component, ComponentAction, ComponentGroup, ComponentInstance } from "components";
+import { Component, ComponentAction, ComponentInstance } from "components";
+import { ComponentGroup } from "groups";
 import { gymRoutineMenuStyles } from "./styles";
 import { matchesQuery } from "utils";
 

@@ -12,6 +12,12 @@ node_modules
 # They should be uploaded to GitHub releases instead.
 main.js
 
+# Validation bundle
+scripts/.components-bundle.mjs
+
+# Auto-generated component registry
+src/components.register.ts
+
 # Exclude sourcemaps
 *.map
 

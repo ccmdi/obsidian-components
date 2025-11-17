@@ -1,33 +1,8 @@
-// components.ts
-
 import { App, MarkdownPostProcessorContext, TAbstractFile, TFile, MarkdownRenderChild } from "obsidian";
 import { parseArguments, validateArguments, parseFM, resolveSpecialVariables, parseArgsAliases } from "utils";
-
-import { githubStats } from "components/github-stats/githubStats";
-import { githubNotifications } from "components/github-notifications/githubNotifications";
-import { media } from "components/media/media";
-import { navigate } from "components/navigate/navigate";
-import { statChart } from "components/stat-chart/statChart";
-import { clock } from "components/clock/clock";
-import { discordStatus } from "components/discord-status/discordStatus";
-import { timeline } from "components/timeline/timeline";
-import { reminders } from "components/reminders/reminders";
-import { ankiStatus } from "components/anki-status/ankiStatus";
-import { widgetSpace } from "components/widget-space/widgetSpace";
-import { analytics } from "components/analytics/analytics";
-import { gymRoutineMenu } from "components/gym/gymRoutineMenu";
-import { gymWorkoutTracker } from "components/gym/gymWorkoutTracker";
-import { gymStats } from "components/gym/gymStats";
-import { progressBar } from "components/progress-bar/progressBar";
-import { propertyButton } from "components/property-adder/propertyAdder";
-import { countdown } from "components/countdown/countdown";
-import { noteEmbed } from "components/note-embed/noteEmbed";
-import { calendar } from "components/calendar/calendar";
-
-// import { llm } from "components/llm/llm";
-
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
+import { ComponentGroup } from "groups";
 
 /**
  * Global instance registry for cleanup
@@ -141,16 +116,6 @@ export enum ComponentAction {
     EXTERNAL = 'EXTERNAL'
 }
 
-export enum ComponentGroup {
-    GYM = 'gym'
-}
-
-export type ComponentGroupMetadata = {
-    name: string;
-    description: string;
-    members?: Component<readonly string[]>[];
-};
-
 export type ComponentArgs<TArgs extends readonly string[] = readonly string[]> = 
 Record<TArgs[number], string> & {
     original: Record<string, string>;
@@ -161,6 +126,7 @@ export interface Component<TArgs extends readonly string[]> {
     name?: string;
     description?: string;
     icon?: string;
+    enabled?: boolean; // Default true - set to false to exclude from COMPONENTS array
     args: Partial<Record<TArgs[number], ComponentArg>>;
     aliases?: string[];
     render: (args: ComponentArgs<TArgs>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: ComponentSettingsData) => Promise<void>;
@@ -284,44 +250,7 @@ export namespace Component {
     }
 }
 
-export const COMPONENTS: Component<readonly string[]>[] = [
-    analytics,
-    ankiStatus,
-    calendar,
-    githubStats,
-    githubNotifications,
-    media,
-    navigate,
-    statChart,
-    clock,
-    discordStatus,
-    timeline,
-    reminders,
-    widgetSpace,
-    progressBar,
-    propertyButton,
-    countdown,
-    noteEmbed,
-
-    //gym group
-    gymRoutineMenu,
-    gymWorkoutTracker,
-    gymStats,
-];
-
-
-export const GROUPS: Record<ComponentGroup, ComponentGroupMetadata> = {
-    [ComponentGroup.GYM]: {
-        name: 'Gym',
-        description: 'Components for tracking gym routines and workouts'
-    }
-}
-
-for(const component of COMPONENTS) {
-    if (component.group) {
-        if (!GROUPS[component.group].members) {
-            GROUPS[component.group].members = [];
-        }
-        GROUPS[component.group].members!.push(component);
-    }
-}
+import { COMPONENTS } from "./components.register";
+export { COMPONENTS };
+import { GROUPS } from "./groups";
+export { GROUPS };
