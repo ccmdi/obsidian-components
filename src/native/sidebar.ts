@@ -27,6 +27,8 @@ export default class ComponentSidebarView extends ItemView {
                 return 'layout-grid';
             case 'github-stats':
                 return 'github';
+            case 'github-notifications':
+                return 'inbox';
             case 'discord-status':
                 return 'message-circle';
             case 'timeline':
