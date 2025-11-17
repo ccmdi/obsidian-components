@@ -6,6 +6,7 @@ export const gymStats: Component<['query']> = {
     keyName: 'gym-stats',
     name: 'Gym Stats',
     description: 'Display stats for your workouts',
+    icon: 'dumbbell',
     //TODO more args
     args: {
         query: {

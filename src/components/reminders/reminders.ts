@@ -6,6 +6,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
     name: 'Reminders',
     description: 'Display reminders from daily notes',
     keyName: 'reminders',
+    icon: 'bell',
     args: {
         query: {
             description: 'Query to filter notes (supports #tags, "folder/paths", and AND operator)',

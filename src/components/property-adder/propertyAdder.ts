@@ -119,6 +119,7 @@ export const propertyButton: Component<['property', 'action', 'value', 'buttonTe
     name: 'Property Button',
     description: 'Add or modify frontmatter properties',
     keyName: 'property-button',
+    icon: 'plus-circle',
     args: {
         property: {
             description: 'The property name to modify',

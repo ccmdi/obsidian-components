@@ -8,6 +8,7 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
     keyName: 'timeline',
     name: 'Timeline',
     description: 'Display a timeline of periodic notes (e.g. daily notes)',
+    icon: 'gantt-chart',
     args: {
         query: {
             description: 'Query to filter notes (supports #tags, "folder/paths", and AND operator). Defaults to current note\'s folder',

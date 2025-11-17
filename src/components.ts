@@ -160,6 +160,7 @@ export interface Component<TArgs extends readonly string[]> {
     keyName: string;
     name?: string;
     description?: string;
+    icon?: string;
     args: Partial<Record<TArgs[number], ComponentArg>>;
     aliases?: string[];
     render: (args: ComponentArgs<TArgs>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: ComponentSettingsData) => Promise<void>;

@@ -61,6 +61,7 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'autoRefre
     name: 'GitHub Notifications',
     description: 'Display your GitHub notification inbox',
     keyName: 'github-notifications',
+    icon: 'inbox',
     aliases: ['gh-notifications', 'gh-inbox', 'github-inbox'],
     args: {
         GITHUB_TOKEN: {

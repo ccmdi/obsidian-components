@@ -6,6 +6,7 @@ import { parseBoolean } from "utils";
 export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
     name: 'Anki Status',
     keyName: 'anki-status',
+    icon: 'brain',
     args: {
         showStats: {
             description: 'Show review counts and due cards',

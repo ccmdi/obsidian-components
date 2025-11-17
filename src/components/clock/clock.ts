@@ -4,6 +4,7 @@ import { parseBoolean } from "utils";
 export const clock: Component<['type', 'format', 'timezone', 'size', 'showSeconds', 'showDate', 'background', 'background-color', 'border']> = {
     name: 'Clock',
     keyName: 'clock',
+    icon: 'clock',
     args: {
         type: {
             description: 'Type of clock (digital, analog, binary, matrix)',

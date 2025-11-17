@@ -7,6 +7,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
     name: 'Media',
     description: 'Display media files from a folder or specific file',
     keyName: 'media',
+    icon: 'play-circle',
     aliases: ['random-media'],
     args: {
         folder: {
