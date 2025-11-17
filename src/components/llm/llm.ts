@@ -23,6 +23,7 @@ export const llm: Component<['apiKey', 'model', 'systemPrompt', 'maxTokens', 'te
     name: 'LLM',
     description: 'Chat interface powered by Claude (Anthropic API)',
     keyName: 'llm',
+    enabled: false, // Not ready yet
     args: {
         apiKey: {
             description: 'Anthropic API key (or set in component settings)',
