@@ -22,52 +22,7 @@ export default class ComponentSidebarView extends ItemView {
     }
 
     getIcon(): string {
-        switch (this.componentKey) {
-            case 'widget-space':
-                return 'layout-grid';
-            case 'github-stats':
-                return 'github';
-            case 'github-notifications':
-                return 'inbox';
-            case 'discord-status':
-                return 'message-circle';
-            case 'timeline':
-                return 'gantt-chart';
-            case 'navigate':
-                return 'arrow-left-right';
-            case 'map':
-                return 'map-pin';
-            case 'analytics':
-                return 'bar-chart-2';
-            case 'anki-status':
-                return 'brain';
-            case 'reminders':
-                return 'bell';
-            case 'calendar':
-                return 'calendar';
-            case 'clock':
-                return 'clock';
-            case 'stat-chart':
-                return 'trending-up';
-            case 'media':
-                return 'play-circle';
-            case 'gym-routine-menu':
-                return 'dumbbell';
-            case 'gym-workout-tracker':
-                return 'dumbbell';
-            case 'gym-stats':
-                return 'dumbbell';
-            case 'progress-bar':
-                return 'bar-chart-2';
-            case 'property-button':
-                return 'plus-circle';
-            case 'countdown':
-                return 'timer';
-            case 'note-embed':
-                return 'file-text';
-            default:
-                return 'puzzle';
-        }
+        return this.currentComponent?.icon || 'puzzle';
     }
 
     async onOpen() {

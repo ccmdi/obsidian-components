@@ -8,6 +8,7 @@ export const noteEmbed: Component<['target']> = {
 	keyName: 'note-embed',
 	name: 'Note Embed',
 	description: 'Embed another note using Obsidian\'s native rendering',
+	icon: 'file-text',
 	args: {
 		target: {
 			description: 'Target note name or path (with or without .md extension)',

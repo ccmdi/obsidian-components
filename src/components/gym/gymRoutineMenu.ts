@@ -5,6 +5,7 @@ export const gymRoutineMenu: Component<[]> = {
     keyName: 'gym-routine-menu',
     name: 'Gym Routine Menu',
     description: 'Display a menu for selecting a gym routine',
+    icon: 'dumbbell',
     args: {},
     isMountable: true,
     group: ComponentGroup.GYM,

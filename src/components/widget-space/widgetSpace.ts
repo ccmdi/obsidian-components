@@ -28,6 +28,7 @@ export const widgetSpace: Component<['layout']> = {
     name: 'Widget Space',
     description: 'A modular container for multiple components with drag & drop',
     keyName: 'widget-space',
+    icon: 'layout-grid',
     isMountable: false,
     args: {
         layout: {

@@ -7,6 +7,7 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 	keyName: 'progress-bar',
 	name: 'Progress Bar',
 	description: 'Display a progress bar with percentage.',
+	icon: 'bar-chart-2',
 	args: {
 		progress: {
 			description: 'Progress value (0-100). Can use frontmatter: progress=fm.progress',

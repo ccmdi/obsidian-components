@@ -340,6 +340,7 @@ export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {
     keyName: 'analytics',
     name: 'Vault Analytics',
     description: 'Display comprehensive vault analytics and insights',
+    icon: 'bar-chart-2',
     args: {
         searchFolder: {
             description: 'Folder to analyze (leave empty for entire vault)',

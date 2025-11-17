@@ -76,6 +76,7 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat']> =
     name: 'Navigate',
     description: 'Navigate periodic notes',
     keyName: 'navigate',
+    icon: 'arrow-left-right',
     args: {
         folder: {
             description: 'Folder to navigate',

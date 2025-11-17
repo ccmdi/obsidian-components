@@ -35,6 +35,7 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
         name: 'GitHub Stats',
         description: 'Display your GitHub contribution streak',
         keyName: 'github-stats',
+        icon: 'github',
         aliases: ['github-streak', 'gh-streak'],
         args: {
             GITHUB_TOKEN: {

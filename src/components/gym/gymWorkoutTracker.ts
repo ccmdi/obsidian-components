@@ -5,6 +5,7 @@ export const gymWorkoutTracker: Component<[]> = {
     keyName: 'gym-workout-tracker',
     name: 'Gym Workout Tracker',
     description: 'Track your workout progress for the day',
+    icon: 'dumbbell',
     args: {},
     isMountable: true,
     group: ComponentGroup.GYM,

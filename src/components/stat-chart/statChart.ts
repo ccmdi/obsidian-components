@@ -10,6 +10,7 @@ declare global {
 export const statChart: Component<['query', 'field', 'type', 'threshold', 'label', 'startDate', 'endDate', 'height']> = {
     name: 'Chart',
     keyName: 'stat-chart',
+    icon: 'trending-up',
     aliases: ['chart'],
     args: {
         query: {
