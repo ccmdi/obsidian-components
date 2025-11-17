@@ -12,6 +12,9 @@ node_modules
 # They should be uploaded to GitHub releases instead.
 main.js
 
+# Validation bundle
+scripts/.components-bundle.mjs
+
 # Exclude sourcemaps
 *.map
 

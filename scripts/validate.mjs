@@ -6,12 +6,21 @@
  * Add new validators to the VALIDATORS array below
  */
 
-import { readFileSync, readdirSync } from 'fs';
-import { join, dirname } from 'path';
+import { execSync } from 'child_process';
+import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const projectRoot = join(__dirname, '..');
+
+// Build components.ts into an importable bundle
+console.log('Building components bundle for validation...');
+execSync('node scripts/build-for-validation.mjs', {
+	cwd: dirname(__dirname),
+	stdio: 'inherit'
+});
+
+// Import the bundled COMPONENTS array
+const { COMPONENTS } = await import('./.components-bundle.mjs');
 
 // ============================================================================
 // VALIDATORS
@@ -23,53 +32,16 @@ const projectRoot = join(__dirname, '..');
  */
 
 /**
- * Get all component files by scanning the components directory
- */
-function getComponentFiles() {
-	const componentsDir = join(projectRoot, 'src/components');
-	const entries = readdirSync(componentsDir, { withFileTypes: true });
-
-	const componentFiles = [];
-
-	for (const entry of entries) {
-		if (entry.isDirectory()) {
-			const dirPath = join(componentsDir, entry.name);
-			const files = readdirSync(dirPath);
-
-			// Find .ts files (excluding styles.ts)
-			for (const file of files) {
-				if (file.endsWith('.ts') && file !== 'styles.ts') {
-					componentFiles.push({
-						name: file.replace('.ts', ''),
-						path: join(dirPath, file),
-						relativePath: `src/components/${entry.name}/${file}`
-					});
-				}
-			}
-		}
-	}
-
-	return componentFiles;
-}
-
-/**
  * Check for components missing icon property
  */
 function validateComponentIcons() {
 	const warnings = [];
-	const componentFiles = getComponentFiles();
 
-	for (const component of componentFiles) {
-		const content = readFileSync(component.path, 'utf-8');
-
-		// Check if the component object has an icon property
-		// Look for: icon: 'something' or icon: "something"
-		const hasIcon = /icon\s*:\s*['"`]/.test(content);
-
-		if (!hasIcon) {
+	for (const component of COMPONENTS) {
+		if (!component.icon) {
 			warnings.push({
-				message: `Component "${component.name}" is missing an icon property`,
-				file: component.relativePath,
+				message: `Component "${component.id}" is missing an icon property`,
+				file: 'src/components.ts',
 				line: 1
 			});
 		}
