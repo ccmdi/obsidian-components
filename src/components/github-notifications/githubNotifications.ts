@@ -1,0 +1,223 @@
+import { Component, ComponentAction, ComponentInstance } from 'components';
+import { getAccentColorHex } from 'utils';
+import { githubNotificationsStyles } from './styles';
+
+interface GithubNotification {
+    id: string;
+    unread: boolean;
+    reason: string;
+    updated_at: string;
+    subject: {
+        title: string;
+        url: string;
+        type: string;
+    };
+    repository: {
+        full_name: string;
+        html_url: string;
+    };
+    url: string;
+}
+
+const TYPE_ICONS: Record<string, string> = {
+    'PullRequest': '🔀',
+    'Issue': '⚠️',
+    'Commit': '📝',
+    'Release': '🚀',
+    'Discussion': '💬',
+    'SecurityAdvisory': '🔒',
+};
+
+const REASON_LABELS: Record<string, string> = {
+    'review_requested': 'Review Requested',
+    'assign': 'Assigned',
+    'author': 'You Created',
+    'comment': 'Comment',
+    'mention': 'Mentioned',
+    'team_mention': 'Team Mentioned',
+    'state_change': 'State Changed',
+    'subscribed': 'Subscribed',
+};
+
+function getTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    const weeks = Math.floor(days / 7);
+    return `${weeks}w ago`;
+}
+
+export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'auto_refresh']> = {
+    name: 'GitHub Notifications',
+    description: 'Display your GitHub notification inbox',
+    keyName: 'github-notifications',
+    aliases: ['gh-notifications', 'gh-inbox', 'github-inbox'],
+    args: {
+        GITHUB_TOKEN: {
+            description: 'GitHub token to use for API requests. Get one from [here](https://github.com/settings/tokens). Requires "notifications" scope.',
+            required: true
+        },
+        limit: {
+            description: 'Maximum number of notifications to display',
+            default: '10'
+        },
+        auto_refresh: {
+            description: 'Auto-refresh interval in seconds (0 to disable)',
+            default: '300'
+        }
+    },
+    isMountable: true,
+    does: [ComponentAction.EXTERNAL],
+    styles: githubNotificationsStyles,
+    render: async (args, el, ctx, app, instance: ComponentInstance) => {
+        const GITHUB_TOKEN = args.GITHUB_TOKEN;
+        const limit = parseInt(args.limit) || 10;
+        const autoRefresh = parseInt(args.auto_refresh) || 0;
+
+        const container = el.createEl('div', { cls: 'github-notifications-container' });
+
+        async function fetchNotifications(): Promise<GithubNotification[]> {
+            const response = await fetch('https://api.github.com/notifications?per_page=50', {
+                headers: {
+                    'Authorization': `Bearer ${GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
+            }
+
+            return await response.json();
+        }
+
+        async function render() {
+            container.empty();
+
+            // Header
+            const header = container.createEl('div', { cls: 'github-notifications-header' });
+            const titleWrapper = header.createEl('div', { cls: 'github-notifications-title' });
+
+            const accentColorHex = getAccentColorHex(el);
+            const iconImg = titleWrapper.createEl('img', {
+                cls: 'github-notifications-icon',
+                attr: {
+                    src: `https://cdn.simpleicons.org/github/${accentColorHex}`,
+                    alt: 'GitHub'
+                }
+            });
+
+            titleWrapper.createEl('span', { text: 'Notifications' });
+
+            const refreshBtn = header.createEl('button', {
+                cls: 'github-notifications-refresh',
+                text: '↻'
+            });
+            refreshBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                render();
+            });
+
+            // Loading state
+            const listContainer = container.createEl('div', { cls: 'github-notifications-list' });
+            const loadingContainer = listContainer.createEl('div', { cls: 'github-notifications-loading' });
+            for (let i = 0; i < 3; i++) {
+                loadingContainer.createEl('div', { cls: 'github-notification-skeleton' });
+            }
+
+            try {
+                const notifications = await fetchNotifications();
+                const limited = notifications.slice(0, limit);
+
+                listContainer.empty();
+
+                // Update count in header
+                if (notifications.length > 0) {
+                    titleWrapper.createEl('span', {
+                        cls: 'github-notifications-count',
+                        text: notifications.length.toString()
+                    });
+                }
+
+                if (limited.length === 0) {
+                    const emptyState = listContainer.createEl('div', { cls: 'github-notifications-empty' });
+                    emptyState.createEl('div', { cls: 'github-notifications-empty-icon', text: '✓' });
+                    emptyState.createEl('div', { text: 'All caught up!' });
+                } else {
+                    limited.forEach(notification => {
+                        const item = listContainer.createEl('div', { cls: 'github-notification-item' });
+
+                        const itemHeader = item.createEl('div', { cls: 'github-notification-header' });
+                        const icon = TYPE_ICONS[notification.subject.type] || '📬';
+                        itemHeader.createEl('span', { cls: 'github-notification-type-icon', text: icon });
+                        itemHeader.createEl('span', {
+                            cls: 'github-notification-title',
+                            text: notification.subject.title
+                        });
+
+                        const meta = item.createEl('div', { cls: 'github-notification-meta' });
+                        meta.createEl('span', {
+                            cls: 'github-notification-repo',
+                            text: notification.repository.full_name
+                        });
+
+                        const reasonText = REASON_LABELS[notification.reason] || notification.reason.replace(/_/g, ' ');
+                        meta.createEl('span', {
+                            cls: 'github-notification-reason',
+                            text: reasonText
+                        });
+
+                        meta.createEl('span', {
+                            cls: 'github-notification-time',
+                            text: getTimeAgo(notification.updated_at)
+                        });
+
+                        // Click to open
+                        item.addEventListener('click', () => {
+                            // Try to get the HTML URL from the subject URL
+                            // GitHub API subject URLs are API endpoints, we need to convert them
+                            let htmlUrl = notification.repository.html_url;
+
+                            if (notification.subject.url) {
+                                // Convert API URL to HTML URL
+                                // e.g., https://api.github.com/repos/owner/repo/pulls/123
+                                // to https://github.com/owner/repo/pull/123
+                                const apiUrl = notification.subject.url;
+                                const match = apiUrl.match(/repos\/([^\/]+\/[^\/]+)\/(pulls|issues)\/(\d+)/);
+                                if (match) {
+                                    const [, repo, type, number] = match;
+                                    const htmlType = type === 'pulls' ? 'pull' : 'issue';
+                                    htmlUrl = `https://github.com/${repo}/${htmlType}/${number}`;
+                                }
+                            }
+
+                            window.open(htmlUrl, '_blank');
+                        });
+                    });
+                }
+            } catch (error) {
+                listContainer.empty();
+                listContainer.createEl('div', {
+                    cls: 'github-notifications-error',
+                    text: `Error: ${error.message}`
+                });
+            }
+        }
+
+        await render();
+
+        // Auto-refresh
+        if (autoRefresh > 0) {
+            ComponentInstance.createUpdateLoop(instance, render, autoRefresh * 1000);
+        }
+    },
+    settings: {}
+};

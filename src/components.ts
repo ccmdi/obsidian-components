@@ -4,6 +4,7 @@ import { App, MarkdownPostProcessorContext, TAbstractFile, TFile, MarkdownRender
 import { parseArguments, validateArguments, parseFM, resolveSpecialVariables, parseArgsAliases } from "utils";
 
 import { githubStats } from "components/github-stats/githubStats";
+import { githubNotifications } from "components/github-notifications/githubNotifications";
 import { media } from "components/media/media";
 import { navigate } from "components/navigate/navigate";
 import { statChart } from "components/stat-chart/statChart";
@@ -287,6 +288,7 @@ export const COMPONENTS: Component<readonly string[]>[] = [
     ankiStatus,
     calendar,
     githubStats,
+    githubNotifications,
     media,
     navigate,
     statChart,

@@ -13,6 +13,7 @@ Adds custom components to Obsidian notes and sidebars.
 * **Chart** - chart date-mapped array data
 * **Discord status**
 * **GitHub streak** - GitHub contribution streak
+* **GitHub notifications** - GitHub notification inbox
 * **Navigate button** - navigate between periodic notes
 * **Reminders** - due tasks from periodic notes
 * **Timeline** - timeline of periodic notes

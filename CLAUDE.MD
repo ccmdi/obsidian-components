@@ -54,6 +54,7 @@ obsidian-components/
 │   │   ├── countdown/
 │   │   ├── discord-status/
 │   │   ├── github-stats/
+│   │   ├── github-notifications/
 │   │   ├── gym/               # Component group
 │   │   ├── media/
 │   │   ├── navigate/
@@ -153,6 +154,7 @@ interface ComponentInstance {
 - **countdown** - Countdown timer
 - **discord-status** - Discord presence status
 - **github-stats** - GitHub contribution streak
+- **github-notifications** - GitHub notification inbox
 - **media** - Media player
 - **navigate** - Navigate between periodic notes
 - **note-embed** - Embed note content
