@@ -1,9 +1,8 @@
-// components.ts
-
 import { App, MarkdownPostProcessorContext, TAbstractFile, TFile, MarkdownRenderChild } from "obsidian";
 import { parseArguments, validateArguments, parseFM, resolveSpecialVariables, parseArgsAliases } from "utils";
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
+import { ComponentGroup } from "groups";
 
 /**
  * Global instance registry for cleanup
@@ -116,16 +115,6 @@ export enum ComponentAction {
     WRITE = 'WRITE',
     EXTERNAL = 'EXTERNAL'
 }
-
-export enum ComponentGroup {
-    GYM = 'gym'
-}
-
-export type ComponentGroupMetadata = {
-    name: string;
-    description: string;
-    members?: Component<readonly string[]>[];
-};
 
 export type ComponentArgs<TArgs extends readonly string[] = readonly string[]> = 
 Record<TArgs[number], string> & {
@@ -261,22 +250,7 @@ export namespace Component {
     }
 }
 
-// COMPONENTS array is auto-generated in components.register.ts
 import { COMPONENTS } from "./components.register";
 export { COMPONENTS };
-
-export const GROUPS: Record<ComponentGroup, ComponentGroupMetadata> = {
-    [ComponentGroup.GYM]: {
-        name: 'Gym',
-        description: 'Components for tracking gym routines and workouts'
-    }
-}
-
-for(const component of COMPONENTS) {
-    if (component.group) {
-        if (!GROUPS[component.group].members) {
-            GROUPS[component.group].members = [];
-        }
-        GROUPS[component.group].members!.push(component);
-    }
-}
+import { GROUPS } from "./groups";
+export { GROUPS };

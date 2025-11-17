@@ -1,4 +1,5 @@
-import { Component, ComponentGroup, ComponentInstance, ComponentAction } from "components";
+import { Component, ComponentInstance, ComponentAction } from "components";
+import { ComponentGroup } from "groups";
 import { gymRoutineMenuStyles } from "./styles";
 
 export const gymWorkoutTracker: Component<[]> = {
