@@ -173,6 +173,7 @@ export interface Component<TArgs extends readonly string[]> {
     does?: ComponentAction[];
     group?: ComponentGroup;
     styles: string | null;
+    icon?: string;
 }
 
 export namespace Component {

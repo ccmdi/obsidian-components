@@ -22,6 +22,11 @@ export default class ComponentSidebarView extends ItemView {
     }
 
     getIcon(): string {
+        // Use component icon if defined, otherwise fall back to switch statement
+        if (this.currentComponent?.icon) {
+            return this.currentComponent.icon;
+        }
+
         switch (this.componentKey) {
             case 'widget-space':
                 return 'layout-grid';
