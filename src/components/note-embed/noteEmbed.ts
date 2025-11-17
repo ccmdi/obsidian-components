@@ -6,6 +6,7 @@ import { noteEmbedStyles } from './styles';
 
 export const noteEmbed: Component<['target']> = {
 	keyName: 'note-embed',
+	icon: 'file-text',
 	name: 'Note Embed',
 	description: 'Embed another note using Obsidian\'s native rendering',
 	args: {

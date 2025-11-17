@@ -338,6 +338,7 @@ function generateMissingLinksDOM(el: HTMLElement, topMissingLinks: [string, numb
 
 export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {
     keyName: 'analytics',
+    icon: 'bar-chart-2',
     name: 'Vault Analytics',
     description: 'Display comprehensive vault analytics and insights',
     args: {

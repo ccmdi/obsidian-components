@@ -47,6 +47,7 @@ interface LanyardData {
 export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hideProfile']> = {
     name: 'Discord Status',
     keyName: 'discord-status',
+    icon: 'message-circle',
     args: {
         userId: {
             description: 'Your Discord user ID',

@@ -3,6 +3,7 @@ import { gymRoutineMenuStyles } from "./styles";
 
 export const gymRoutineMenu: Component<[]> = {
     keyName: 'gym-routine-menu',
+    icon: 'dumbbell',
     name: 'Gym Routine Menu',
     description: 'Display a menu for selecting a gym routine',
     args: {},

@@ -204,6 +204,7 @@ export const calendar: Component<[]> = {
     name: 'Calendar',
     description: 'Interactive calendar for navigating daily notes',
     keyName: 'calendar',
+    icon: 'calendar',
     args: {},
     isMountable: true,
     render: renderCalendar,

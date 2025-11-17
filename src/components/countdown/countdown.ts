@@ -5,6 +5,7 @@ import { countdownStyles } from './styles';
 
 export const countdown: Component<['date', 'name', 'showTime']> = {
 	keyName: 'countdown',
+	icon: 'timer',
 	name: 'Event Countdown',
 	description: 'Display countdown to a specific date/event',
 	args: {

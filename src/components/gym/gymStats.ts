@@ -4,6 +4,7 @@ import { matchesQuery } from "utils";
 
 export const gymStats: Component<['query']> = {
     keyName: 'gym-stats',
+    icon: 'dumbbell',
     name: 'Gym Stats',
     description: 'Display stats for your workouts',
     //TODO more args

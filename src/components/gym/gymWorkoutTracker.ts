@@ -3,6 +3,7 @@ import { gymRoutineMenuStyles } from "./styles";
 
 export const gymWorkoutTracker: Component<[]> = {
     keyName: 'gym-workout-tracker',
+    icon: 'dumbbell',
     name: 'Gym Workout Tracker',
     description: 'Track your workout progress for the day',
     args: {},

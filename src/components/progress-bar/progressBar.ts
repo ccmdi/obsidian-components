@@ -5,6 +5,7 @@ import { progressBarStyles } from './styles';
 
 export const progressBar: Component<['progress', 'height', 'backgroundColor', 'barColor', 'textColor', 'borderRadius', 'showLabel']> = {
 	keyName: 'progress-bar',
+	icon: 'bar-chart-2',
 	name: 'Progress Bar',
 	description: 'Display a progress bar with percentage.',
 	args: {

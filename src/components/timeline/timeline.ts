@@ -6,6 +6,7 @@ import timelineStyles from "./styles";
 
 export const timeline: Component<['query', 'limit', 'journalSection', 'taskSection', 'dateFormat', 'showTasks', 'showJournalDropdown']> = {
     keyName: 'timeline',
+    icon: 'gantt-chart',
     name: 'Timeline',
     description: 'Display a timeline of periodic notes (e.g. daily notes)',
     args: {
