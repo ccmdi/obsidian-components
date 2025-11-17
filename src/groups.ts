@@ -17,11 +17,19 @@ export const GROUPS: Record<ComponentGroup, ComponentGroupMetadata> = {
     }
 }
 
-for(const component of COMPONENTS) {
-    if (component.group) {
-        if (!GROUPS[component.group].members) {
-            GROUPS[component.group].members = [];
+// Initialize groups lazily to avoid bundling issues
+let groupsInitialized = false;
+
+export function initializeGroups() {
+    if (groupsInitialized) return;
+    groupsInitialized = true;
+
+    for(const component of COMPONENTS) {
+        if (component.group) {
+            if (!GROUPS[component.group].members) {
+                GROUPS[component.group].members = [];
+            }
+            GROUPS[component.group].members!.push(component);
         }
-        GROUPS[component.group].members!.push(component);
     }
 }
