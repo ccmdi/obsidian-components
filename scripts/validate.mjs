@@ -6,7 +6,7 @@
  * Add new validators to the VALIDATORS array below
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -23,46 +23,33 @@ const projectRoot = join(__dirname, '..');
  */
 
 /**
- * Parse component files to extract component definitions and their import paths
+ * Get all component files by scanning the components directory
  */
-function getComponentDefinitions() {
-	const componentsFile = join(projectRoot, 'src/components.ts');
-	const componentsContent = readFileSync(componentsFile, 'utf-8');
+function getComponentFiles() {
+	const componentsDir = join(projectRoot, 'src/components');
+	const entries = readdirSync(componentsDir, { withFileTypes: true });
 
-	// Find the COMPONENTS array
-	const componentsArrayMatch = componentsContent.match(/export const COMPONENTS[^=]*=\s*\[([\s\S]*?)\];/);
-	if (!componentsArrayMatch) {
-		return [];
+	const componentFiles = [];
+
+	for (const entry of entries) {
+		if (entry.isDirectory()) {
+			const dirPath = join(componentsDir, entry.name);
+			const files = readdirSync(dirPath);
+
+			// Find .ts files (excluding styles.ts)
+			for (const file of files) {
+				if (file.endsWith('.ts') && file !== 'styles.ts') {
+					componentFiles.push({
+						name: file.replace('.ts', ''),
+						path: join(dirPath, file),
+						relativePath: `src/components/${entry.name}/${file}`
+					});
+				}
+			}
+		}
 	}
 
-	// Extract component names from the array
-	const arrayContent = componentsArrayMatch[1];
-	const componentNames = arrayContent
-		.split(',')
-		.map(line => line.trim())
-		.filter(line => line && !line.startsWith('//'));
-
-	// Build a map of component names to their import paths
-	const componentMap = new Map();
-	const importRegex = /import\s*\{\s*(\w+)\s*\}\s*from\s*["']components\/([^"']+)["']/g;
-	let match;
-
-	while ((match = importRegex.exec(componentsContent)) !== null) {
-		const [, componentName, importPath] = match;
-		componentMap.set(componentName, importPath);
-	}
-
-	return componentNames.map(name => ({
-		name,
-		importPath: componentMap.get(name)
-	}));
-}
-
-/**
- * Convert camelCase to kebab-case
- */
-function camelToKebab(str) {
-	return str.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+	return componentFiles;
 }
 
 /**
@@ -70,40 +57,19 @@ function camelToKebab(str) {
  */
 function validateComponentIcons() {
 	const warnings = [];
-	const components = getComponentDefinitions();
+	const componentFiles = getComponentFiles();
 
-	for (const component of components) {
-		if (!component.importPath) {
+	for (const component of componentFiles) {
+		const content = readFileSync(component.path, 'utf-8');
+
+		// Check if the component object has an icon property
+		// Look for: icon: 'something' or icon: "something"
+		const hasIcon = /icon\s*:\s*['"`]/.test(content);
+
+		if (!hasIcon) {
 			warnings.push({
-				message: `Component "${component.name}" has no import path found`,
-				file: 'src/components.ts',
-				line: 1
-			});
-			continue;
-		}
-
-		// Use the import path from components.ts (imports use "components/..." which maps to "src/components/...")
-		const componentFile = join(projectRoot, `src/components/${component.importPath}.ts`);
-
-		try {
-			const content = readFileSync(componentFile, 'utf-8');
-
-			// Check if the component object has an icon property
-			// Look for: icon: 'something'
-			const hasIcon = /icon\s*:\s*['"`]/.test(content);
-
-			if (!hasIcon) {
-				warnings.push({
-					message: `Component "${component.name}" is missing an icon property`,
-					file: `src/components/${component.importPath}.ts`,
-					line: 1
-				});
-			}
-		} catch (error) {
-			// Component file doesn't exist or can't be read
-			warnings.push({
-				message: `Component "${component.name}" file not found or unreadable: ${error.message}`,
-				file: `src/components/${component.importPath}.ts`,
+				message: `Component "${component.name}" is missing an icon property`,
+				file: component.relativePath,
 				line: 1
 			});
 		}
