@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
-import { COMPONENTS, Component, ComponentAction, ComponentSetting, ComponentGroup, GROUPS, ComponentGroupMetadata } from "components";
+import { COMPONENTS, Component, ComponentAction, ComponentSetting, GROUPS } from "components";
 import ComponentsPlugin from "main";
+import { ComponentGroup } from "groups";
 import { renderExternalLinkToElement } from "utils";
 
 export default class ComponentsSettingTab extends PluginSettingTab {
