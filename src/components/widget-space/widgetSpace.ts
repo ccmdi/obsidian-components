@@ -362,13 +362,14 @@ export const widgetSpace: Component<['layout']> = {
                         requestAnimationFrame(() => {
                             grid.classList.add('initial-load-done');
                             skeleton.style.display = 'none';
+                            // Enable transitions after items have settled
+                            setTimeout(() => grid.classList.add('transitions-enabled'), 50);
                         });
                     });
                 }
             });
 
             muuri.on('dragStart', (item: any) => {
-                grid.classList.add('is-dragging');
                 const el = item.getElement();
                 el.style.zIndex = '1000';
                 el.style.transform += ' scale(1.02)';
@@ -376,7 +377,6 @@ export const widgetSpace: Component<['layout']> = {
             });
 
             muuri.on('dragEnd', async (item: any) => {
-                grid.classList.remove('is-dragging');
                 const el = item.getElement();
                 el.style.zIndex = '';
                 el.style.transform = el.style.transform.replace(' scale(1.02)', '');
@@ -465,6 +465,7 @@ export const widgetSpace: Component<['layout']> = {
         if (layout.widgets.length === 0) {
             skeleton.style.display = 'none';
             grid.classList.add('initial-load-done');
+            grid.classList.add('transitions-enabled');
         } else {
             muuri.layout(false);
         }
@@ -480,6 +481,7 @@ export const widgetSpace: Component<['layout']> = {
 
                 if (!entry.isIntersecting) {
                     grid.classList.remove('initial-load-done');
+                    grid.classList.remove('transitions-enabled');
                     skeleton.style.display = '';
                 } else if (!grid.classList.contains('initial-load-done')) {
                     muuri.refreshItems();
@@ -488,6 +490,7 @@ export const widgetSpace: Component<['layout']> = {
                         requestAnimationFrame(() => {
                             grid.classList.add('initial-load-done');
                             skeleton.style.display = 'none';
+                            setTimeout(() => grid.classList.add('transitions-enabled'), 50);
                         });
                     });
                 }

@@ -68,8 +68,8 @@ export const widgetSpaceStyles = /*css*/`
     .widget-space-grid:not(.initial-load-done) .widget-item {
         visibility: hidden;
     }
-    /* Enable transform transitions for all items during drag operations */
-    .widget-space-grid.is-dragging .widget-item {
+    /* Enable transform transitions only when explicitly allowed */
+    .widget-space-grid.transitions-enabled .widget-item {
         transition: box-shadow 0.2s ease, height 0.3s ease-out, transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
     /* But not for the item being dragged */
