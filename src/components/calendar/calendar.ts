@@ -183,6 +183,19 @@ const renderCalendar = async (
             dayEl.addEventListener('click', async () => {
                 await navigateToDate(date);
             });
+
+            // Middle click to open in new tab (only if note exists)
+            dayEl.addEventListener('auxclick', async (e) => {
+                if (e.button === 1 && checkNoteExists(date)) {
+                    e.preventDefault();
+                    const fileName = formatDateForFile(date);
+                    const fullPath = dailyNotesFolder ? `${dailyNotesFolder}/${fileName}.md` : `${fileName}.md`;
+                    const file = app.vault.getAbstractFileByPath(fullPath);
+                    if (file instanceof TFile) {
+                        await app.workspace.getLeaf('tab').openFile(file);
+                    }
+                }
+            });
         }
 
         // Fill in next month's days to complete 6 rows (42 cells)
