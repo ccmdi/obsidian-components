@@ -235,7 +235,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             name: "Months Back",
             desc: "How many months back to search for tasks",
             type: "number",
-            default: 6
+            default: 2
         },
         limit: {
             name: "Task Limit",
