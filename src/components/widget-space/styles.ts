@@ -7,6 +7,10 @@ export const widgetSpaceStyles = /*css*/`
         position: relative;
         overflow: auto;
         --widget-space-width: 100%;
+        scrollbar-width: none;
+    }
+    .widget-space-container::-webkit-scrollbar {
+        display: none;
     }
 
     /* Remove component padding specifically for widget-space */
