@@ -31,17 +31,10 @@ interface DiscordUser {
     id: string;
 }
 
-interface SpotifyData {
-    song: string;
-    artist: string;
-    timestamps?: DiscordActivityTimestamps;
-}
-
 interface LanyardData {
     discord_user: DiscordUser;
     discord_status: string;
     activities: DiscordActivity[];
-    spotify?: SpotifyData;
 }
 
 export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hideProfile']> = {
@@ -301,37 +294,15 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             // Add activity cards
             if (showActivity && user.activities && user.activities.length > 0) {
                 user.activities.forEach((activity) => {
-                    const activityType = getActivityType(activity.type);
                     const artworkUrl = getArtworkUrl(activity);
+                    const activityType = getActivityType(activity.type);
 
-                    let title = activity.name;
-                    let subtitle = `${activityType}${activity.details ? ` • ${activity.details}` : ''}${activity.state ? ` • ${activity.state}` : ''}`;
+                    const title = activity.name;
+                    const subtitle = `${activityType}${activity.details ? ` • ${activity.details}` : ''}${activity.state ? ` • ${activity.state}` : ''}`;
 
                     currentActivities.push(activity);
-
-                    const card = createActivityCard(activity, artworkUrl, title, subtitle);
-                    widget.appendChild(card);
+                    widget.appendChild(createActivityCard(activity, artworkUrl, title, subtitle));
                 });
-            }
-
-            // Add separate Spotify card if showSpotify is enabled and we have spotify data
-            if (user.spotify) {
-                const spotifyActivity = user.activities?.find((a) => a.name === 'Spotify');
-                const artworkUrl = spotifyActivity ? getArtworkUrl(spotifyActivity) : null;
-
-                // Add spotify activity to our tracking array
-                if (spotifyActivity) {
-                    currentActivities.push(spotifyActivity);
-                }
-
-                const subtitle = `by ${user.spotify.artist}`;
-                const activityForCard = spotifyActivity || {
-                    type: 2, // Listening to
-                    name: 'Spotify',
-                    timestamps: user.spotify.timestamps
-                };
-                const card = createActivityCard(activityForCard, artworkUrl, user.spotify.song, subtitle);
-                widget.appendChild(card);
             }
 
             // Start activity timer updates if needed
