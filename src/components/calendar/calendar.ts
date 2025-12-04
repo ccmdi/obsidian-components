@@ -197,7 +197,25 @@ const renderCalendar = async (
         }
     };
 
+    const refreshNoteIndicators = () => {
+        const days = container.querySelectorAll('.calendar-day:not(.calendar-day-other-month)');
+        days.forEach((dayEl, index) => {
+            const day = index + 1;
+            const date = new Date(currentYear, currentMonth, day);
+            if (checkNoteExists(date)) {
+                dayEl.classList.add('calendar-day-has-note');
+            } else {
+                dayEl.classList.remove('calendar-day-has-note');
+            }
+        });
+    };
+
     renderCalendarView();
+
+    app.workspace.on('active-leaf-change', refreshNoteIndicators);
+    ComponentInstance.addCleanup(instance, () => {
+        app.workspace.off('active-leaf-change', refreshNoteIndicators);
+    });
 };
 
 export const calendar: Component<[]> = {
