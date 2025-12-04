@@ -71,11 +71,15 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey']> = {
                     cls: 'anthropic-usage-label',
                     text: 'Usage'
                 });
-                const resetTime = window.moment(usageData.five_hour.resets_at).format('h:mm A');
-                info.createEl('div', {
-                    cls: 'anthropic-usage-reset',
-                    text: `resets ${resetTime}`
-                });
+
+                // Only show reset time if resets_at is a valid date
+                if (usageData.five_hour.resets_at && window.moment(usageData.five_hour.resets_at).isValid()) {
+                    const resetTime = window.moment(usageData.five_hour.resets_at).format('h:mm A');
+                    info.createEl('div', {
+                        cls: 'anthropic-usage-reset',
+                        text: `resets ${resetTime}`
+                    });
+                }
 
                 // Progress bar
                 const bar = barWrapper.createEl('div', { cls: 'anthropic-usage-bar' });
