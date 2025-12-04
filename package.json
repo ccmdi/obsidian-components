@@ -1,6 +1,6 @@
 {
 	"name": "components",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Components for Obsidian",
 	"main": "main.js",
 	"scripts": {
