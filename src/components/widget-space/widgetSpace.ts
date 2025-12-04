@@ -204,6 +204,10 @@ export const widgetSpace: Component<['layout']> = {
         const handleInternalLink = async (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             if (target.classList.contains('internal-link')) {
+                // Only handle left-click on 'click' event, middle-click on 'auxclick' event
+                if (e.type === 'click' && e.button !== 0) return;
+                if (e.type === 'auxclick' && e.button !== 1) return;
+
                 e.preventDefault();
                 e.stopPropagation();
                 const linkTarget = target.getAttribute('data-href');
@@ -211,13 +215,7 @@ export const widgetSpace: Component<['layout']> = {
                     const widget = target.closest('.widget-item') as HTMLElement;
                     const contextPath = widget?.dataset.componentKey || '';
                     const isNewTab = e.button === 1 || e.ctrlKey || e.metaKey; // Middle click or Ctrl/Cmd+click
-
-                    if (isNewTab) {
-                        const leaf = app.workspace.getLeaf('tab');
-                        await app.workspace.openLinkText(linkTarget, contextPath, isNewTab ? 'tab' : false);
-                    } else {
-                        await app.workspace.openLinkText(linkTarget, contextPath);
-                    }
+                    await app.workspace.openLinkText(linkTarget, contextPath, isNewTab ? 'tab' : false);
                 }
             }
         };
