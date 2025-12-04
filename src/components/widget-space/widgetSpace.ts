@@ -200,6 +200,31 @@ export const widgetSpace: Component<['layout']> = {
             }
         });
 
+        // Handle internal link clicks within widgets
+        const handleInternalLink = async (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (target.classList.contains('internal-link')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const linkTarget = target.getAttribute('data-href');
+                if (linkTarget) {
+                    const widget = target.closest('.widget-item') as HTMLElement;
+                    const contextPath = widget?.dataset.componentKey || '';
+                    const isNewTab = e.button === 1 || e.ctrlKey || e.metaKey; // Middle click or Ctrl/Cmd+click
+
+                    if (isNewTab) {
+                        const leaf = app.workspace.getLeaf('tab');
+                        await app.workspace.openLinkText(linkTarget, contextPath, isNewTab ? 'tab' : false);
+                    } else {
+                        await app.workspace.openLinkText(linkTarget, contextPath);
+                    }
+                }
+            }
+        };
+
+        container.addEventListener('click', handleInternalLink);
+        container.addEventListener('auxclick', handleInternalLink);
+
         let muuri: any;
         let widgetCounter = 0;
 
