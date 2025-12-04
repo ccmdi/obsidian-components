@@ -185,9 +185,9 @@ const renderCalendar = async (
             });
         }
 
-        // Fill in next month's days to complete the grid
+        // Fill in next month's days to complete 6 rows (42 cells)
         const totalCellsUsed = startingDayOfWeek + daysInMonth;
-        const remainingCells = totalCellsUsed % 7 === 0 ? 0 : 7 - (totalCellsUsed % 7);
+        const remainingCells = 42 - totalCellsUsed;
 
         for (let day = 1; day <= remainingCells; day++) {
             daysContainer.createEl('div', {

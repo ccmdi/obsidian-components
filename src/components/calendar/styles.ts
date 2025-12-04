@@ -1,4 +1,4 @@
-export default `
+export default /*css*/`
 .calendar-container {
     width: 100%;
     max-width: 320px;
@@ -24,26 +24,23 @@ export default `
     color: var(--text-normal);
 }
 
-.calendar-nav-button {
-    background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    color: var(--text-normal);
+button.calendar-nav-button {
+    all: unset;
+    background-color: transparent !important;
+    color: var(--text-muted);
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 2px;
-    font-size: 18px;
-    transition: all 0.2s ease;
+    padding: 4px;
+    font-size: 14px;
     line-height: 1;
+    transition: color 0.15s ease;
 }
 
 .calendar-nav-button:hover {
-    background: var(--background-modifier-hover);
     color: var(--text-normal);
-    transform: scale(1.1);
 }
 
 .calendar-nav-button:active {
-    transform: scale(0.95);
+    color: var(--text-accent);
 }
 
 .calendar-weekdays {
@@ -65,6 +62,7 @@ export default `
 .calendar-days {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
     gap: 4px;
 }
 
