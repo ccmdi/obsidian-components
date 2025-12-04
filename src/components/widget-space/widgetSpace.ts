@@ -347,22 +347,28 @@ export const widgetSpace: Component<['layout']> = {
 
             muuri = new window.Muuri(grid, options);
 
-            // Hide skeleton after layout is complete and positioned
+            // Hide skeleton after layout - will be triggered manually after all widgets load
             muuri.on('layoutEnd', () => {
-                // Give 50ms breathing room for positioning
-                setTimeout(() => {
-                    skeleton.style.display = 'none';
-                }, 50);
+                if (grid.dataset.initialLoadComplete === 'true' && !grid.classList.contains('initial-load-done')) {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            grid.classList.add('initial-load-done');
+                            skeleton.style.display = 'none';
+                        });
+                    });
+                }
             });
 
             // Improve drag experience
             muuri.on('dragStart', (item: any) => {
+                grid.classList.add('is-dragging');
                 item.getElement().style.zIndex = '1000';
                 item.getElement().style.transform += ' scale(1.02)';
                 item.getElement().style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
             });
 
             muuri.on('dragEnd', async (item: any) => {
+                grid.classList.remove('is-dragging');
                 item.getElement().style.zIndex = '';
                 item.getElement().style.transform = item.getElement().style.transform.replace(' scale(1.02)', '');
                 item.getElement().style.boxShadow = '';
@@ -560,10 +566,50 @@ export const widgetSpace: Component<['layout']> = {
         initGrid();
         await loadWidgets();
 
+        // Mark initial load complete and trigger final layout
+        grid.dataset.initialLoadComplete = 'true';
         if (layout.widgets.length === 0) {
             skeleton.style.display = 'none';
+            grid.classList.add('initial-load-done');
+        } else {
+            // Trigger a layout to fire layoutEnd event now that all widgets are loaded
+            muuri.layout(false);
         }
 
+        // Handle sidebar tab switching
+        // When tab becomes HIDDEN: hide items and show skeleton so they're ready when we come back
+        // When tab becomes VISIBLE: recalculate layout, then reveal
+        let hasBeenVisibleOnce = false;
+        const visibilityObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                // Skip until initial load is complete
+                if (!grid.classList.contains('initial-load-done') && !hasBeenVisibleOnce) {
+                    if (entry.isIntersecting) {
+                        hasBeenVisibleOnce = true;
+                    }
+                    return;
+                }
+
+                if (!entry.isIntersecting) {
+                    // Going invisible - hide items now so they're hidden when we return
+                    grid.classList.remove('initial-load-done');
+                    skeleton.style.display = '';
+                } else if (entry.isIntersecting && !grid.classList.contains('initial-load-done')) {
+                    // Becoming visible again - recalculate and show
+                    muuri.refreshItems();
+                    muuri.layout(false);
+
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            grid.classList.add('initial-load-done');
+                            skeleton.style.display = 'none';
+                        });
+                    });
+                }
+            });
+        }, { threshold: 0.01 });
+        visibilityObserver.observe(container);
+        ComponentInstance.addCleanup(instance, () => visibilityObserver.disconnect());
 
         const resizeObserver = muuri.resizeObserver;
         if (resizeObserver) {

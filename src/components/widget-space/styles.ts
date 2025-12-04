@@ -57,22 +57,26 @@ export const widgetSpaceStyles = /*css*/`
         border: 1px solid var(--background-modifier-border);
         border-radius: 6px;
         cursor: move;
-        transition: box-shadow 0.2s ease, height 0.3s ease-out, transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        transition: box-shadow 0.2s ease, height 0.3s ease-out;
         box-sizing: border-box;
         width: calc(var(--widget-space-width) - 8px);
         will-change: transform;
         backface-visibility: hidden;
         transform-style: preserve-3d;
     }
+    /* Hide items until initial layout is done */
+    .widget-space-grid:not(.initial-load-done) .widget-item {
+        visibility: hidden;
+    }
+    /* Enable transform transitions for all items during drag operations */
     .widget-space-grid.is-dragging .widget-item {
-transition: none !important;
-}
-    /* Disable transitions during drag for performance */
+        transition: box-shadow 0.2s ease, height 0.3s ease-out, transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    /* But not for the item being dragged */
     .widget-item.muuri-item-dragging {
         transition: box-shadow 0.2s ease !important;
     }
-
-    /* Re-enable transitions when releasing */
+    /* Smooth transition when releasing dragged item */
     .widget-item.muuri-item-releasing {
         transition: box-shadow 0.2s ease, height 0.3s ease-out, transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
     }
