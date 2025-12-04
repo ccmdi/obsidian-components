@@ -458,8 +458,7 @@ export async function getTasks(app: App, file: TFile, options: {
                 const isIncomplete = status === ' ' || status === 'R' || status === '/';
 
                 if ((completed && isCompleted) || (incomplete && isIncomplete)) {
-                    let processedTaskText = renderMarkdownLink(taskText);
-                    tasks.push(processedTaskText);
+                    tasks.push(taskText);
                 }
             }
         }

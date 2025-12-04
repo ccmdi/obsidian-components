@@ -65,6 +65,9 @@ export const remindersStyles = /*css*/`
         color: var(--text-normal);
         font-size: 0.95em;
         line-height: 1.4;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
     }
     .reminder-age {
         font-size: 0.8em;

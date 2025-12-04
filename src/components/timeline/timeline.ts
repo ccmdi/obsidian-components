@@ -1,6 +1,6 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { TFile } from "obsidian";
-import { formatDate, getTasks, matchesQuery } from "utils";
+import { formatDate, getTasks, matchesQuery, renderMarkdownLinkToElement } from "utils";
 import timelineStyles from "./styles";
 
 
@@ -183,7 +183,7 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
                             }
                         });
                         taskDiv.appendText('✓ ');
-                        taskDiv.appendText(task);
+                        renderMarkdownLinkToElement(task, taskDiv);
                     });
                 }
 

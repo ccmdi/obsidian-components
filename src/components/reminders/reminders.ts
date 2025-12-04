@@ -1,5 +1,5 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
-import { useNavigation, useTargetNoteSorting, getTasks, matchesQuery } from "utils";
+import { useNavigation, useTargetNoteSorting, getTasks, matchesQuery, renderMarkdownLinkToElement } from "utils";
 import { remindersStyles } from "./styles";
 
 export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', 'colorAges', 'showCount', 'sort', 'showHeader']> = {
@@ -22,11 +22,11 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
         },
         showAges: {
             description: 'Show task ages',
-            default: 'true'
+            default: 'false'
         },
         colorAges: {
             description: 'Color task ages',
-            default: 'true'
+            default: 'false'
         },
         showCount: {
             description: 'Show total task count',
@@ -191,7 +191,10 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
                 const listItem = taskList.createEl('div', { cls: 'reminder-item' });
 
                 listItem.createEl('span', { cls: 'reminder-bullet', text: '•' });
-                listItem.createEl('span', { cls: 'reminder-text', text: task.text });
+
+                // Render task text with clickable internal links
+                const textSpan = listItem.createEl('span', { cls: 'reminder-text' });
+                renderMarkdownLinkToElement(task.text, textSpan);
 
                 // Add age if needed
                 if (showAges && task.age >= 7) {
@@ -206,6 +209,10 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
 
                 // Make clickable to open the file
                 listItem.addEventListener('mousedown', async (event) => {
+                    // Don't navigate if clicking on an internal link
+                    if ((event.target as HTMLElement).classList.contains('internal-link')) {
+                        return;
+                    }
                     const filePath = `${task.file?.path}`;
                     const isNewTab = event.button === 1; // Middle click
                     await useNavigation(app, filePath, isNewTab);
@@ -240,13 +247,13 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             name: "Show Task Ages",
             desc: "Display how old each task is",
             type: "toggle",
-            default: true
+            default: false
         },
         colorAges: {
             name: "Color Task Ages",
             desc: "Use red coloring for older tasks",
             type: "toggle",
-            default: true
+            default: false
         },
         sort: {
             name: "Sort By",
