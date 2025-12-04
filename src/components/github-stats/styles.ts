@@ -61,7 +61,7 @@ export const githubStyles = /*css*/`
 
     /* Tooltip that appears on hover */
     .github-tooltip {
-        position: absolute;
+        position: fixed;
         padding: 6px 10px;
         background: var(--background-secondary-alt);
         border: 1px solid var(--background-modifier-border);
@@ -70,12 +70,8 @@ export const githubStyles = /*css*/`
         font-size: 12px;
         white-space: nowrap;
         z-index: 1000;
-
-        /* Hide by default and prevent interaction */
         opacity: 0;
         pointer-events: none;
-        
-        /* Center horizontally and position above the anchor point with a 5px gap */
         transform: translate(-50%, calc(-100% - 5px));
         transition: opacity 0.15s ease-in-out;
     }

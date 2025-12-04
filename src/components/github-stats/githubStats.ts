@@ -52,7 +52,8 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
             el.style.position = 'relative';
 
             const widget = el.createEl('div', { cls: 'github-streak-container' });
-            const tooltip = el.createEl('div', { cls: 'github-tooltip' });
+            const tooltip = document.body.createEl('div', { cls: 'github-tooltip' });
+            ComponentInstance.addCleanup(instance, () => tooltip.remove());
 
             // Loading state
             const loadingWrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
@@ -70,7 +71,6 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
             }
             
             el.appendChild(widget);
-            el.appendChild(tooltip);
     
             const query = `{ viewer { login, contributionsCollection { contributionCalendar { weeks { contributionDays { date, contributionCount } } } } } }`;
     
@@ -129,12 +129,10 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
                     const target = e.target as HTMLElement;
                     tooltip.textContent = target.dataset.tooltip || '';
                     tooltip.style.opacity = '1';
-    
+
                     const rect = target.getBoundingClientRect();
-                    const containerRect = el.getBoundingClientRect();
-                    
-                    tooltip.style.left = `${rect.left - containerRect.left + rect.width / 2}px`;
-                    tooltip.style.top = `${rect.top - containerRect.top}px`;
+                    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+                    tooltip.style.top = `${rect.top}px`;
                 });
                 square.addEventListener('mouseleave', () => {
                     tooltip.style.opacity = '0';
