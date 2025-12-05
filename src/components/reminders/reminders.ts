@@ -114,13 +114,13 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             for (const file of files) {
                 const fileDate = new Date(file.name.replace('.md', ''));
 
-                // Get both complete and incomplete tasks
+                // Get both complete and incomplete tasks (single read per file)
                 const allTasksInFile = await getTasks(app, file, { incomplete: true, completed: true });
+                const completedTasks = await getTasks(app, file, { incomplete: false, completed: true });
+                const completedSet = new Set(completedTasks);
 
                 for (const taskText of allTasksInFile) {
-                    // Check if task is completed in this file
-                    const completedTasks = await getTasks(app, file, { incomplete: false, completed: true });
-                    const isCompleted = completedTasks.includes(taskText);
+                    const isCompleted = completedSet.has(taskText);
 
                     if (!taskTextMap[taskText]) {
                         // First occurrence of this task

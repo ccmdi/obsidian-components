@@ -104,6 +104,10 @@ export const githubStats: Component<['GITHUB_TOKEN']> =
                     style: 'width: 100%; height: 100%;'
                 }
             });
+            // Fallback if CDN image fails to load
+            icon.onerror = () => {
+                icon.src = `https://cdn.simpleicons.org/github/000000`;
+            };
 
             const streakContainer = wrapper.createEl('div', { cls: 'github-streak' });
 

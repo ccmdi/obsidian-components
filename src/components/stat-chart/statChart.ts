@@ -221,6 +221,14 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
         });
         
         updateChart();
+
+        // Cleanup chart instance when component is destroyed
+        ComponentInstance.addCleanup(instance, () => {
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+        });
     },
     settings: {}
 }

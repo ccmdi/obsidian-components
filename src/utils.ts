@@ -183,7 +183,8 @@ export function formatDate(date: Date, format: string): string {
  * e.g., "hsl(246, 84%, 69%)" -> "766df3"
  */
 export function getAccentColorHex(el: HTMLElement): string {
-    const fallback = 'black';
+    // Fallback must be a valid hex code (not a color name) for CDN compatibility
+    const fallback = '000000';
 
     const tempDiv = el.ownerDocument.createElement('div');
     tempDiv.style.color = 'var(--text-accent)';
