@@ -31,7 +31,7 @@ export const llm: Component<['apiKey', 'model', 'systemPrompt', 'maxTokens', 'te
     description: 'AI assistant powered by Claude',
     keyName: 'llm',
     icon: 'message-square',
-    enabled: true,
+    enabled: false,
     args: {
         apiKey: {
             description: 'Anthropic API key (or set in component settings)',
