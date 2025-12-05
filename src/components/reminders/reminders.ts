@@ -161,14 +161,15 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             const uniqueTasks = Object.entries(taskTextMap)
                 .filter(([text, data]) => !data.latestCompleted)
                 .map(([text, data]) => {
-                    const fileName = data.firstDate.toISOString().slice(0, 10);
+                    // Use lastDate for file reference (completion & navigation go to most recent)
+                    const fileName = data.lastDate.toISOString().slice(0, 10);
                     const file = files.find(f => f.name.replace('.md', '') === fileName);
                     if(!file) throw new Error(`File not found: ${fileName}`);
                     const fm = app.metadataCache.getFileCache(file);
                     return {
                         text,
-                        date: data.firstDate,
-                        age: daysBetween(new Date(), data.firstDate),
+                        date: data.lastDate, // Most recent occurrence for navigation
+                        age: daysBetween(new Date(), data.firstDate), // Age from first occurrence
                         file,
                         fm
                     };

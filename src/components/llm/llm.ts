@@ -423,7 +423,7 @@ ${context}`;
                 let hasText = false;
 
                 for (const block of contentBlocks) {
-                    if (block.type === 'text') {
+                    if (block.type === 'text' && block.text) {
                         hasText = true;
                         const textEl = contentEl.createEl('div', { cls: 'llm-text-block' });
                         // Animate text in
@@ -439,12 +439,12 @@ ${context}`;
                         };
                         typeChar();
 
-                    } else if (block.type === 'tool_use') {
+                    } else if (block.type === 'tool_use' && block.name) {
                         const toolEl = renderToolUse(contentEl, block.name, block.input, true);
                         messagesEl.scrollTop = messagesEl.scrollHeight;
 
                         // Execute tool
-                        const result = await executeTool(block.name, block.input);
+                        const result = await executeTool(block.name, block.input as Record<string, unknown>);
 
                         // Update tool UI
                         toolEl.removeClass('llm-tool-active');
