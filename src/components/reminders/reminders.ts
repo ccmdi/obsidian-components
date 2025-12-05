@@ -124,7 +124,14 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             }
 
             // Extract ALL tasks from all files to track completion status
-            const taskTextMap: Record<string, { firstDate: Date, lastDate: Date, latestCompleted: boolean }> = {};
+            // Store actual file references to handle duplicate filenames in different folders
+            const taskTextMap: Record<string, {
+                firstDate: Date,
+                lastDate: Date,
+                firstFile: TFile,
+                lastFile: TFile,
+                latestCompleted: boolean
+            }> = {};
 
             for (const file of files) {
                 const fileDate = new Date(file.name.replace('.md', ''));
@@ -142,16 +149,20 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
                         taskTextMap[taskText] = {
                             firstDate: fileDate,
                             lastDate: fileDate,
+                            firstFile: file,
+                            lastFile: file,
                             latestCompleted: isCompleted
                         };
                     } else {
                         // Update earliest occurrence
                         if (fileDate < taskTextMap[taskText].firstDate) {
                             taskTextMap[taskText].firstDate = fileDate;
+                            taskTextMap[taskText].firstFile = file;
                         }
                         // Update latest occurrence and completion status
                         if (fileDate > taskTextMap[taskText].lastDate) {
                             taskTextMap[taskText].lastDate = fileDate;
+                            taskTextMap[taskText].lastFile = file;
                             taskTextMap[taskText].latestCompleted = isCompleted;
                         }
                     }
@@ -161,16 +172,13 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             const uniqueTasks = Object.entries(taskTextMap)
                 .filter(([text, data]) => !data.latestCompleted)
                 .map(([text, data]) => {
-                    // Use lastDate for file reference (completion & navigation go to most recent)
-                    const fileName = data.lastDate.toISOString().slice(0, 10);
-                    const file = files.find(f => f.name.replace('.md', '') === fileName);
-                    if(!file) throw new Error(`File not found: ${fileName}`);
-                    const fm = app.metadataCache.getFileCache(file);
+                    // Use direct file reference (handles duplicate filenames in different folders)
+                    const fm = app.metadataCache.getFileCache(data.lastFile);
                     return {
                         text,
                         date: data.lastDate, // Most recent occurrence for navigation
                         age: daysBetween(new Date(), data.firstDate), // Age from first occurrence
-                        file,
+                        file: data.lastFile, // Direct reference to correct file
                         fm
                     };
                 });
