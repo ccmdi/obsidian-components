@@ -34,6 +34,7 @@ export const remindersStyles = /*css*/`
         font-size: 0.8em;
         font-weight: 500;
         margin-left: auto;
+        transition: transform 0.15s ease;
     }
     .reminders-list {
         display: flex;
@@ -47,18 +48,36 @@ export const remindersStyles = /*css*/`
         background: var(--background-primary);
         border-radius: 8px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.2s ease, opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease;
         border: 1px solid transparent;
+        max-height: 100px;
+        overflow: hidden;
     }
     .reminder-item:hover {
         background: var(--background-modifier-hover);
         border-color: var(--background-modifier-border);
         transform: translateX(2px);
     }
-    .reminder-bullet {
-        color: var(--text-accent);
-        margin-right: 8px;
-        font-weight: bold;
+    .reminder-item.completing {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    .reminder-item.completed {
+        opacity: 0;
+        transform: translateX(20px);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin-bottom: -8px;
+    }
+    .reminder-item.completed .reminder-text {
+        text-decoration: line-through;
+        color: var(--text-muted);
+    }
+    .reminder-checkbox {
+        margin-right: 10px;
+        cursor: pointer;
+        flex-shrink: 0;
     }
     .reminder-text {
         flex: 1;

@@ -1,6 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { useNavigation, useTargetNoteSorting, getTasks, matchesQuery, renderMarkdownLinkToElement } from "utils";
 import { remindersStyles } from "./styles";
+import { TFile } from "obsidian";
 
 export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', 'colorAges', 'showCount', 'sort', 'showHeader']> = {
     name: 'Reminders',
@@ -42,7 +43,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
         }
     },
     isMountable: true,
-    does: [ComponentAction.READ],
+    does: [ComponentAction.READ, ComponentAction.WRITE],
     styles: remindersStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const query = args.query;
@@ -61,7 +62,6 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
         const sortBy = args.sort;
         const showHeader = args.showHeader !== 'false';
 
-
         const getColorForAge = (age: number): string => {
             if (!colorAges) return "var(--text-muted)";
             if (age < 7) return "rgba(0, 0, 0, 0)";
@@ -70,17 +70,32 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             return "rgba(244, 67, 54, 0.9)";
         };
 
-        const styledAge = (age: number): string => {
-            if (!showAges) return "";
+        // Mark a task as complete in its source file
+        const completeTask = async (file: TFile, taskText: string): Promise<boolean> => {
+            try {
+                const content = await app.vault.read(file);
+                const lines = content.split('\n');
 
-            const color = getColorForAge(age);
-
-            if (age < 7 && colorAges) {
-                return "";
+                // Find and replace the task line
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    // Match incomplete task with this text
+                    const taskMatch = line.match(/^(\s*- \[)[ \/R](\] .*)$/);
+                    if (taskMatch) {
+                        const extractedText = line.replace(/^\s*- \[.\] /, '');
+                        if (extractedText === taskText) {
+                            // Replace with completed task
+                            lines[i] = line.replace(/^(\s*- \[)[ \/R](\].*)$/, '$1x$2');
+                            await app.vault.modify(file, lines.join('\n'));
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            } catch (error) {
+                console.error('Error completing task:', error);
+                return false;
             }
-
-            const ageText = `${age} day${age === 1 ? '' : 's'} old`;
-            return `<span style="color: ${color}; font-weight: bold;">(${ageText})</span>`;
         };
 
         try {
@@ -109,34 +124,45 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             }
 
             // Extract ALL tasks from all files to track completion status
-            const taskTextMap: Record<string, { firstDate: Date, lastDate: Date, latestCompleted: boolean }> = {};
+            // Store actual file references to handle duplicate filenames in different folders
+            const taskTextMap: Record<string, {
+                firstDate: Date,
+                lastDate: Date,
+                firstFile: TFile,
+                lastFile: TFile,
+                latestCompleted: boolean
+            }> = {};
 
             for (const file of files) {
                 const fileDate = new Date(file.name.replace('.md', ''));
 
-                // Get both complete and incomplete tasks
+                // Get both complete and incomplete tasks (single read per file)
                 const allTasksInFile = await getTasks(app, file, { incomplete: true, completed: true });
+                const completedTasks = await getTasks(app, file, { incomplete: false, completed: true });
+                const completedSet = new Set(completedTasks);
 
                 for (const taskText of allTasksInFile) {
-                    // Check if task is completed in this file
-                    const completedTasks = await getTasks(app, file, { incomplete: false, completed: true });
-                    const isCompleted = completedTasks.includes(taskText);
+                    const isCompleted = completedSet.has(taskText);
 
                     if (!taskTextMap[taskText]) {
                         // First occurrence of this task
                         taskTextMap[taskText] = {
                             firstDate: fileDate,
                             lastDate: fileDate,
+                            firstFile: file,
+                            lastFile: file,
                             latestCompleted: isCompleted
                         };
                     } else {
                         // Update earliest occurrence
                         if (fileDate < taskTextMap[taskText].firstDate) {
                             taskTextMap[taskText].firstDate = fileDate;
+                            taskTextMap[taskText].firstFile = file;
                         }
                         // Update latest occurrence and completion status
                         if (fileDate > taskTextMap[taskText].lastDate) {
                             taskTextMap[taskText].lastDate = fileDate;
+                            taskTextMap[taskText].lastFile = file;
                             taskTextMap[taskText].latestCompleted = isCompleted;
                         }
                     }
@@ -146,15 +172,13 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             const uniqueTasks = Object.entries(taskTextMap)
                 .filter(([text, data]) => !data.latestCompleted)
                 .map(([text, data]) => {
-                    const fileName = data.firstDate.toISOString().slice(0, 10);
-                    const file = files.find(f => f.name.replace('.md', '') === fileName);
-                    if(!file) throw new Error(`File not found: ${fileName}`);
-                    const fm = app.metadataCache.getFileCache(file);
+                    // Use direct file reference (handles duplicate filenames in different folders)
+                    const fm = app.metadataCache.getFileCache(data.lastFile);
                     return {
                         text,
-                        date: data.firstDate,
-                        age: daysBetween(new Date(), data.firstDate),
-                        file,
+                        date: data.lastDate, // Most recent occurrence for navigation
+                        age: daysBetween(new Date(), data.firstDate), // Age from first occurrence
+                        file: data.lastFile, // Direct reference to correct file
                         fm
                     };
                 });
@@ -162,6 +186,8 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             const sortedTasks = useTargetNoteSorting(uniqueTasks, sortBy);
 
             const container = el.createEl('div', { cls: 'reminders-container' });
+            let countEl: HTMLElement | null = null;
+            let currentCount = Math.min(sortedTasks.length, limit);
 
             if (sortedTasks.length === 0) {
                 if (showHeader) {
@@ -177,9 +203,9 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
                 const header = container.createEl('div', { cls: 'reminders-header' });
                 header.createEl('h3', { cls: 'reminders-title', text: 'Reminders' });
                 if (showCount) {
-                    header.createEl('div', {
+                    countEl = header.createEl('div', {
                         cls: 'reminders-count',
-                        text: Math.min(sortedTasks.length, limit).toString()
+                        text: currentCount.toString()
                     });
                 }
             }
@@ -190,7 +216,50 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             for (const task of sortedTasks.slice(0, limit)) {
                 const listItem = taskList.createEl('div', { cls: 'reminder-item' });
 
-                listItem.createEl('span', { cls: 'reminder-bullet', text: '•' });
+                // Create checkbox
+                const checkbox = listItem.createEl('input', {
+                    cls: 'reminder-checkbox task-list-item-checkbox',
+                    attr: { type: 'checkbox' }
+                });
+
+                // Handle task completion
+                checkbox.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+
+                    if (checkbox.checked) {
+                        checkbox.disabled = true;
+                        listItem.addClass('completing');
+
+                        const success = await completeTask(task.file, task.text);
+
+                        if (success) {
+                            // Update count
+                            currentCount--;
+                            if (countEl) {
+                                countEl.textContent = currentCount.toString();
+                            }
+
+                            // Animate out
+                            listItem.addClass('completed');
+                            setTimeout(() => {
+                                listItem.remove();
+                                // Show empty state if no tasks left
+                                if (taskList.children.length === 0) {
+                                    taskList.remove();
+                                    container.createEl('div', {
+                                        cls: 'reminders-empty',
+                                        text: 'No incomplete tasks found.'
+                                    });
+                                }
+                            }, 300);
+                        } else {
+                            // Revert on failure
+                            checkbox.checked = false;
+                            checkbox.disabled = false;
+                            listItem.removeClass('completing');
+                        }
+                    }
+                });
 
                 // Render task text with clickable internal links
                 const textSpan = listItem.createEl('span', { cls: 'reminder-text' });
@@ -201,16 +270,18 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
                     const color = getColorForAge(task.age);
                     const ageText = `${task.age} day${task.age === 1 ? '' : 's'} old`;
                     const ageSpan = listItem.createEl('span', { cls: 'reminder-age' });
-                    const ageContent = ageSpan.createEl('span', {
+                    ageSpan.createEl('span', {
                         attr: { style: `color: ${color}; font-weight: bold;` },
                         text: `(${ageText})`
                     });
                 }
 
-                // Make clickable to open the file
+                // Make clickable to open the file (but not on checkbox or links)
                 listItem.addEventListener('mousedown', async (event) => {
-                    // Don't navigate if clicking on an internal link
-                    if ((event.target as HTMLElement).classList.contains('internal-link')) {
+                    const target = event.target as HTMLElement;
+                    // Don't navigate if clicking on checkbox or internal link
+                    if (target.classList.contains('reminder-checkbox') ||
+                        target.classList.contains('internal-link')) {
                         return;
                     }
                     const filePath = `${task.file?.path}`;
