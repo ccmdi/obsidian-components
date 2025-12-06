@@ -124,19 +124,4 @@ button.calendar-nav-button {
 .calendar-day-today.calendar-day-has-note::after {
     background: var(--text-on-accent);
 }
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.calendar-container {
-    animation: slideIn 0.3s ease;
-}
 `;

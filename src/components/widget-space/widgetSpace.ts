@@ -345,7 +345,7 @@ export const widgetSpace: Component<['layout']> = {
             muuri = new window.Muuri(grid, {
                 items: '.widget-item',
                 dragEnabled: true,
-                dragContainer: container,
+                dragContainer: document.body,
                 dragSortHeuristics: { sortInterval: 10, minDragDistance: 5, minBounceBackAngle: Math.PI / 2 },
                 layout: { fillGaps: true, horizontal: false, alignRight: false, alignBottom: false, rounding: true },
                 layoutDuration: 0,
@@ -353,7 +353,14 @@ export const widgetSpace: Component<['layout']> = {
                 dragStartPredicate: { distance: 10, delay: 0 },
                 dragAxis: null,
                 dragSort: true,
-                itemHeight: 'auto'
+                itemHeight: 'auto',
+                dragAutoScroll: {
+                    targets: [
+                        { element: container, priority: 0, axis: window.Muuri.AutoScroller.AXIS_Y }
+                    ],
+                    threshold: 50,
+                    speed: window.Muuri.AutoScroller.smoothSpeed(500, 800, 1000)
+                }
             });
 
             muuri.on('layoutEnd', () => {
@@ -369,6 +376,12 @@ export const widgetSpace: Component<['layout']> = {
                 }
             });
 
+            muuri.on('dragInit', (item: any) => {
+                const el = item.getElement();
+                // Lock width to current value before moving to document.body
+                el.style.width = `${el.offsetWidth}px`;
+            });
+
             muuri.on('dragStart', (item: any) => {
                 const el = item.getElement();
                 el.style.zIndex = '1000';
@@ -382,6 +395,12 @@ export const widgetSpace: Component<['layout']> = {
                 el.style.transform = el.style.transform.replace(' scale(1.02)', '');
                 el.style.boxShadow = '';
                 await saveLayout();
+            });
+
+            muuri.on('dragReleaseEnd', (item: any) => {
+                const el = item.getElement();
+                // Restore CSS variable-based width after release animation completes
+                el.style.width = '';
             });
 
             muuri.resizeObserver = new ResizeObserver((entries) => {

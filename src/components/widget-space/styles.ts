@@ -18,6 +18,10 @@ export const widgetSpaceStyles = /*css*/`
         margin: 0 !important;
         padding: 0 !important;
     }
+    /* Hide scrollbar on sidebar view-content when containing widget-space */
+    .view-content:has(.widget-space-container) {
+        overflow: hidden !important;
+    }
     .widget-space-grid {
         position: relative;
         min-height: 150px;
@@ -97,6 +101,10 @@ export const widgetSpaceStyles = /*css*/`
     }
     .widget-item.muuri-item-hidden {
         z-index: 0;
+    }
+    /* Ensure dragged items render correctly when moved to document.body */
+    body > .widget-item.muuri-item-dragging {
+        z-index: 9999;
     }
     .widget-content {
         transition: height 0.3s ease-out, min-height 0.3s ease-out;

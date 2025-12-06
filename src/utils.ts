@@ -328,14 +328,6 @@ export function useTargetNoteSorting<T extends { fm?: CachedMetadata | null, age
     });
 }
 
-export function renderMarkdownLink(link: string) {
-    return link.replace(/\[\[([^\]]+)\]\]/g, (match, linkText) => {
-        const [target, display] = linkText.split('|');
-        const displayText = display || target;
-        return `<a href="#" class="internal-link" data-href="${target.trim()}">${displayText.trim()}</a>`;
-    });
-}
-
 /**
  * Renders text with markdown links as DOM elements (safe alternative to innerHTML).
  * Creates text nodes and link elements instead of HTML strings.
