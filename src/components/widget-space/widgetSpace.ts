@@ -4,6 +4,7 @@ import { widgetSpaceStyles } from "./styles";
 import ConfirmationModal from "../../native/confirmation";
 import { COMPONENTS, componentInstances } from "../../components";
 import ComponentSidebarView from "../../native/sidebar";
+import Muuri from "muuri";
 
 interface WidgetConfig {
     id: string;
@@ -25,25 +26,7 @@ interface WidgetState {
     componentInstance: ComponentInstance | null;
 }
 
-declare global {
-    interface Window {
-        Muuri: any;
-    }
-}
-
 const CONFIG_PATH = (app: App) => `${app.vault.configDir}/plugins/components/components-widget-layout.json`;
-
-async function loadMuuri(): Promise<void> {
-    if (window.Muuri) return;
-
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/muuri@0.9.5/dist/muuri.min.js';
-    await new Promise<void>((resolve, reject) => {
-        script.onload = () => resolve();
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
 
 async function loadLayout(app: App, argsLayout: string): Promise<WidgetSpaceLayout> {
     try {
@@ -213,12 +196,11 @@ export const widgetSpace: Component<['layout']> = {
             default: ''
         }
     },
-    does: [ComponentAction.READ, ComponentAction.WRITE, ComponentAction.EXTERNAL],
+    does: [ComponentAction.READ, ComponentAction.WRITE],
     styles: widgetSpaceStyles,
 
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const layout = await loadLayout(app, args.layout);
-        await loadMuuri();
 
         el.style.position = 'relative';
 
@@ -342,7 +324,7 @@ export const widgetSpace: Component<['layout']> = {
 
         // Muuri initialization
         const initMuuri = () => {
-            muuri = new window.Muuri(grid, {
+            muuri = new Muuri(grid, {
                 items: '.widget-item',
                 dragEnabled: true,
                 dragContainer: document.body,
@@ -351,15 +333,13 @@ export const widgetSpace: Component<['layout']> = {
                 layoutDuration: 0,
                 layoutEasing: 'ease',
                 dragStartPredicate: { distance: 10, delay: 0 },
-                dragAxis: null,
                 dragSort: true,
-                itemHeight: 'auto',
                 dragAutoScroll: {
                     targets: [
-                        { element: container, priority: 0, axis: window.Muuri.AutoScroller.AXIS_Y }
+                        { element: container, priority: 0, axis: Muuri.AutoScroller.AXIS_Y }
                     ],
                     threshold: 50,
-                    speed: window.Muuri.AutoScroller.smoothSpeed(500, 800, 1000)
+                    speed: Muuri.AutoScroller.smoothSpeed(500, 800, 1000)
                 }
             });
 
