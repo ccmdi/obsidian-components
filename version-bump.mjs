@@ -1,17 +1,49 @@
 import { readFileSync, writeFileSync } from "fs";
+import { execSync } from "child_process";
 
-const targetVersion = process.env.npm_package_version;
+const bumpType = process.argv[2] || "patch";
 
-// read minAppVersion from manifest.json and bump version to target version
+if (!["major", "minor", "patch"].includes(bumpType)) {
+    console.error("Usage: node version-bump.mjs [major|minor|patch]");
+    process.exit(1);
+}
+
+const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+const [major, minor, patch] = packageJson.version.split(".").map(Number);
+
+let newVersion;
+if (bumpType === "major") {
+    newVersion = `${major + 1}.0.0`;
+} else if (bumpType === "minor") {
+    newVersion = `${major}.${minor + 1}.0`;
+} else {
+    newVersion = `${major}.${minor}.${patch + 1}`;
+}
+
+// Update package.json
+packageJson.version = newVersion;
+writeFileSync("package.json", JSON.stringify(packageJson, null, "\t") + "\n");
+console.log(`Updated package.json to ${newVersion}`);
+
+// Update manifest.json
 const manifest = JSON.parse(readFileSync("manifest.json", "utf8"));
 const { minAppVersion } = manifest;
-manifest.version = targetVersion;
+manifest.version = newVersion;
 writeFileSync("manifest.json", JSON.stringify(manifest, null, "\t"));
+console.log(`Updated manifest.json to ${newVersion}`);
 
-// update versions.json with target version and minAppVersion from manifest.json
-// but only if the target version is not already in versions.json
-const versions = JSON.parse(readFileSync('versions.json', 'utf8'));
-if (!Object.values(versions).includes(minAppVersion)) {
-    versions[targetVersion] = minAppVersion;
-    writeFileSync('versions.json', JSON.stringify(versions, null, '\t'));
+// Update versions.json only if minAppVersion changed
+const versions = JSON.parse(readFileSync("versions.json", "utf8"));
+const lastMinAppVersion = Object.values(versions).pop();
+if (lastMinAppVersion !== minAppVersion) {
+    versions[newVersion] = minAppVersion;
+    writeFileSync("versions.json", JSON.stringify(versions, null, "\t"));
+    console.log(`Updated versions.json with ${newVersion}: ${minAppVersion}`);
+} else {
+    console.log(`Skipped versions.json (minAppVersion unchanged: ${minAppVersion})`);
 }
+
+console.log("Updating package-lock.json...");
+execSync("npm install", { stdio: "inherit" });
+
+console.log(`\nVersion bumped to ${newVersion}`);
