@@ -49,7 +49,7 @@ export default class ComponentSelectorModal extends Modal {
             option.addEventListener('click', () => {
                 this.close();
                 if (Component.hasArgs(component)) {
-                    new ComponentArgsModal(this.app, component, this.plugin).open();
+                    new ComponentArgsModal(this.app, component).open();
                 } else {
                     this.openComponentSidebar(component);
                 }
@@ -82,25 +82,29 @@ export default class ComponentSelectorModal extends Modal {
 
 export class ComponentArgsModal extends Modal {
     component: Component<readonly string[]>;
-    plugin: ComponentsPlugin;
     args: Record<string, string> = {};
     onSubmit?: (args: Record<string, string>) => void;
-    mode: 'sidebar' | 'insert';
+    mode: 'sidebar' | 'insert' | 'widget-space';
+    submitText?: string;
 
     constructor(
         app: App,
         component: Component<readonly string[]>,
-        plugin: ComponentsPlugin,
         options?: {
-            mode?: 'sidebar' | 'insert',
+            mode?: 'sidebar' | 'insert' | 'widget-space',
+            submitText?: string,
+            initialArgs?: Record<string, string>,
             onSubmit?: (args: Record<string, string>) => void
         }
     ) {
         super(app);
         this.component = component;
-        this.plugin = plugin;
         this.mode = options?.mode || 'sidebar';
+        this.submitText = options?.submitText;
         this.onSubmit = options?.onSubmit;
+        if (options?.initialArgs) {
+            this.args = options.initialArgs;
+        }
     }
 
     onOpen() {
@@ -117,6 +121,7 @@ export class ComponentArgsModal extends Modal {
                     .setName(argKey)
                     .addText(text => text
                         .setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
+                        .setValue(this.args[argKey] || '')
                         .onChange(value => {
                             this.args[argKey] = value;
                         })
@@ -141,7 +146,7 @@ export class ComponentArgsModal extends Modal {
         const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
 
         const submitBtn = buttonContainer.createEl('button', {
-            text: this.mode === 'insert' ? 'Insert Code Block' : 'Open in Sidebar',
+            text: this.submitText || (this.mode === 'insert' ? 'Insert Code Block' : this.mode === 'widget-space' ? 'Add Widget' : 'Open in Sidebar'),
             cls: 'mod-cta'
         });
         submitBtn.onclick = () => {
@@ -167,7 +172,7 @@ export class ComponentArgsModal extends Modal {
         // Close modal
         this.close();
 
-        if (this.mode === 'insert' && this.onSubmit) {
+        if ((this.mode === 'insert' || this.mode === 'widget-space') && this.onSubmit) {
             this.onSubmit(this.args);
         } else {
             await this.openComponentSidebar();
@@ -243,7 +248,7 @@ export class PlaceComponentModal extends Modal {
             option.addEventListener('click', () => {
                 this.close();
                 if (Component.hasArgs(component)) {
-                    new ComponentArgsModal(this.app, component, this.plugin, {
+                    new ComponentArgsModal(this.app, component, {
                         mode: 'insert',
                         onSubmit: (args) => {
                             const argsLines = Object.entries(args)

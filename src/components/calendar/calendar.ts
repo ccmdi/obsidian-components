@@ -27,7 +27,6 @@ const renderCalendar = async (
             }
         }
     } catch (e) {
-        // Silently fall back to defaults
         console.debug('Could not access daily notes settings, using defaults');
     }
 
