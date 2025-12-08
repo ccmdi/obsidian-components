@@ -7,6 +7,7 @@ export interface ComponentsSettings {
 	defaultContainerMargin: number;
 	enableAutoComplete: boolean;
 	autoCompleteOpenModal: boolean;
+	modalArgSuggest: boolean;
 }
 
 function generateDefaultSettings(): ComponentsSettings {
@@ -32,7 +33,8 @@ function generateDefaultSettings(): ComponentsSettings {
 		groupStates: {},
 		defaultContainerMargin: 6,
 		enableAutoComplete: false,
-		autoCompleteOpenModal: false
+		autoCompleteOpenModal: false,
+		modalArgSuggest: true
 	};
 }
 

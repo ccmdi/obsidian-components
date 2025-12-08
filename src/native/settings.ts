@@ -110,6 +110,18 @@ export default class ComponentsSettingTab extends PluginSettingTab {
             modalSetting.settingEl.addClass('is-disabled');
         }
 
+        // Modal argument autocomplete setting
+        new Setting(containerEl)
+            .setName('Enable modal argument autocomplete')
+            .setDesc('Show autocomplete suggestions for folder paths and queries when configuring component arguments')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.modalArgSuggest)
+                .onChange(async (value) => {
+                    this.plugin.settings.modalArgSuggest = value;
+                    await this.plugin.saveSettings();
+                })
+            );
+
         // Container margin setting
         new Setting(containerEl)
             .setName('Default container margin')

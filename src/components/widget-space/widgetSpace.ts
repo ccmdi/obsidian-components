@@ -1,9 +1,10 @@
-import { Component, ComponentAction, ComponentInstance } from "../../components";
+import { Component, ComponentAction, ComponentInstance } from "components";
 import { App, Modal, Setting, TextComponent, Notice } from "obsidian";
 import { widgetSpaceStyles } from "./styles";
-import ConfirmationModal from "../../native/confirmation";
-import { COMPONENTS, componentInstances } from "../../components";
-import ComponentSidebarView from "../../native/sidebar";
+import ConfirmationModal from "native/confirmation";
+import { ComponentArgsModal } from "native/modal";
+import { COMPONENTS, componentInstances } from "components";
+import ComponentSidebarView from "native/sidebar";
 import Muuri from "muuri";
 
 interface WidgetConfig {
@@ -123,66 +124,7 @@ class ComponentSelectorModal extends Modal {
     }
 }
 
-class WidgetConfigModal extends Modal {
-    private component: Component<readonly string[]>;
-    private args: Record<string, string> = {};
-    private onSubmit: (args: Record<string, string>) => void;
 
-    constructor(app: App, component: Component<readonly string[]>, onSubmit: (args: Record<string, string>) => void) {
-        super(app);
-        this.component = component;
-        this.onSubmit = onSubmit;
-    }
-
-    onOpen() {
-        const { contentEl } = this;
-        contentEl.empty();
-        contentEl.createEl('h2', { text: `Configure ${this.component.name || this.component.keyName}` });
-
-        if (Component.hasArgs(this.component)) {
-            Object.entries(this.component.args).forEach(([argKey, argConfig]) => {
-                const setting = new Setting(contentEl)
-                    .setName(argKey)
-                    .setDesc(argConfig?.description || '')
-                    .addText((text: TextComponent) => text
-                        .setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
-                        .onChange((value: string) => { this.args[argKey] = value; })
-                    );
-
-                if (argConfig?.required) {
-                    setting.nameEl.createSpan({ text: ' *', cls: 'mod-warning' });
-                }
-            });
-        } else {
-            contentEl.createEl('p', { text: 'This component has no configurable arguments.' });
-        }
-
-        const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
-
-        buttonContainer.createEl('button', { text: 'Add Widget', cls: 'mod-cta' })
-            .onclick = () => this.submit();
-
-        buttonContainer.createEl('button', { text: 'Cancel' })
-            .onclick = () => this.close();
-    }
-
-    private submit() {
-        const requiredArgs = Component.getRequiredArgs(this.component);
-        const missingRequired = requiredArgs.filter(arg => !this.args[arg]?.trim());
-
-        if (missingRequired.length > 0) {
-            new Notice(`Missing required arguments: ${missingRequired.join(', ')}`);
-            return;
-        }
-
-        this.close();
-        this.onSubmit(this.args);
-    }
-
-    onClose() {
-        this.contentEl.empty();
-    }
-}
 
 export const widgetSpace: Component<['layout']> = {
     name: 'Widget Space',
@@ -270,6 +212,26 @@ export const widgetSpace: Component<['layout']> = {
                 e.stopPropagation();
                 new ConfirmationModal(app, `Remove ${componentName} widget?`, () => removeWidget(widget)).open();
             });
+
+            widget.addEventListener('mousedown', (e) => {
+                if (e.button !== 1) return;
+                e.preventDefault();
+                e.stopPropagation();
+                new ComponentArgsModal(app, COMPONENTS.find(c => c.keyName === componentKey)!, {
+                    mode: 'widget-space',
+                    initialArgs: activeWidgets.get(widgetId)!.args,
+                    submitText: 'Update Widget',
+                    onSubmit: (args) => {
+                        activeWidgets.get(widgetId)!.args = args;
+                        const content = activeWidgets.get(widgetId)!.element.querySelector('.widget-content') as HTMLElement;
+                        const component = componentInstances.get(content.dataset.componentId!)!;
+                        if (component) component.destroy();
+                        content.empty();
+                        Component.render(COMPONENTS.find(c => c.keyName === componentKey)!, argsToSource(args), content, ctx, app, componentSettings);
+                        saveLayout();
+                    }
+                }).open();
+            })
 
             const content = widget.createEl('div', { cls: 'widget-content' });
             content.dataset.widgetId = widgetId;
@@ -424,8 +386,12 @@ export const widgetSpace: Component<['layout']> = {
         container.addEventListener('dblclick', (e) => {
             if (e.target === container || e.target === grid) {
                 new ComponentSelectorModal(app, availableComponents, (comp) => {
-                    new WidgetConfigModal(app, comp, (args) => {
-                        addWidget(comp.keyName, comp.name || comp.keyName, args);
+                    new ComponentArgsModal(app, comp, {
+                        mode: 'widget-space',
+                        submitText: 'Add Widget',
+                        onSubmit: (args) => {
+                            addWidget(comp.keyName, comp.name || comp.keyName, args);
+                        }
                     }).open();
                 }).open();
             }

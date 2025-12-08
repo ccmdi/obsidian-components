@@ -1,7 +1,8 @@
-import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor } from "obsidian";
+import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import { renderExternalLinkToElement } from "utils";
+import { FolderSuggest, QuerySuggest, FileSuggest } from "./suggest";
 
 export default class ComponentSelectorModal extends Modal {
     plugin: ComponentsPlugin;
@@ -49,7 +50,7 @@ export default class ComponentSelectorModal extends Modal {
             option.addEventListener('click', () => {
                 this.close();
                 if (Component.hasArgs(component)) {
-                    new ComponentArgsModal(this.app, component, this.plugin).open();
+                    new ComponentArgsModal(this.app, component).open();
                 } else {
                     this.openComponentSidebar(component);
                 }
@@ -82,25 +83,33 @@ export default class ComponentSelectorModal extends Modal {
 
 export class ComponentArgsModal extends Modal {
     component: Component<readonly string[]>;
-    plugin: ComponentsPlugin;
     args: Record<string, string> = {};
     onSubmit?: (args: Record<string, string>) => void;
-    mode: 'sidebar' | 'insert';
+    mode: 'sidebar' | 'insert' | 'widget-space';
+    submitText?: string;
 
     constructor(
         app: App,
         component: Component<readonly string[]>,
-        plugin: ComponentsPlugin,
         options?: {
-            mode?: 'sidebar' | 'insert',
+            mode?: 'sidebar' | 'insert' | 'widget-space',
+            submitText?: string,
+            initialArgs?: Record<string, string>,
             onSubmit?: (args: Record<string, string>) => void
         }
     ) {
         super(app);
         this.component = component;
-        this.plugin = plugin;
         this.mode = options?.mode || 'sidebar';
+        this.submitText = options?.submitText;
         this.onSubmit = options?.onSubmit;
+        if (options?.initialArgs) {
+            this.args = options.initialArgs;
+        }
+    }
+
+    private get enableSuggest(): boolean {
+        return ComponentsPlugin.instance?.settings?.modalArgSuggest ?? true;
     }
 
     onOpen() {
@@ -110,17 +119,30 @@ export class ComponentArgsModal extends Modal {
         // Set the title in the modal header
         titleEl.setText(`Configure ${this.component.name || this.component.keyName}`);
 
+        this.scope.register([], 'Enter', (evt) => {
+            const suggestEl = document.querySelector('.suggestion-container');
+            if (suggestEl) return;
+
+            evt.preventDefault();
+            this.handleSubmit();
+        });
+
         // Create form for each arg
         if (Component.hasArgs(this.component)) {
             Object.entries(this.component.args).forEach(([argKey, argConfig]) => {
                 const setting = new Setting(contentEl)
                     .setName(argKey)
-                    .addText(text => text
-                        .setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
-                        .onChange(value => {
-                            this.args[argKey] = value;
-                        })
-                    );
+                    .addText(text => {
+                        text.setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
+                            .setValue(this.args[argKey] || '')
+                            .onChange(value => {
+                                this.args[argKey] = value;
+                            });
+
+                        if (this.enableSuggest) {
+                            this.attachSuggest(argKey, text);
+                        }
+                    });
 
                 const description = argConfig?.description || '';
                 if (description) {
@@ -141,7 +163,7 @@ export class ComponentArgsModal extends Modal {
         const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
 
         const submitBtn = buttonContainer.createEl('button', {
-            text: this.mode === 'insert' ? 'Insert Code Block' : 'Open in Sidebar',
+            text: this.submitText || (this.mode === 'insert' ? 'Insert Code Block' : this.mode === 'widget-space' ? 'Add Widget' : 'Open in Sidebar'),
             cls: 'mod-cta'
         });
         submitBtn.onclick = () => {
@@ -152,6 +174,27 @@ export class ComponentArgsModal extends Modal {
         cancelBtn.onclick = () => {
             this.close();
         };
+    }
+
+    /**
+     * Attach appropriate suggest to input based on arg key name
+     */
+    private attachSuggest(argKey: string, textComponent: TextComponent): void {
+        const inputEl = textComponent.inputEl;
+        const lowerKey = argKey.toLowerCase();
+
+        // folder arg: suggest folders only
+        if (lowerKey === 'folder' || lowerKey.endsWith('folder') || lowerKey.endsWith('path')) {
+            new FolderSuggest(this.app, inputEl);
+        }
+        // query arg: suggest folders and tags
+        else if (lowerKey === 'query') {
+            new QuerySuggest(this.app, inputEl);
+        }
+        // file arg: suggest files
+        else if (lowerKey === 'file' || lowerKey.endsWith('file')) {
+            new FileSuggest(this.app, inputEl);
+        }
     }
 
     async handleSubmit() {
@@ -167,7 +210,7 @@ export class ComponentArgsModal extends Modal {
         // Close modal
         this.close();
 
-        if (this.mode === 'insert' && this.onSubmit) {
+        if ((this.mode === 'insert' || this.mode === 'widget-space') && this.onSubmit) {
             this.onSubmit(this.args);
         } else {
             await this.openComponentSidebar();
@@ -243,7 +286,7 @@ export class PlaceComponentModal extends Modal {
             option.addEventListener('click', () => {
                 this.close();
                 if (Component.hasArgs(component)) {
-                    new ComponentArgsModal(this.app, component, this.plugin, {
+                    new ComponentArgsModal(this.app, component, {
                         mode: 'insert',
                         onSubmit: (args) => {
                             const argsLines = Object.entries(args)
