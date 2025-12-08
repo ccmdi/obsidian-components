@@ -12,12 +12,15 @@ import { ComponentAutoComplete } from 'native/autocomplete';
 export const COMPONENT_SIDEBAR_VIEW_TYPE = 'component-sidebar';
 
 export default class ComponentsPlugin extends Plugin {
+    static instance: ComponentsPlugin;
+
     settings: ComponentsSettings;
     private registeredProcessors: Set<string> = new Set();
     private globalStyleElement: HTMLStyleElement | null = null;
     private autoComplete: ComponentAutoComplete | null = null;
 
     async onload() {
+        ComponentsPlugin.instance = this;
         await this.loadSettings();
         this.addSettingTab(new ComponentsSettingTab(this.app, this));
 

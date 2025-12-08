@@ -50,9 +50,7 @@ export default class ComponentSelectorModal extends Modal {
             option.addEventListener('click', () => {
                 this.close();
                 if (Component.hasArgs(component)) {
-                    new ComponentArgsModal(this.app, component, {
-                        enableSuggest: this.plugin.settings.modalArgSuggest
-                    }).open();
+                    new ComponentArgsModal(this.app, component).open();
                 } else {
                     this.openComponentSidebar(component);
                 }
@@ -89,7 +87,6 @@ export class ComponentArgsModal extends Modal {
     onSubmit?: (args: Record<string, string>) => void;
     mode: 'sidebar' | 'insert' | 'widget-space';
     submitText?: string;
-    enableSuggest: boolean;
 
     constructor(
         app: App,
@@ -98,8 +95,7 @@ export class ComponentArgsModal extends Modal {
             mode?: 'sidebar' | 'insert' | 'widget-space',
             submitText?: string,
             initialArgs?: Record<string, string>,
-            onSubmit?: (args: Record<string, string>) => void,
-            enableSuggest?: boolean
+            onSubmit?: (args: Record<string, string>) => void
         }
     ) {
         super(app);
@@ -107,10 +103,13 @@ export class ComponentArgsModal extends Modal {
         this.mode = options?.mode || 'sidebar';
         this.submitText = options?.submitText;
         this.onSubmit = options?.onSubmit;
-        this.enableSuggest = options?.enableSuggest ?? true;
         if (options?.initialArgs) {
             this.args = options.initialArgs;
         }
+    }
+
+    private get enableSuggest(): boolean {
+        return ComponentsPlugin.instance?.settings?.modalArgSuggest ?? true;
     }
 
     onOpen() {
@@ -289,7 +288,6 @@ export class PlaceComponentModal extends Modal {
                 if (Component.hasArgs(component)) {
                     new ComponentArgsModal(this.app, component, {
                         mode: 'insert',
-                        enableSuggest: this.plugin.settings.modalArgSuggest,
                         onSubmit: (args) => {
                             const argsLines = Object.entries(args)
                                 .filter(([, value]) => value && value.trim() !== '')
