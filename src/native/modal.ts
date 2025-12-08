@@ -1,7 +1,8 @@
-import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor } from "obsidian";
+import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import { renderExternalLinkToElement } from "utils";
+import { FolderSuggest, QuerySuggest, FileSuggest } from "./suggest";
 
 export default class ComponentSelectorModal extends Modal {
     plugin: ComponentsPlugin;
@@ -119,13 +120,15 @@ export class ComponentArgsModal extends Modal {
             Object.entries(this.component.args).forEach(([argKey, argConfig]) => {
                 const setting = new Setting(contentEl)
                     .setName(argKey)
-                    .addText(text => text
-                        .setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
-                        .setValue(this.args[argKey] || '')
-                        .onChange(value => {
-                            this.args[argKey] = value;
-                        })
-                    );
+                    .addText(text => {
+                        text.setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
+                            .setValue(this.args[argKey] || '')
+                            .onChange(value => {
+                                this.args[argKey] = value;
+                            });
+
+                        this.attachSuggest(argKey, text);
+                    });
 
                 const description = argConfig?.description || '';
                 if (description) {
@@ -157,6 +160,27 @@ export class ComponentArgsModal extends Modal {
         cancelBtn.onclick = () => {
             this.close();
         };
+    }
+
+    /**
+     * Attach appropriate suggest to input based on arg key name
+     */
+    private attachSuggest(argKey: string, textComponent: TextComponent): void {
+        const inputEl = textComponent.inputEl;
+        const lowerKey = argKey.toLowerCase();
+
+        // folder arg: suggest folders only
+        if (lowerKey === 'folder' || lowerKey.endsWith('folder') || lowerKey.endsWith('path')) {
+            new FolderSuggest(this.app, inputEl);
+        }
+        // query arg: suggest folders and tags
+        else if (lowerKey === 'query') {
+            new QuerySuggest(this.app, inputEl);
+        }
+        // file arg: suggest files
+        else if (lowerKey === 'file' || lowerKey.endsWith('file')) {
+            new FileSuggest(this.app, inputEl);
+        }
     }
 
     async handleSubmit() {

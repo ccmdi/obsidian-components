@@ -133,7 +133,6 @@ export class ComponentAutoComplete extends EditorSuggest<ComponentSuggestion> {
             const modal = new ComponentArgsModal(
                 this.app,
                 component,
-                this.plugin,
                 {
                     mode: 'insert',
                     onSubmit: (args) => {
