@@ -50,7 +50,9 @@ export default class ComponentSelectorModal extends Modal {
             option.addEventListener('click', () => {
                 this.close();
                 if (Component.hasArgs(component)) {
-                    new ComponentArgsModal(this.app, component).open();
+                    new ComponentArgsModal(this.app, component, {
+                        enableSuggest: this.plugin.settings.modalArgSuggest
+                    }).open();
                 } else {
                     this.openComponentSidebar(component);
                 }
@@ -87,6 +89,7 @@ export class ComponentArgsModal extends Modal {
     onSubmit?: (args: Record<string, string>) => void;
     mode: 'sidebar' | 'insert' | 'widget-space';
     submitText?: string;
+    enableSuggest: boolean;
 
     constructor(
         app: App,
@@ -95,7 +98,8 @@ export class ComponentArgsModal extends Modal {
             mode?: 'sidebar' | 'insert' | 'widget-space',
             submitText?: string,
             initialArgs?: Record<string, string>,
-            onSubmit?: (args: Record<string, string>) => void
+            onSubmit?: (args: Record<string, string>) => void,
+            enableSuggest?: boolean
         }
     ) {
         super(app);
@@ -103,6 +107,7 @@ export class ComponentArgsModal extends Modal {
         this.mode = options?.mode || 'sidebar';
         this.submitText = options?.submitText;
         this.onSubmit = options?.onSubmit;
+        this.enableSuggest = options?.enableSuggest ?? true;
         if (options?.initialArgs) {
             this.args = options.initialArgs;
         }
@@ -114,6 +119,14 @@ export class ComponentArgsModal extends Modal {
 
         // Set the title in the modal header
         titleEl.setText(`Configure ${this.component.name || this.component.keyName}`);
+
+        this.scope.register([], 'Enter', (evt) => {
+            const suggestEl = document.querySelector('.suggestion-container');
+            if (suggestEl) return;
+
+            evt.preventDefault();
+            this.handleSubmit();
+        });
 
         // Create form for each arg
         if (Component.hasArgs(this.component)) {
@@ -127,7 +140,9 @@ export class ComponentArgsModal extends Modal {
                                 this.args[argKey] = value;
                             });
 
-                        this.attachSuggest(argKey, text);
+                        if (this.enableSuggest) {
+                            this.attachSuggest(argKey, text);
+                        }
                     });
 
                 const description = argConfig?.description || '';
@@ -274,6 +289,7 @@ export class PlaceComponentModal extends Modal {
                 if (Component.hasArgs(component)) {
                     new ComponentArgsModal(this.app, component, {
                         mode: 'insert',
+                        enableSuggest: this.plugin.settings.modalArgSuggest,
                         onSubmit: (args) => {
                             const argsLines = Object.entries(args)
                                 .filter(([, value]) => value && value.trim() !== '')

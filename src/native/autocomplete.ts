@@ -135,6 +135,7 @@ export class ComponentAutoComplete extends EditorSuggest<ComponentSuggestion> {
                 component,
                 {
                     mode: 'insert',
+                    enableSuggest: this.plugin.settings.modalArgSuggest,
                     onSubmit: (args) => {
                         // Insert the configured code block
                         this.insertCodeBlock(editor, start, component.keyName, args);
