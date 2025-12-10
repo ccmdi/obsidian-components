@@ -66,10 +66,10 @@ export const discordStatusStyles = /*css*/`
         .discord-info {
             display: none !important;
         }
-        .spotify-info {
+        .activity-info {
             display: none !important;
         }
-        .discord-spotify {
+        .discord-activity-card {
             gap: 3%;
         }
         .activity-artwork {
@@ -82,12 +82,12 @@ export const discordStatusStyles = /*css*/`
             aspect-ratio: 1;
             object-fit: cover;
         }
-        .spotify-controls {
+        .activity-controls {
             flex: 1;
             align-items: center !important;
             justify-content: center;
         }
-        .spotify-time {
+        .activity-timer {
             font-size: clamp(12px, 4vw, 18px);
             font-weight: 600;
         }
@@ -147,7 +147,7 @@ export const discordStatusStyles = /*css*/`
         color: var(--text-muted);
         line-height: 1.3;
     }
-    .discord-spotify {
+    .discord-activity-card {
         margin-top: 2%;
         padding: 4px;
         background: var(--background-secondary);
@@ -194,14 +194,14 @@ export const discordStatusStyles = /*css*/`
     .activity-artwork.has-image::after {
         opacity: 0;
     }
-    .spotify-info {
+    .activity-info {
         flex: 1;
         min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 2px;
     }
-    .spotify-track {
+    .activity-title {
         font-weight: 500;
         font-size: clamp(12px, 3.5vw, 14px);
         color: var(--text-normal);
@@ -209,21 +209,21 @@ export const discordStatusStyles = /*css*/`
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .spotify-artist {
+    .activity-subtitle {
         font-size: clamp(10px, 3vw, 12px);
         color: var(--text-muted);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .spotify-controls {
+    .activity-controls {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
         gap: 4px;
         flex-shrink: 0;
     }
-    .spotify-time {
+    .activity-timer {
         color: var(--text-faint);
         font-family: var(--font-interface);
     }

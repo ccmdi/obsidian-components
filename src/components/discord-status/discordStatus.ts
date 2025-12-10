@@ -129,11 +129,19 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             }
         };
 
-        const getArtworkUrl = (activity: DiscordActivity) => {
-            if (!activity.assets) return null;
-
-            const largeImage = activity.assets.large_image;
-            if (!largeImage) return null;
+        const getArtworkUrl = async (activity: DiscordActivity) => {
+            const largeImage = activity.assets?.large_image;
+            if (!largeImage) {
+                if (!activity.application_id) return null;
+                try {
+                    const response = await fetch(`https://discord.com/api/v10/applications/${activity.application_id}/rpc`);
+                    const data = await response.json();
+                    if (!data.icon) return null;
+                    return `https://cdn.discordapp.com/app-icons/${activity.application_id}/${data.icon}.png`;
+                } catch {
+                    return null;
+                }
+            }
 
             // Spotify artwork
             if (largeImage.startsWith('spotify:')) {
@@ -168,9 +176,9 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         const updateActivityTimers = () => {
             if (isDestroyed || currentActivities.length === 0) return;
 
-            const spotifyTimes = widget.querySelectorAll('.spotify-time');
+            const activityTimes = widget.querySelectorAll('.activity-timer');
 
-            spotifyTimes.forEach((timeElement, index) => {
+            activityTimes.forEach((timeElement, index) => {
                 if (currentActivities[index] && currentActivities[index].timestamps?.start) {
                     const elapsed = Date.now() - (currentActivities[index].timestamps?.start || 0);
                     (timeElement as HTMLElement).textContent = formatTime(elapsed);
@@ -182,7 +190,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             clearInterval(activityUpdateInterval);
             if (currentActivities.length > 0) {
                 activityUpdateInterval = setInterval(updateActivityTimers, 1000);
-                ComponentInstance.addInterval(instance!, activityUpdateInterval);
+                ComponentInstance.addInterval(instance, activityUpdateInterval);
             }
         };
 
@@ -198,122 +206,163 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             errorDiv.appendText(message);
         };
 
+        const getActivityKey = (activity: DiscordActivity) => `${activity.type}-${activity.name}`;
+
+        const updateActivityCardElement = (card: HTMLElement, activity: DiscordActivity, artworkUrl: string | null, title: string, subtitle: string) => {
+            const trackDiv = card.querySelector('.activity-title');
+            if (trackDiv && trackDiv.textContent !== title) trackDiv.textContent = title;
+
+            const artistDiv = card.querySelector('.activity-subtitle');
+            if (artistDiv && artistDiv.textContent !== subtitle) artistDiv.textContent = subtitle;
+
+            const artworkDiv = card.querySelector('.activity-artwork');
+            let img = artworkDiv?.querySelector('img');
+
+            if (artworkUrl) {
+                if (!img) {
+                    img = document.createElement('img');
+                    artworkDiv?.appendChild(img);
+                }
+                if (img.getAttribute('src') !== artworkUrl) {
+                    img.src = artworkUrl;
+                    img.alt = `${title} artwork`;
+                    img.classList.remove('loaded');
+                    artworkDiv?.classList.remove('has-image');
+                    
+                    img.onload = () => {
+                        img!.classList.add('loaded');
+                        artworkDiv?.classList.add('has-image');
+                    };
+                }
+            } else if (img) {
+                img.remove();
+                artworkDiv?.classList.remove('has-image');
+            }
+
+            const existingTime = card.querySelector('.activity-timer');
+            if (activity.timestamps?.start) {
+                if (!existingTime) {
+                    const controls = card.querySelector('.activity-controls');
+                    const timeDiv = controls?.createEl('div', { cls: 'activity-timer' });
+                    if(timeDiv) timeDiv.textContent = formatTime(Date.now() - activity.timestamps.start);
+                }
+            } else if (existingTime) {
+                existingTime.remove();
+            }
+        };
+
         const createActivityCard = (activity: DiscordActivity, artworkUrl: string | null, title: string, subtitle: string) => {
             const card = document.createElement('div');
-            card.classList.add('discord-spotify');
+            card.classList.add('discord-activity-card');
+            card.dataset.key = getActivityKey(activity);
 
-            // Artwork container
             const artworkDiv = card.createEl('div', { cls: 'activity-artwork' });
-            if (artworkUrl) {
-                const img = artworkDiv.createEl('img', {
-                    attr: {
-                        src: artworkUrl,
-                        alt: '' // Will be set safely below
-                    }
-                });
-                // Set alt text safely using textContent (not directly in template)
-                img.alt = `${title} artwork`;
+            
+            const infoDiv = card.createEl('div', { cls: 'activity-info' });
+            infoDiv.createEl('div', { cls: 'activity-title' }); 
+            infoDiv.createEl('div', { cls: 'activity-subtitle' }); 
 
-                img.onload = () => {
-                    img.classList.add('loaded');
-                    artworkDiv.classList.add('has-image');
-                };
+            card.createEl('div', { cls: 'activity-controls' });
 
-                img.onerror = () => {
-                    img.remove();
-                };
-
-                if (img.complete && img.naturalWidth > 0) {
-                    img.classList.add('loaded');
-                    artworkDiv.classList.add('has-image');
-                }
-            }
-
-            // Info container
-            const infoDiv = card.createEl('div', { cls: 'spotify-info' });
-            const trackDiv = infoDiv.createEl('div', { cls: 'spotify-track' });
-            trackDiv.textContent = title;
-            const artistDiv = infoDiv.createEl('div', { cls: 'spotify-artist' });
-            artistDiv.textContent = subtitle;
-
-            // Controls container
-            const controlsDiv = card.createEl('div', { cls: 'spotify-controls' });
-            if (activity.timestamps && activity.timestamps.start) {
-                const timeDiv = controlsDiv.createEl('div', { cls: 'spotify-time' });
-                timeDiv.textContent = formatTime(Date.now() - activity.timestamps.start);
-            }
+            updateActivityCardElement(card, activity, artworkUrl, title, subtitle);
 
             return card;
         };
 
-        const updateUI = (user: LanyardData) => {
+        let initialized = false;
+
+        const updateUI = async (user: LanyardData) => {
             const statusColor = getStatusColor(user.discord_status);
+            currentActivities = user.activities;
 
-            currentActivities = [];
+            let wrapper = widget.querySelector('.discord-status-wrapper');
 
-            // Update the main card content
-            const mainContent = widget.querySelector('.discord-status-wrapper') || widget;
-            mainContent.empty();
+            if (!initialized) {
+                widget.empty();
+                wrapper = widget.createEl('div', { cls: 'discord-status-wrapper' });
 
-            const wrapper = mainContent.createEl('div', { cls: 'discord-status-wrapper' });
+                const avatarDiv = wrapper.createEl('div', { cls: 'discord-avatar' });
+                avatarDiv.createEl('img');
+                avatarDiv.createEl('div', { cls: 'status-indicator' });
 
-            // Avatar container
-            const avatarDiv = wrapper.createEl('div', { cls: 'discord-avatar' });
-            const avatarImg = avatarDiv.createEl('img', {
-                attr: {
-                    src: `https://cdn.discordapp.com/avatars/${userId}/${user.discord_user.avatar}.png?size=128`,
-                    alt: '' // Will be set safely below
-                }
-            });
-            avatarImg.alt = `${user.discord_user.username}'s avatar`;
+                const infoDiv = wrapper.createEl('div', { cls: 'discord-info' });
+                infoDiv.createEl('div', { cls: 'discord-username' });
+                infoDiv.createEl('div', { cls: 'discord-status-text' });
 
-            const statusIndicator = avatarDiv.createEl('div', {
-                cls: 'status-indicator',
-                attr: { style: `background-color: ${statusColor};` }
-            });
-
-            // Info container
-            const infoDiv = wrapper.createEl('div', { cls: 'discord-info' });
-            const usernameDiv = infoDiv.createEl('div', { cls: 'discord-username' });
-            usernameDiv.textContent = user.discord_user.display_name || user.discord_user.username;
-
-            const statusTextDiv = infoDiv.createEl('div', { cls: 'discord-status-text' });
-            statusTextDiv.textContent = user.discord_status.charAt(0).toUpperCase() + user.discord_status.slice(1);
-
-            // Custom status (type 4 activity)
-            const customStatusActivity = user.activities.find((a) => a.type === 4);
-            if (customStatusActivity?.state) {
-                const customStatusDiv = infoDiv.createEl('div', { cls: 'custom-status' });
-                customStatusDiv.textContent = customStatusActivity.state;
+                widget.appendChild(connectionIndicator);
+                initialized = true;
             }
 
-            // Remove any existing activity cards
-            const existingActivities = widget.querySelectorAll('.discord-spotify');
-            existingActivities.forEach(card => card.remove());
+            const avatarImg = wrapper!.querySelector('.discord-avatar img') as HTMLImageElement;
+            const newAvatarUrl = `https://cdn.discordapp.com/avatars/${userId}/${user.discord_user.avatar}.png?size=128`;
+            if (avatarImg && avatarImg.src !== newAvatarUrl) {
+                avatarImg.src = newAvatarUrl;
+                avatarImg.alt = `${user.discord_user.username}'s avatar`;
+            }
 
-            // Add activity cards
+            const statusInd = wrapper!.querySelector('.status-indicator') as HTMLElement;
+            if (statusInd) statusInd.style.backgroundColor = statusColor;
+
+            const nameDiv = wrapper!.querySelector('.discord-username');
+            const displayName = user.discord_user.display_name || user.discord_user.username;
+            if (nameDiv && nameDiv.textContent !== displayName) nameDiv.textContent = displayName;
+
+            const statusTextDiv = wrapper!.querySelector('.discord-status-text');
+            const statusText = user.discord_status.charAt(0).toUpperCase() + user.discord_status.slice(1);
+            if (statusTextDiv && statusTextDiv.textContent !== statusText) statusTextDiv.textContent = statusText;
+
+            const infoContainer = wrapper!.querySelector('.discord-info');
+            const customStatusActivity = user.activities.find((a) => a.type === 4);
+            let customStatusDiv = infoContainer?.querySelector('.custom-status');
+
+            if (customStatusActivity?.state) {
+                if (!customStatusDiv) customStatusDiv = infoContainer?.createEl('div', { cls: 'custom-status' });
+                if (customStatusDiv && customStatusDiv.textContent !== customStatusActivity.state) customStatusDiv.textContent = customStatusActivity.state;
+            } else if (customStatusDiv) {
+                customStatusDiv.remove();
+            }
+
+            const processedKeys = new Set<string>();
+            let lastNode = wrapper as HTMLElement;
+
             if (showActivity && user.activities && user.activities.length > 0) {
-                user.activities.forEach((activity) => {
-                    const artworkUrl = getArtworkUrl(activity);
-                    const activityType = getActivityType(activity.type);
+                const cardActivities = user.activities.filter(a => a.type !== 4);
 
+                for (const activity of cardActivities) {
+                    const key = getActivityKey(activity);
+                    processedKeys.add(key);
+
+                    const artworkUrl = await getArtworkUrl(activity);
+                    const activityType = getActivityType(activity.type);
                     const title = activity.name;
                     const subtitle = `${activityType}${activity.details ? ` • ${activity.details}` : ''}${activity.state ? ` • ${activity.state}` : ''}`;
 
-                    currentActivities.push(activity);
-                    widget.appendChild(createActivityCard(activity, artworkUrl, title, subtitle));
-                });
+                    let card = widget.querySelector(`.discord-activity-card[data-key="${key}"]`) as HTMLElement;
+
+                    if (!card) {
+                        card = createActivityCard(activity, artworkUrl, title, subtitle);
+                    } else {
+                        updateActivityCardElement(card, activity, artworkUrl, title, subtitle);
+                    }
+
+                    if (card !== lastNode.nextSibling) {
+                        lastNode.after(card);
+                    }
+                    lastNode = card;
+                }
             }
 
-            // Start activity timer updates if needed
+            widget.querySelectorAll('.discord-activity-card').forEach(card => {
+                if (!processedKeys.has((card as HTMLElement).dataset.key || '')) {
+                    card.remove();
+                }
+            });
+
             startActivityUpdates();
         };
 
         const connectWebSocket = () => {
             if (isDestroyed) return;
-
-            // Clear existing intervals
-            // Intervals handled by instance system
 
             connectionIndicator.classList.add('disconnected');
 
