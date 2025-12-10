@@ -176,19 +176,21 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         const updateActivityTimers = () => {
             if (isDestroyed || currentActivities.length === 0) return;
 
-            const activityTimes = widget.querySelectorAll('.activity-timer');
-
-            activityTimes.forEach((timeElement, index) => {
-                if (currentActivities[index] && currentActivities[index].timestamps?.start) {
-                    const elapsed = Date.now() - (currentActivities[index].timestamps?.start || 0);
-                    (timeElement as HTMLElement).textContent = formatTime(elapsed);
+            widget.querySelectorAll('.discord-activity-card').forEach(card => {
+                const key = (card as HTMLElement).dataset.key;
+                const activity = currentActivities.find(a => getActivityKey(a) === key);
+                const timeEl = card.querySelector('.activity-timer');
+                if (activity?.timestamps?.start && timeEl) {
+                    timeEl.textContent = formatTime(Date.now() - activity.timestamps.start);
                 }
             });
         };
 
         const startActivityUpdates = () => {
             clearInterval(activityUpdateInterval);
-            if (currentActivities.length > 0) {
+            const hasTimedActivities = currentActivities.some(a => a.timestamps?.start);
+            if (hasTimedActivities) {
+                updateActivityTimers();
                 activityUpdateInterval = setInterval(updateActivityTimers, 1000);
                 ComponentInstance.addInterval(instance, activityUpdateInterval);
             }
