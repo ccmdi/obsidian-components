@@ -83,12 +83,12 @@ button.calendar-nav-button {
 
 .calendar-day:not(.calendar-day-other-month):hover {
     background: var(--background-modifier-hover);
-    transform: scale(1.05);
     border-color: var(--background-modifier-border);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .calendar-day:not(.calendar-day-other-month):active {
-    transform: scale(0.95);
+    background: var(--background-modifier-active-hover);
 }
 
 .calendar-day-other-month {
@@ -106,7 +106,7 @@ button.calendar-nav-button {
 .calendar-day-today:hover {
     background: var(--interactive-accent-hover);
     color: var(--text-on-accent);
-    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .calendar-day-has-note::after {
