@@ -1,7 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { requestUrl } from "obsidian";
 import { anthropicUsageStyles } from "./styles";
-import { getAccentColorHex } from "utils";
+import { getAccentColorHex, parseBoolean } from "utils";
 
 interface AnthropicUsageData {
     five_hour: {
@@ -10,7 +10,7 @@ interface AnthropicUsageData {
     };
 }
 
-export const anthropicUsage: Component<['organizationId', 'sessionKey']> = {
+export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRelativeTime']> = {
     name: 'Anthropic Usage',
     keyName: 'anthropic-usage',
     icon: 'brain',
@@ -22,6 +22,11 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey']> = {
         sessionKey: {
             description: 'Session Key',
             required: true
+        },
+        showRelativeTime: {
+            description: 'Show relative time until reset (e.g. "13 minutes")',
+            default: 'false',
+            required: false
         }
     },
     isMountable: true,
@@ -74,10 +79,16 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey']> = {
 
                 // Only show reset time if resets_at is a valid date
                 if (usageData.five_hour.resets_at && window.moment(usageData.five_hour.resets_at).isValid()) {
-                    const resetTime = window.moment(usageData.five_hour.resets_at).format('h:mm A');
+                    const resetMoment = window.moment(usageData.five_hour.resets_at);
+                    const resetTime = resetMoment.format('h:mm A');
+                    let resetText = `resets ${resetTime}`;
+                    if (parseBoolean(args.showRelativeTime)) {
+                        const relativeTime = resetMoment.fromNow(true);
+                        resetText += ` (${relativeTime})`;
+                    }
                     info.createEl('div', {
                         cls: 'anthropic-usage-reset',
-                        text: `resets ${resetTime}`
+                        text: resetText
                     });
                 }
 
