@@ -45,8 +45,6 @@ export const gymStats: Component<['query']> = {
             }
         }
 
-        console.log(workoutFiles);
-
         if (workoutFiles.length === 0) {
             el.createEl("p", { text: "No workout data found" });
             return;

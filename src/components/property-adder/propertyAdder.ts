@@ -144,7 +144,7 @@ export const propertyButton: Component<['property', 'action', 'value', 'buttonTe
     },
     isMountable: true,
     render: renderPropertyAdder,
-    refresh: false,
+    refresh: null,
     does: [ComponentAction.READ, ComponentAction.WRITE],
     aliases: ['property-adder', 'prop-button'],
     styles: propertyAdderStyles

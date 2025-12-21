@@ -357,7 +357,7 @@ export const widgetSpace: Component<['layout']> = {
         const refreshComponents = async () => {
             for (const [, widgetData] of activeWidgets) {
                 const component = COMPONENTS.find(c => c.keyName === widgetData.componentKey);
-                if (!component?.refresh) continue;
+                if (!component?.refresh || component?.refresh !== 'leafChanged') continue;
 
                 const content = widgetData.element.querySelector('.widget-content') as HTMLElement;
                 if (!content) continue;

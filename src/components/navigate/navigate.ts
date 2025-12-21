@@ -97,7 +97,7 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat']> =
     },
     isMountable: true,
     render: renderNavigate,
-    refresh: true,
+    refresh: 'leafChanged',
     does: [ComponentAction.READ, ComponentAction.WRITE],
     styles: navigateStyles,
     settings: {

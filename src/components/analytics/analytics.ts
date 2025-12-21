@@ -359,7 +359,7 @@ export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {
     does: [ComponentAction.READ],
     styles: analyticsStyles,
     render: renderAnalytics,
-    refresh: true,
+    refresh: 'leafChanged',
     settings: {
         colors: {
             name: "Color Scheme",
