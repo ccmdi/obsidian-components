@@ -116,10 +116,12 @@ export enum ComponentAction {
     EXTERNAL = 'EXTERNAL'
 }
 
-export type RefreshStrategy = 
-    | 'metadataChanged' 
-    | 'leafChanged' 
-    | { type: 'timeElapsed'; interval: number } 
+export type RefreshStrategy =
+    | 'metadataChanged'
+    | 'leafChanged'
+    | 'daily'
+    | 'hourly'
+    | { type: 'timeElapsed'; interval: number }
     | null;
 
 export type ComponentArgs<TArgs extends readonly string[] = readonly string[]> = 
@@ -197,6 +199,21 @@ export namespace Component {
             const handler = () => instance.data.triggerRefresh();
             app.workspace.on('active-leaf-change', handler);
             ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
+        }
+        else if (component.refresh === 'daily' || component.refresh === 'hourly') {
+            const schedule = () => {
+                const now = new Date();
+                const next = component.refresh === 'daily'
+                    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+                    : new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1);
+                const timeout = setTimeout(() => {
+                    instance.data.triggerRefresh();
+                    schedule();
+                }, next.getTime() - now.getTime());
+                instance.data.boundaryTimeout = timeout;
+            };
+            schedule();
+            ComponentInstance.addCleanup(instance, () => clearTimeout(instance.data.boundaryTimeout));
         }
         else if (typeof component.refresh === 'object' && component.refresh.type === 'timeElapsed') {
             const interval = setInterval(() => instance.data.triggerRefresh(), component.refresh.interval);
