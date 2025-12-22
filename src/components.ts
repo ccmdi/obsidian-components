@@ -3,6 +3,7 @@ import { parseArguments, validateArguments, parseFM, resolveSpecialVariables, pa
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
+import { debug } from "debug";
 
 /**
  * Global instance registry for cleanup
@@ -52,7 +53,7 @@ export namespace ComponentInstance {
         // Store instance reference on element
         el.dataset.componentId = id;
         componentInstances.set(id, instance);
-        // console.log(`Component ${id} created. Total instances: ${componentInstances.size}`);
+        debug(`Component ${id} created. Total instances: ${componentInstances.size}`);
 
         return instance;
     }

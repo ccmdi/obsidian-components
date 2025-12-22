@@ -41,6 +41,9 @@ const context = await esbuild.context({
 	outfile: "main.js",
 	minify: prod,
 	plugins: [autoRegisterComponents],
+	define: {
+		"__DEV__": prod ? "false" : "true",
+	},
 });
 
 if (prod) {

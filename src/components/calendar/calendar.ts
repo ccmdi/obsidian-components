@@ -1,6 +1,7 @@
 import { Component, ComponentArgs, ComponentAction, ComponentInstance } from "components";
 import calendarStyles from "./styles";
 import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
+import { debug } from "debug";
 
 const renderCalendar = async (
     args: ComponentArgs<[]>,
@@ -27,7 +28,7 @@ const renderCalendar = async (
             }
         }
     } catch (e) {
-        console.debug('Could not access daily notes settings, using defaults');
+        debug('Could not access daily notes settings, using defaults');
     }
 
     // Track current view month/year
