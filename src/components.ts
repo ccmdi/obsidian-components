@@ -1,5 +1,5 @@
 import { App, MarkdownPostProcessorContext, TAbstractFile, TFile, MarkdownRenderChild } from "obsidian";
-import { parseArguments, validateArguments, parseFM, resolveSpecialVariables, parseArgsAliases } from "utils";
+import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSpecialVariables, parseArgsAliases } from "utils";
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
@@ -287,6 +287,7 @@ export namespace Component {
         const componentArgKeys = new Set(Component.getArgKeys(component));
 
         args = parseFM(args, app, ctx);
+        args = parseFileContent(args, app, ctx);
         // Handle special VALUES
         args = resolveSpecialVariables(args, ctx);
         args = parseArgsAliases(args, componentArgKeys);

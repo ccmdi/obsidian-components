@@ -1,6 +1,6 @@
 // utils.ts
 
-import { App, MarkdownPostProcessorContext, TFile, CachedMetadata } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, MarkdownView, parseYaml } from "obsidian";
 
 /**
  * Parses .env-style key-value pairs from a code block.
@@ -122,10 +122,49 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
 export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
     const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
     const fm = file instanceof TFile ? app.metadataCache.getFileCache(file)?.frontmatter || {} : {};
+    
     Object.keys(args).forEach(key => {
         if (args[key]?.startsWith('fm.')) {
             const fmKey = args[key].slice(3);
-            args[key] = String(fm[fmKey]);
+            const value = fm[fmKey];
+            if (value !== null && typeof value === 'object') {
+                args[key] = JSON.stringify(value);
+            } else {
+                args[key] = String(value);
+            }
+        }
+    });
+    
+    return args;
+}
+
+/**
+ * Parse frontmatter directly from active file content (bypasses metadata cache)
+ * Use this when you need guaranteed fresh data (e.g., newly created files)
+ */
+export function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
+    //TODO more idiomatic with parseFM but it works so
+    const needsParsing = Object.values(args).some(v => v?.startsWith('file.'));
+    if (!needsParsing) return args;
+    
+    const activeView = app.workspace.getActiveViewOfType(MarkdownView);
+    if (!activeView?.editor) return args;
+    
+    const content = activeView.editor.getValue();
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!fmMatch) return args;
+    
+    const fm = parseYaml(fmMatch[1]) || {};
+
+    Object.keys(args).forEach(key => {
+        if (args[key]?.startsWith('file.')) {
+            const fmKey = args[key].slice(5);
+            const value = fm[fmKey];
+            if (value !== null && typeof value === 'object') {
+                args[key] = JSON.stringify(value);
+            } else {
+                args[key] = String(value);
+            }
         }
     });
     
