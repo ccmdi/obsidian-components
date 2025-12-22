@@ -240,11 +240,7 @@ export const widgetSpace: Component<['layout']> = {
             const component = COMPONENTS.find(c => c.keyName === componentKey);
             if (component) {
                 try {
-                    const activeFile = app.workspace.getActiveFile();
-                    const dynamicCtx = ctx.sourcePath && activeFile
-                        ? { ...ctx, sourcePath: activeFile.path }
-                        : ctx;
-                    await Component.render(component, argsToSource(componentArgs), content, dynamicCtx, app, componentSettings);
+                    await Component.render(component, argsToSource(componentArgs), content, ctx, app, componentSettings);
                 } catch (error) {
                     content.createEl('div', {
                         attr: { style: 'color: var(--text-error); padding: 8px;' },
@@ -353,33 +349,6 @@ export const widgetSpace: Component<['layout']> = {
             });
         };
 
-        // Component refresh on active leaf change
-        const refreshComponents = async () => {
-            for (const [, widgetData] of activeWidgets) {
-                const component = COMPONENTS.find(c => c.keyName === widgetData.componentKey);
-                if (!component?.refresh) continue;
-
-                const content = widgetData.element.querySelector('.widget-content') as HTMLElement;
-                if (!content) continue;
-
-                try {
-                    const componentId = content.dataset.componentId;
-                    if (componentId) {
-                        componentInstances.get(componentId)?.destroy();
-                    }
-                    content.empty();
-
-                    const activeFile = app.workspace.getActiveFile();
-                    const dynamicCtx = ctx.sourcePath && activeFile
-                        ? { ...ctx, sourcePath: activeFile.path }
-                        : ctx;
-                    await Component.render(component, argsToSource(widgetData.args), content, dynamicCtx, app, componentSettings);
-                } catch (error) {
-                    console.warn(`Failed to refresh ${component.keyName}:`, error);
-                }
-            }
-        };
-
         // Event handlers
         const availableComponents = COMPONENTS.filter(c => c.isMountable);
 
@@ -468,11 +437,8 @@ export const widgetSpace: Component<['layout']> = {
             muuri.resizeObserver?.observe(content);
         });
 
-        app.workspace.on('active-leaf-change', refreshComponents);
-
         // Cleanup
         ComponentInstance.addCleanup(instance, () => {
-            app.workspace.off('active-leaf-change', refreshComponents);
             visibilityObserver.disconnect();
             gridResizeObserver.disconnect();
             muuri.resizeObserver?.disconnect();

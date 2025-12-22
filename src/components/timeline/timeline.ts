@@ -339,6 +339,7 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
         await initializeTimelineView();
         el.appendChild(container);
     },
+    refresh: 'daily',
     settings: {
         limit: {
             name: "Timeline Limit",

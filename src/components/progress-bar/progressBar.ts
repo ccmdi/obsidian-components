@@ -3,11 +3,35 @@ import type { Component } from 'components';
 import { ComponentInstance } from 'components';
 import { progressBarStyles } from './styles';
 
+function animateValue(element: HTMLElement, start: number, end: number, duration: number) {
+	const startTime = performance.now();
+
+	const step = (currentTime: number) => {
+		const elapsed = currentTime - startTime;
+		const progress = Math.min(elapsed / duration, 1);
+
+		// Ease-in-out curve to match the CSS transition
+		const eased = progress < 0.5
+			? 2 * progress * progress
+			: 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+		const current = Math.round(start + (end - start) * eased);
+		element.textContent = `${current}%`;
+
+		if (progress < 1) {
+			requestAnimationFrame(step);
+		}
+	};
+
+	requestAnimationFrame(step);
+}
+
 export const progressBar: Component<['progress', 'height', 'backgroundColor', 'barColor', 'textColor', 'borderRadius', 'showLabel']> = {
 	keyName: 'progress-bar',
 	name: 'Progress Bar',
 	description: 'Display a progress bar with percentage.',
 	icon: 'bar-chart-2',
+	refresh: 'metadataChanged',
 	args: {
 		progress: {
 			description: 'Progress value (0-100). Can use frontmatter: progress=fm.progress',
@@ -41,13 +65,8 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 	isMountable: true,
 	aliases: ['progress'],
 	styles: progressBarStyles,
-	render: async (
-		args,
-		el: HTMLElement,
-		ctx: MarkdownPostProcessorContext,
-		app: App,
-		instance: ComponentInstance,
-	) => {
+
+	render: async (args, el, ctx, app, instance) => {
 		let progress = parseFloat(args.progress) || 0;
 		progress = Math.max(0, Math.min(100, progress));
 
@@ -73,13 +92,9 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		progressFill.style.width = `${progress}%`;
 		progressFill.style.height = '100%';
 		progressFill.style.transition = 'width 0.5s ease-in-out';
+		progressFill.style.backgroundColor = barColor;
 
-		if (barColor.startsWith('var(') || barColor.startsWith('#') || barColor.startsWith('rgb')) {
-			progressFill.style.backgroundColor = barColor;
-		} else {
-			progressFill.style.backgroundColor = barColor;
-		}
-
+		let label: HTMLElement | null = null;
 		if (showLabel) {
 			const labelOverlay = container.createDiv({ cls: 'progress-bar-label' });
 			labelOverlay.style.position = 'absolute';
@@ -89,10 +104,31 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 			labelOverlay.style.alignItems = 'center';
 			labelOverlay.style.justifyContent = 'center';
 
-			const label = labelOverlay.createEl('span');
+			label = labelOverlay.createEl('span');
 			label.textContent = `${progress}%`;
 			label.style.color = textColor;
 			label.style.fontWeight = 'bold';
+		}
+
+		// Store refs for renderRefresh
+		instance.data.progressFill = progressFill;
+		instance.data.label = label;
+		instance.data.currentProgress = progress;
+	},
+
+	renderRefresh: async (args, el, ctx, app, instance) => {
+		let newProgress = parseFloat(args.progress) || 0;
+		newProgress = Math.max(0, Math.min(100, newProgress));
+
+		const oldProgress = instance.data.currentProgress;
+		instance.data.currentProgress = newProgress;
+
+		// Animate the bar (CSS transition handles this)
+		instance.data.progressFill.style.width = `${newProgress}%`;
+
+		// Animate the label count
+		if (instance.data.label) {
+			animateValue(instance.data.label, oldProgress, newProgress, 500);
 		}
 	},
 };

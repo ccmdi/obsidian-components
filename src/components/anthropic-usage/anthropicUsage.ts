@@ -38,6 +38,49 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         const accentColorHex = getAccentColorHex(el);
         const svgUrl = `https://cdn.simpleicons.org/claude/${accentColorHex}`;
 
+        let spinClicks = 0;
+        let currentRotation = 0;
+        let iconContainer: HTMLElement | null = null;
+        let decayTimeout: NodeJS.Timeout | null = null;
+
+        const spinIcon = (degrees: number, duration: number = 300) => {
+            if (!iconContainer) return;
+            iconContainer.style.transition = `transform ${duration}ms ease-out`;
+            iconContainer.style.transform = `rotate(${degrees}deg)`;
+        };
+
+        const resetSpin = () => {
+            if (currentRotation === 0) return;
+            spinClicks = 0;
+            currentRotation = 0;
+            spinIcon(0, 600); // Slow unwind
+        };
+
+        const handleIconClick = async () => {
+            // Clear decay timeout on each click
+            if (decayTimeout) clearTimeout(decayTimeout);
+
+            spinClicks++;
+
+            if (spinClicks >= 5) {
+                // Full spin to 360, unwind to 0, then fetch
+                spinClicks = 0;
+                spinIcon(360, 500); // Complete one full rotation
+                setTimeout(() => {
+                    currentRotation = 0;
+                    spinIcon(0, 500); // Unwind back to start
+                    setTimeout(() => {
+                        fetchAndRender();
+                    }, 500);
+                }, 500);
+            } else {
+                currentRotation += 60;
+                spinIcon(currentRotation);
+                // Auto-unwind after 2 seconds of no clicks
+                decayTimeout = setTimeout(resetSpin, 2000);
+            }
+        };
+
         const fetchAndRender = async () => {
             try {
                 const response = await requestUrl({
@@ -52,7 +95,9 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                 widget.empty();
 
                 // Icon
-                const iconContainer = widget.createEl('div', { cls: 'anthropic-usage-icon' });
+                iconContainer = widget.createEl('div', { cls: 'anthropic-usage-icon' });
+                iconContainer.style.cursor = 'pointer';
+                iconContainer.addEventListener('click', handleIconClick);
                 const icon = iconContainer.createEl('img', {
                     attr: {
                         src: svgUrl,

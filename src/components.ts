@@ -3,6 +3,7 @@ import { parseArguments, validateArguments, parseFM, resolveSpecialVariables, pa
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
+import { debug } from "debug";
 
 /**
  * Global instance registry for cleanup
@@ -43,16 +44,16 @@ export namespace ComponentInstance {
                 // Run all cleanup functions
                 instance.data.cleanup?.forEach(cleanupFn => cleanupFn());
 
-                // Remove from registry
+                // Remove from registry and clear element reference
                 componentInstances.delete(id);
-                // console.log(`Component ${id} cleaned up. Total instances: ${componentInstances.size}`);
+                delete el.dataset.componentId;
             }
         };
 
         // Store instance reference on element
         el.dataset.componentId = id;
         componentInstances.set(id, instance);
-        // console.log(`Component ${id} created. Total instances: ${componentInstances.size}`);
+        debug(`Component ${id} created. Total instances: ${componentInstances.size}`);
 
         return instance;
     }
@@ -116,10 +117,20 @@ export enum ComponentAction {
     EXTERNAL = 'EXTERNAL'
 }
 
+export type RefreshStrategy =
+    | 'metadataChanged'
+    | 'leafChanged'
+    | 'daily'
+    | 'hourly'
+    | { type: 'timeElapsed'; interval: number }
+    | null;
+
 export type ComponentArgs<TArgs extends readonly string[] = readonly string[]> = 
 Record<TArgs[number], string> & {
     original: Record<string, string>;
 };
+
+type RenderFunction<TArgs extends readonly string[]> = (args: ComponentArgs<TArgs>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: ComponentSettingsData) => Promise<void>;
 
 export interface Component<TArgs extends readonly string[]> {
     keyName: string;
@@ -129,8 +140,10 @@ export interface Component<TArgs extends readonly string[]> {
     enabled?: boolean; // Default true - set to false to exclude from COMPONENTS array
     args: Partial<Record<TArgs[number], ComponentArg>>;
     aliases?: string[];
-    render: (args: ComponentArgs<TArgs>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings?: ComponentSettingsData) => Promise<void>;
-    refresh?: boolean;
+    render: RenderFunction<TArgs>;
+    renderRefresh?: RenderFunction<TArgs>;
+    refresh?: RefreshStrategy;
+    useDynamicContext?: boolean; // Use active file's path instead of source file's path
     isMountable: boolean;
     settings?: {
         _render?: (containerEl: HTMLElement, app: App, plugin: ComponentsPlugin) => Promise<void> | void;
@@ -140,6 +153,17 @@ export interface Component<TArgs extends readonly string[]> {
     does?: ComponentAction[];
     group?: ComponentGroup;
     styles: string | null;
+}
+
+function injectComponentStyles(component: Component<readonly string[]>): void {
+    if (!component.styles) return;
+    const styleId = `component-styles-${component.keyName}`;
+    if (document.getElementById(styleId)) return;
+    
+    const styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    styleEl.textContent = component.styles;
+    document.head.appendChild(styleEl);
 }
 
 export namespace Component {
@@ -170,6 +194,75 @@ export namespace Component {
         return result;
     }
 
+    function setupRefreshHandlers(
+        component: Component<readonly string[]>,
+        instance: ComponentInstance,
+        ctx: MarkdownPostProcessorContext,
+        app: App
+    ): void {
+        if (!component.refresh) return;
+        if (component.refresh === 'metadataChanged') {
+            const handler = (file: TFile) => {
+                if (file.path === ctx.sourcePath) instance.data.triggerRefresh();
+            };
+            app.metadataCache.on('changed', handler);
+            ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
+        }
+        else if (component.refresh === 'leafChanged') {
+            const handler = () => instance.data.triggerRefresh();
+            app.workspace.on('active-leaf-change', handler);
+            ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
+        }
+        else if (component.refresh === 'daily' || component.refresh === 'hourly') {
+            const schedule = () => {
+                const now = new Date();
+                const next = component.refresh === 'daily'
+                    ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+                    : new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1);
+                const timeout = setTimeout(() => {
+                    instance.data.triggerRefresh();
+                    schedule();
+                }, next.getTime() - now.getTime());
+                instance.data.boundaryTimeout = timeout;
+            };
+            schedule();
+            ComponentInstance.addCleanup(instance, () => clearTimeout(instance.data.boundaryTimeout));
+        }
+        else if (typeof component.refresh === 'object' && component.refresh.type === 'timeElapsed') {
+            const interval = setInterval(() => instance.data.triggerRefresh(), component.refresh.interval);
+            ComponentInstance.addInterval(instance, interval);
+        }
+    }
+
+    function getOrCreateInstance(
+        component: Component<readonly string[]>,
+        el: HTMLElement,
+        ctx: MarkdownPostProcessorContext,
+        app: App
+    ): { instance: ComponentInstance; isNew: boolean } {
+        const existingId = el.dataset.componentId;
+
+        if (existingId && componentInstances.has(existingId)) {
+            return { instance: componentInstances.get(existingId)!, isNew: false };
+        }
+
+        const instance = ComponentInstance.create(el);
+
+        // Register Obsidian cleanup
+        if (ctx.addChild) {
+            const cleanupComponent = new MarkdownRenderChild(el);
+            cleanupComponent.register(() => instance.destroy());
+            ctx.addChild(cleanupComponent);
+        }
+
+        // Setup refresh handlers
+        if (component.refresh) {
+            setupRefreshHandlers(component, instance, ctx, app);
+        }
+
+        return { instance, isNew: true };
+    }
+
     export async function render(
         component: Component<readonly string[]>,
         source: string,
@@ -178,6 +271,16 @@ export namespace Component {
         app: App,
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
+        // Dynamic context: use active file's path instead of source file's path
+        if (component.useDynamicContext) {
+            const activeFile = app.workspace.getActiveFile();
+            if (activeFile) {
+                ctx = { ...ctx, sourcePath: activeFile.path };
+            }
+        }
+
+        injectComponentStyles(component);
+
         const originalArgs = parseArguments(source);
         let args = { ...originalArgs };
 
@@ -215,16 +318,7 @@ export namespace Component {
             return;
         }
 
-        // Internal instance
-        const instance = ComponentInstance.create(el);
-
-        // Obsidian instance: Markdown/reading mode cleanup
-        if (ctx.addChild) {
-            const cleanupComponent = new MarkdownRenderChild(el);
-            cleanupComponent.register(() => instance.destroy());
-            ctx.addChild(cleanupComponent);
-        }
-        // Beyond here, the view is responsible for cleanup.
+        const { instance, isNew } = getOrCreateInstance(component, el, ctx, app);
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {
@@ -239,14 +333,20 @@ export namespace Component {
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
 
-        // Auto-inject component styles if specified
-        if (component.styles) {
-            const styleEl = el.createEl('style');
-            styleEl.textContent = component.styles;
-            el.appendChild(styleEl);
+        // Update triggerRefresh on every render with fresh closure
+        instance.data.triggerRefresh = async () => {
+            if (!component.renderRefresh) el.empty();
+            Component.render(component, source, el, ctx, app, componentSettings);
+        };
+        
+        let renderFn: RenderFunction<readonly string[]>;
+        if(!isNew && component.renderRefresh) {
+            renderFn = component.renderRefresh;
+        } else {
+            renderFn = component.render;
         }
 
-        await component.render(argsWithOriginal, el, ctx, app, instance, componentSettings);
+        await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
     }
 }
 

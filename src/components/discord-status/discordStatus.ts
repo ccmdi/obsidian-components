@@ -1,6 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { discordStatusStyles } from './styles';
 import { parseBoolean } from "utils";
+import { debug } from "debug";
 
 interface DiscordActivityAssets {
     large_image?: string;
@@ -372,7 +373,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
             ws.onopen = () => {
                 if (isDestroyed) return;
-                console.log('Discord WebSocket connected');
+                debug('Discord WebSocket connected');
             };
 
             ws.onmessage = (event) => {
@@ -383,7 +384,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
                     // Handle Hello - start heartbeat
                     if (data.op === 1) {
-                        console.log('Received Hello, starting heartbeat');
+                        debug('Received Hello, starting heartbeat');
                         connectionIndicator.classList.remove('disconnected');
 
                         // Send initialize
@@ -407,7 +408,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
                     // Handle events
                     if (data.op === 0) {
                         if (data.t === 'INIT_STATE') {
-                            console.log('Received INIT_STATE');
+                            debug('Received INIT_STATE');
                             if (data.d && data.d.discord_user) {
                                 updateUI(data.d);
                             } else {
@@ -415,7 +416,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
                                 showError('User not found. Make sure the user ID is correct and the user is in the Lanyard Discord server (https://discord.gg/lanyard).');
                             }
                         } else if (data.t === 'PRESENCE_UPDATE') {
-                            console.log('Received PRESENCE_UPDATE');
+                            debug('Received PRESENCE_UPDATE');
                             updateUI(data.d);
                         }
                     }
@@ -426,7 +427,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
             ws.onclose = (event) => {
                 if (isDestroyed) return;
-                console.log('Discord WebSocket closed:', event.code, event.reason);
+                debug('Discord WebSocket closed:', event.code, event.reason);
                 connectionIndicator.classList.add('disconnected');
                 clearInterval(heartbeatInterval);
 
