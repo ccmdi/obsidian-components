@@ -8,12 +8,11 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
     const templatePath = args.template;
     const dateFormat = args.dateFormat || (componentSettings.dateFormat as string | undefined);
 
-    const initiator = app.workspace.getActiveFile();
-    if (!initiator) {
+    if (!ctx.sourcePath) {
         el.textContent = "No active file to navigate from.";
         return;
     }
-    const initiatorName = initiator.name.slice(0, initiator.name.length - 3);
+    const initiatorName = ctx.sourcePath.split('/').pop()?.replace(/\.md$/, '') || '';
 
     const createNavigationButton = (dayOffset: number, label: string) => {
         const btn = el.createEl('button', { cls: `daily-nav ${dayOffset < 0 ? 'yesterday' : 'tomorrow'}` });
@@ -98,6 +97,7 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat']> =
     isMountable: true,
     render: renderNavigate,
     refresh: 'leafChanged',
+    useDynamicContext: true,
     does: [ComponentAction.READ, ComponentAction.WRITE],
     styles: navigateStyles,
     settings: {

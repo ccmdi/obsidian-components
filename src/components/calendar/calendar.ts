@@ -240,4 +240,5 @@ export const calendar: Component<[]> = {
     render: renderCalendar,
     does: [ComponentAction.READ, ComponentAction.WRITE],
     styles: calendarStyles,
+    refresh: 'daily'
 };
