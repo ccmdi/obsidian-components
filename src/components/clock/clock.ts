@@ -1,5 +1,6 @@
 import { Component, ComponentInstance } from "components";
 import { parseBoolean } from "utils";
+import { clockStyles } from "./styles";
 
 export const clock: Component<['type', 'format', 'timezone', 'size', 'showSeconds', 'showDate', 'background', 'background-color', 'border']> = {
     name: 'Clock',
@@ -44,7 +45,7 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
         }
     },
     isMountable: true,
-    styles: null,
+    styles: clockStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const type = args.type;
         const format = args.format;

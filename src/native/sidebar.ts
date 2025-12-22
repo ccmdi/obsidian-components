@@ -73,6 +73,7 @@ export default class ComponentSidebarView extends ItemView {
         instances.forEach(instance => instance.destroy());
 
         container.empty();
+        container.addClass('in-sidebar');
 
         try {
             // Convert args to source format for renderComponent

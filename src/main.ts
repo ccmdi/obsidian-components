@@ -83,7 +83,7 @@ export default class ComponentsPlugin extends Plugin {
 
         this.globalStyleElement = document.createElement('style');
         this.globalStyleElement.textContent = `
-            .component {
+            .component:not(.in-sidebar) {
                 margin: ${this.settings.defaultContainerMargin || 6}px;
             }
         `;

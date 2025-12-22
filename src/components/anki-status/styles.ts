@@ -238,4 +238,16 @@ export const ankiStatusStyles = /*css*/`
     .retry-button:hover {
         background: var(--interactive-accent-hover);
     }
+
+    /* Loading state */
+    .anki-loading-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+    }
+    .anki-loading-value {
+        width: 30px;
+        height: 20px;
+        margin: 0 auto 4px;
+    }
 `

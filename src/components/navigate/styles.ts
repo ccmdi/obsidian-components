@@ -1,4 +1,9 @@
-const navigateStyles = /*css*/` 
+const navigateStyles = /*css*/`
+    .daily-nav-container {
+        display: flex;
+        gap: 0;
+    }
+
     /* Daily notes > navigation buttons base styles */
     .daily-nav-container .daily-nav {
     --nav-bg-opacity: 0.5;

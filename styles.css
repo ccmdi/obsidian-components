@@ -1,17 +1,12 @@
-.component:has(.github-streak-container) {
-  width: unset !important;
+/* Sidebar component base styles */
+.in-sidebar {
+  margin: 0;
+  padding: 0;
 }
-.component:has(.daily-image) {
-  margin: 0px auto !important;
+.in-sidebar > div {
+  border: 0;
 }
 
-.component.view-content {
-  margin: 0 !important;
-  padding: 0 !important;
-  &>div {
-    border: 0 !important;
-  }
-}
 .setting-item-does {
   /* Base Style: All tags share these properties */
   font-size: 0.75em;
@@ -49,19 +44,6 @@
     padding-left: 12px;
     margin-bottom: 8px;
 }
-
-.anki-loading-icon {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-}
-
-.anki-loading-value {
-    width: 30px;
-    height: 20px;
-    margin: 0 auto 4px;
-}
-
 
 .confirmation-modal h2 {
   margin-top: 0 !important;
@@ -145,74 +127,18 @@
   color: var(--text-error);
 }
 
-/* Navigate component */
-.daily-nav-container {
-  display: flex;
-  gap: 0;
-}
-
-/* Media component */
-.media-centered {
-  display: block;
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-.media-centered video,
-.media-centered img {
-  display: block;
-  margin: 0 auto;
-  text-align: center;
-}
-
-/* Clock component */
-.clock-container {
-  text-align: center;
-  max-width: 100%;
-  width: fit-content;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  padding: 0.25em;
-}
-
-.clock-digital {
-  font-size: 2em;
-  font-family: monospace;
-  font-weight: bold;
-}
-
-.clock-binary {
-  font-family: monospace;
-  font-size: 1.2em;
-}
-
-.clock-matrix {
-  font-family: 'Courier New', monospace;
-  background-color: black;
-  color: #00ff00;
-  padding: 10px;
-  border-radius: 5px;
-  font-size: 1.5em;
-}
-
 /* Error messages */
 .component-error {
   color: var(--text-error);
 }
 
-.view-content.component {
-  & .note-embed-container {
-    padding: 0 !important;
-    & * {
-      border-radius: 0 !important;
-    }
-    & .component {
-      margin: 0 !important;
-    }
-  }
-
-  &.clock-container {
-    width: 100% !important;
-    padding: 6px !important;
-  }
+/* Note embed in sidebar */
+.in-sidebar .note-embed-container {
+  padding: 0;
+}
+.in-sidebar .note-embed-container * {
+  border-radius: 0;
+}
+.in-sidebar .note-embed-container .component {
+  margin: 0;
 }

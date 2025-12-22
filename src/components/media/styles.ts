@@ -22,4 +22,22 @@ export const mediaStyles = /*css*/`
         color: var(--text-normal);
         font-size: 0.9em;
     }
+
+    /* Centered variant */
+    .media-centered {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .media-centered video,
+    .media-centered img {
+        display: block;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    /* Sidebar adjustments */
+    .in-sidebar .media-container {
+        margin: 0 auto;
+    }
 `
