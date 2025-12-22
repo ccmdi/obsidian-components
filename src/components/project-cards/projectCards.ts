@@ -391,7 +391,7 @@ export const projectCards: Component<[
             title.createEl('a', {
                 cls: 'internal-link',
                 text: project.name,
-                attr: { href: project.name }
+                attr: { href: project.path }
             });
 
             if (showBadges && sortBy !== 'date') {

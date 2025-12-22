@@ -120,11 +120,14 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
 }
 
 export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
-    const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
-    const fm = file instanceof TFile ? app.metadataCache.getFileCache(file)?.frontmatter || {} : {};
-    
+    let fm: Record<string, any> | null = null;
+
     Object.keys(args).forEach(key => {
         if (args[key]?.startsWith('fm.')) {
+            if (fm === null) {
+                const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
+                fm = file instanceof TFile ? app.metadataCache.getFileCache(file)?.frontmatter || {} : {};
+            }
             const fmKey = args[key].slice(3);
             const value = fm[fmKey];
             if (value !== null && typeof value === 'object') {
@@ -134,7 +137,7 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
             }
         }
     });
-    
+
     return args;
 }
 
@@ -143,23 +146,18 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
  * Use this when you need guaranteed fresh data (e.g., newly created files)
  */
 export function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
-    //TODO more idiomatic with parseFM but it works so
-    const needsParsing = Object.values(args).some(v => v?.startsWith('file.'));
-    if (!needsParsing) return args;
-    
-    const activeView = app.workspace.getActiveViewOfType(MarkdownView);
-    if (!activeView?.editor) return args;
-    
-    const content = activeView.editor.getValue();
-    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-    if (!fmMatch) return args;
-    
-    const fm = parseYaml(fmMatch[1]) || {};
+    let fm: Record<string, any> | null = null;
 
     Object.keys(args).forEach(key => {
         if (args[key]?.startsWith('file.')) {
+            if (fm === null) {
+                const activeView = app.workspace.getActiveViewOfType(MarkdownView);
+                const content = activeView?.editor?.getValue() || '';
+                const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+                fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+            }
             const fmKey = args[key].slice(5);
-            const value = fm[fmKey];
+            const value = fm?.[fmKey];
             if (value !== null && typeof value === 'object') {
                 args[key] = JSON.stringify(value);
             } else {
@@ -167,7 +165,7 @@ export function parseFileContent(args: Record<string, string>, app: App, ctx: Ma
             }
         }
     });
-    
+
     return args;
 }
 
