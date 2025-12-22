@@ -142,6 +142,7 @@ export interface Component<TArgs extends readonly string[]> {
     render: RenderFunction<TArgs>;
     renderRefresh?: RenderFunction<TArgs>;
     refresh?: RefreshStrategy;
+    useDynamicContext?: boolean; // Use active file's path instead of source file's path
     isMountable: boolean;
     settings?: {
         _render?: (containerEl: HTMLElement, app: App, plugin: ComponentsPlugin) => Promise<void> | void;
@@ -151,6 +152,17 @@ export interface Component<TArgs extends readonly string[]> {
     does?: ComponentAction[];
     group?: ComponentGroup;
     styles: string | null;
+}
+
+function injectComponentStyles(component: Component<readonly string[]>): void {
+    if (!component.styles) return;
+    const styleId = `component-styles-${component.keyName}`;
+    if (document.getElementById(styleId)) return;
+    
+    const styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    styleEl.textContent = component.styles;
+    document.head.appendChild(styleEl);
 }
 
 export namespace Component {
@@ -242,12 +254,6 @@ export namespace Component {
             ctx.addChild(cleanupComponent);
         }
 
-        // Inject styles once
-        if (component.styles) {
-            const styleEl = el.createEl('style');
-            styleEl.textContent = component.styles;
-        }
-
         // Setup refresh handlers
         if (component.refresh) {
             setupRefreshHandlers(component, instance, ctx, app);
@@ -264,6 +270,16 @@ export namespace Component {
         app: App,
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
+        // Dynamic context: use active file's path instead of source file's path
+        if (component.useDynamicContext) {
+            const activeFile = app.workspace.getActiveFile();
+            if (activeFile) {
+                ctx = { ...ctx, sourcePath: activeFile.path };
+            }
+        }
+
+        injectComponentStyles(component);
+
         const originalArgs = parseArguments(source);
         let args = { ...originalArgs };
 
@@ -321,9 +337,14 @@ export namespace Component {
             if (!component.renderRefresh) el.empty();
             Component.render(component, source, el, ctx, app, componentSettings);
         };
+        
+        let renderFn: RenderFunction<readonly string[]>;
+        if(!isNew && component.renderRefresh) {
+            renderFn = component.renderRefresh;
+        } else {
+            renderFn = component.render;
+        }
 
-        // Pick render function: full render on first, incremental on refresh (if available)
-        const renderFn = (!isNew && component.renderRefresh) ? component.renderRefresh : component.render;
         await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
     }
 }
