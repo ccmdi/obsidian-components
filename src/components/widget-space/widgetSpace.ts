@@ -318,6 +318,11 @@ export const widgetSpace: Component<['layout']> = {
                 const el = item.getElement();
                 // Lock width to current value before moving to document.body
                 el.style.width = `${el.offsetWidth}px`;
+                // Lock media element dimensions to prevent expansion
+                el.querySelectorAll('img, video').forEach((media: HTMLElement) => {
+                    media.style.width = `${media.offsetWidth}px`;
+                    media.style.height = `${media.offsetHeight}px`;
+                });
             });
 
             muuri.on('dragStart', (item: any) => {
@@ -339,6 +344,11 @@ export const widgetSpace: Component<['layout']> = {
                 const el = item.getElement();
                 // Restore CSS variable-based width after release animation completes
                 el.style.width = '';
+                // Reset media element dimensions
+                el.querySelectorAll('img, video').forEach((media: HTMLElement) => {
+                    media.style.width = '';
+                    media.style.height = '';
+                });
             });
 
             muuri.resizeObserver = new ResizeObserver((entries) => {
