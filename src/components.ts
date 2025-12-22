@@ -179,6 +179,66 @@ export namespace Component {
         return result;
     }
 
+    function setupRefreshHandlers(
+        component: Component<readonly string[]>,
+        instance: ComponentInstance,
+        ctx: MarkdownPostProcessorContext,
+        app: App
+    ): void {
+        if (!component.refresh) return;
+        if (component.refresh === 'metadataChanged') {
+            const handler = (file: TFile) => {
+                if (file.path === ctx.sourcePath) instance.data.triggerRefresh();
+            };
+            app.metadataCache.on('changed', handler);
+            ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
+        }
+        else if (component.refresh === 'leafChanged') {
+            const handler = () => instance.data.triggerRefresh();
+            app.workspace.on('active-leaf-change', handler);
+            ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
+        }
+        else if (typeof component.refresh === 'object' && component.refresh.type === 'timeElapsed') {
+            const interval = setInterval(() => instance.data.triggerRefresh(), component.refresh.interval);
+            ComponentInstance.addInterval(instance, interval);
+        }
+    }
+
+    function getOrCreateInstance(
+        component: Component<readonly string[]>,
+        el: HTMLElement,
+        ctx: MarkdownPostProcessorContext,
+        app: App
+    ): { instance: ComponentInstance; isNew: boolean } {
+        const existingId = el.dataset.componentId;
+
+        if (existingId && componentInstances.has(existingId)) {
+            return { instance: componentInstances.get(existingId)!, isNew: false };
+        }
+
+        const instance = ComponentInstance.create(el);
+
+        // Register Obsidian cleanup
+        if (ctx.addChild) {
+            const cleanupComponent = new MarkdownRenderChild(el);
+            cleanupComponent.register(() => instance.destroy());
+            ctx.addChild(cleanupComponent);
+        }
+
+        // Inject styles once
+        if (component.styles) {
+            const styleEl = el.createEl('style');
+            styleEl.textContent = component.styles;
+        }
+
+        // Setup refresh handlers
+        if (component.refresh) {
+            setupRefreshHandlers(component, instance, ctx, app);
+        }
+
+        return { instance, isNew: true };
+    }
+
     export async function render(
         component: Component<readonly string[]>,
         source: string,
@@ -224,25 +284,7 @@ export namespace Component {
             return;
         }
 
-        const isFirstRender = !el.dataset.componentId;
-
-        // Internal instance
-        let instance: ComponentInstance;
-        if (isFirstRender) {
-            instance = ComponentInstance.create(el);
-
-
-            // Obsidian instance: Markdown/reading mode cleanup
-            if (ctx.addChild) {
-                const cleanupComponent = new MarkdownRenderChild(el);
-                cleanupComponent.register(() => instance.destroy());
-                ctx.addChild(cleanupComponent);
-            }
-        } else {
-            // Get existing instance
-            instance = componentInstances.get(el.dataset.componentId!)!;
-        }
-        // Beyond here, the view is responsible for cleanup.
+        const { instance, isNew } = getOrCreateInstance(component, el, ctx, app);
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {
@@ -257,44 +299,15 @@ export namespace Component {
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
 
-        // Auto-inject component styles if specified (only on first render or after empty)
-        if (component.styles && (isFirstRender || !component.renderRefresh)) {
-            const styleEl = el.createEl('style');
-            styleEl.textContent = component.styles;
-            el.appendChild(styleEl);
-        }
-
-        // Update triggerRefresh on every render with fresh args
+        // Update triggerRefresh on every render with fresh closure
         instance.data.triggerRefresh = async () => {
             if (!component.renderRefresh) el.empty();
             Component.render(component, source, el, ctx, app, componentSettings);
         };
 
-        // First render or no renderRefresh: full render. Otherwise: incremental refresh
-        const renderFn = (!isFirstRender && component.renderRefresh) ? component.renderRefresh : component.render;
+        // Pick render function: full render on first, incremental on refresh (if available)
+        const renderFn = (!isNew && component.renderRefresh) ? component.renderRefresh : component.render;
         await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
-
-        // Set up refresh handlers only on first render
-        if (component.refresh && isFirstRender) {
-            if (component.refresh === 'metadataChanged') {
-                const handler = (file: TFile) => {
-                    if (file.path === ctx.sourcePath) instance.data.triggerRefresh();
-                };
-                app.metadataCache.on('changed', handler);
-                ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
-            }
-
-            else if (component.refresh === 'leafChanged') {
-                const handler = () => instance.data.triggerRefresh();
-                app.workspace.on('active-leaf-change', handler);
-                ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
-            }
-
-            else if (typeof component.refresh === 'object' && component.refresh.type === 'timeElapsed') {
-                const interval = setInterval(() => instance.data.triggerRefresh(), component.refresh.interval);
-                ComponentInstance.addInterval(instance, interval);
-            }
-        }
     }
 }
 
