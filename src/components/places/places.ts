@@ -116,7 +116,7 @@ export const places: Component<[
             default: 'score'
         },
         excludeTag: {
-            description: 'Tag to exclude from results (e.g., map/destination)',
+            description: 'Tag to exclude from results',
             default: ''
         }
     },
