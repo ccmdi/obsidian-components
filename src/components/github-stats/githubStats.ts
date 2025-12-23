@@ -1,5 +1,5 @@
 import { Component, ComponentAction, ComponentInstance } from 'components';
-import { getAccentColorHex } from 'utils';
+import { createColoredIcon } from 'utils';
 import { githubStyles } from './styles';
 
 interface GithubContributionDay {
@@ -132,20 +132,10 @@ export const githubStats: Component<['GITHUB_TOKEN']> = {
         const wrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
 
         // Icon
-        const accentColorHex = getAccentColorHex(el);
-        const svgUrl = `https://cdn.simpleicons.org/github/${accentColorHex}`;
         const iconContainer = wrapper.createEl('div', { cls: 'github-icon' });
         const link = iconContainer.createEl('a', { href: `https://github.com/${username}` });
-        const icon = link.createEl('img', {
-            attr: {
-                src: svgUrl,
-                alt: 'GitHub',
-                style: 'width: 100%; height: 100%;'
-            }
-        });
-        icon.onerror = () => {
-            icon.src = `https://cdn.simpleicons.org/github/000000`;
-        };
+        const icon = createColoredIcon('github');
+        link.appendChild(icon);
 
         // Streak squares
         const streakContainer = wrapper.createEl('div', { cls: 'github-streak' });

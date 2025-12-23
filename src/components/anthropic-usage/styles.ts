@@ -21,7 +21,7 @@ export const anthropicUsageStyles = /*css*/`
         justify-content: center;
     }
 
-    .anthropic-usage-icon img {
+    .anthropic-usage-icon svg {
         width: 100%;
         height: 100%;
         display: block;

@@ -34,6 +34,11 @@ export const githubNotificationsStyles = /*css*/`
         opacity: 0.8;
     }
 
+    .github-notifications-icon svg {
+        width: 100%;
+        height: 100%;
+    }
+
     .github-notifications-count {
         background: var(--text-accent);
         color: var(--text-on-accent);
