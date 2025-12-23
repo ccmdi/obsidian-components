@@ -94,6 +94,15 @@ export default class ComponentsPlugin extends Plugin {
             const componentEl = target.closest('.component[data-component-key]') as HTMLElement;
             
             if (componentEl) {
+                // Skip sidebar components - they can't be edited via code blocks
+                const isInSidebar = componentEl.classList.contains('in-sidebar') || 
+                                    componentEl.closest('.workspace-leaf-content[data-type="component-sidebar"]');
+                
+                if (isInSidebar) {
+                    lastClickedComponent = null;
+                    return;
+                }
+
                 const componentKey = componentEl.dataset.componentKey;
                 const componentArgsStr = componentEl.dataset.componentArgs;
                 const sourcePath = componentEl.dataset.componentSource;
