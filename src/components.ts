@@ -331,6 +331,13 @@ export namespace Component {
         // Internal global class
         el.addClass('component');
 
+        // Store component metadata for context menu editing
+        if (isNew && Component.hasArgs(component)) {
+            el.dataset.componentKey = component.keyName;
+            el.dataset.componentArgs = JSON.stringify(originalArgs);
+            el.dataset.componentSource = ctx.sourcePath;
+        }
+
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
 

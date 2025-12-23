@@ -216,31 +216,49 @@ export function formatDate(date: Date, format: string): string {
 }
 
 /**
- * Converts an HSL color string to a hex code using direct math.
- * e.g., "hsl(246, 84%, 69%)" -> "766df3"
+ * Creates an icon element with an inlined SVG from Simple Icons.
+ * The icon color automatically follows var(--text-accent) via CSS fill.
+ *
+ * @param iconName - The Simple Icons icon name (e.g., 'github', 'claude')
+ * @param options - Optional configuration
+ * @returns HTMLElement container that will be populated with the SVG
  */
-export function getAccentColorHex(el: HTMLElement): string {
-    // Fallback must be a valid hex code (not a color name) for CDN compatibility
-    const fallback = '000000';
+export function createColoredIcon(
+    iconName: string,
+    options: {
+        size?: string;
+        color?: string;
+    } = {}
+): HTMLElement {
+    const { size, color = 'var(--text-accent)' } = options;
+    const iconUrl = `https://cdn.simpleicons.org/${iconName}`;
 
-    const tempDiv = el.ownerDocument.createElement('div');
-    tempDiv.style.color = 'var(--text-accent)';
-    el.ownerDocument.body.appendChild(tempDiv);
-
-    const computedColor = getComputedStyle(tempDiv).color;
-    el.ownerDocument.body.removeChild(tempDiv);
-
-    if (!computedColor || computedColor === 'rgba(0, 0, 0, 0)') return fallback;
-
-    // Parse rgb/rgba values
-    const rgbMatch = computedColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    if (rgbMatch) {
-        const [, r, g, b] = rgbMatch.map(Number);
-        const toHex = (val: number) => val.toString(16).padStart(2, '0');
-        return `${toHex(r)}${toHex(g)}${toHex(b)}`;
+    const container = document.createElement('div');
+    if (size) {
+        container.style.width = size;
+        container.style.height = size;
     }
+    container.style.display = 'flex';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
 
-    return fallback;
+    // Fetch and inline the SVG so we can style it with CSS
+    fetch(iconUrl)
+        .then(response => response.text())
+        .then(svgText => {
+            container.innerHTML = svgText;
+            const svg = container.querySelector('svg');
+            if (svg) {
+                svg.style.width = '100%';
+                svg.style.height = '100%';
+                svg.style.fill = color;
+            }
+        })
+        .catch(() => {
+            // Silently fail - icon just won't show
+        });
+
+    return container;
 }
 
 export async function useTemplate(

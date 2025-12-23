@@ -1,7 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { requestUrl } from "obsidian";
 import { anthropicUsageStyles } from "./styles";
-import { getAccentColorHex, parseBoolean } from "utils";
+import { createColoredIcon, parseBoolean } from "utils";
 
 interface AnthropicUsageData {
     five_hour: {
@@ -34,9 +34,6 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
     styles: anthropicUsageStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const widget = el.createEl('div', { cls: 'anthropic-usage-container' });
-
-        const accentColorHex = getAccentColorHex(el);
-        const svgUrl = `https://cdn.simpleicons.org/claude/${accentColorHex}`;
 
         let spinClicks = 0;
         let currentRotation = 0;
@@ -98,13 +95,8 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                 iconContainer = widget.createEl('div', { cls: 'anthropic-usage-icon' });
                 iconContainer.style.cursor = 'pointer';
                 iconContainer.addEventListener('click', handleIconClick);
-                const icon = iconContainer.createEl('img', {
-                    attr: {
-                        src: svgUrl,
-                        alt: 'Claude',
-                        style: 'width: 100%; height: 100%;'
-                    }
-                });
+                const icon = createColoredIcon('claude');
+                iconContainer.appendChild(icon);
 
                 // Percentage value
                 widget.createEl('div', {
