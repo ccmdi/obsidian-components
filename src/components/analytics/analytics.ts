@@ -1,7 +1,7 @@
 import { Component, ComponentInstance, ComponentAction, ComponentSettingsData } from "components";
 import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
-import { analyticsStyles } from "./styles";
 import { renderMarkdownLinkToElement } from "utils";
+import { createApi, injectOjsStyles } from "ojs";
 
 interface LinkData {
     file: string;
@@ -47,6 +47,8 @@ const renderAnalytics = async (
     instance: ComponentInstance,
     componentSettings: ComponentSettingsData = {}
 ): Promise<void> => {
+    injectOjsStyles();
+
     const searchFolder = args.searchFolder || "";
     const colors = args.colors || (componentSettings.colors as string | undefined);
     const showTitle = args.showTitle === 'true' && componentSettings.showTitle !== false;
@@ -196,56 +198,15 @@ function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder
         authorities, hubs, deadEnds, orphans, topMissingLinks
     } = data;
 
-    const getCardStyle = () => {
-        switch (colors) {
-            case "false":
-                return "background: var(--background-secondary); padding: 1rem; border-radius: 6px; border-left: 3px solid var(--text-muted);";
-            default:
-                return "background: var(--background-secondary); padding: 1rem; border-radius: 6px;";
-        }
-    };
+    const api = createApi();
 
-    const getTitleStyle = (color: string) => {
+    // Map color based on scheme
+    const getColor = (originalColor: string): string => {
         switch (colors) {
-            case "false":
-                return "color: var(--text-normal); font-size: 0.9em;";
-            case "accent":
-                return "color: var(--color-accent); font-size: 0.9em;";
-            case "colorful":
-            default:
-                return `color: ${color}; font-size: 0.9em;`;
+            case "false": return 'var(--text-muted)';
+            case "accent": return 'var(--color-accent)';
+            default: return originalColor;
         }
-    };
-
-    const getBorderStyle = (color: string) => {
-        switch (colors) {
-            case "false":
-                return "";
-            case "accent":
-                return "border-left: 3px solid var(--color-accent);";
-            case "colorful":
-            default:
-                return `border-left: 3px solid ${color};`;
-        }
-    };
-
-    const createCard = (container: HTMLElement, titleText: string, titleColor: string, mainValue: string, mainSuffix: string, subtitleText: string) => {
-        const card = container.createEl('div', {
-            attr: { style: `${getCardStyle()} ${getBorderStyle(titleColor)}` }
-        });
-        const title = card.createEl('strong', { attr: { style: getTitleStyle(titleColor) }, text: titleText });
-        card.appendChild(document.createElement('br'));
-        const valueSpan = card.createEl('span', {
-            attr: { style: 'font-size: 1.4em; font-weight: 600;' },
-            text: mainValue
-        });
-        card.appendText(` ${mainSuffix}`);
-        card.appendChild(document.createElement('br'));
-        card.createEl('small', {
-            attr: { style: 'color: var(--text-muted);' },
-            text: subtitleText
-        });
-        return card;
     };
 
     // Title
@@ -254,43 +215,79 @@ function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder
     }
 
     // Grid
-    const grid = el.createEl('div', { cls: 'vault-analytics-grid' });
+    const grid = api.grid(el);
 
-    createCard(grid, 'CONNECTION HEALTH', 'var(--color-accent)',
-        `${Math.round((totalPages - islands.length) / totalPages * 100)}%`, 'connected',
-        `${islands.length} islands, ${wellConnected.length} bridges`);
+    api.card(grid, {
+        title: 'CONNECTION HEALTH',
+        color: getColor('var(--color-accent)'),
+        value: `${Math.round((totalPages - islands.length) / totalPages * 100)}%`,
+        suffix: 'connected',
+        subtitle: `${islands.length} islands, ${wellConnected.length} bridges`
+    });
 
-    createCard(grid, 'KNOWLEDGE DEPTH', 'var(--color-green)',
-        `${totalPages > 0 ? Math.round(substantialNotes / totalPages * 100) : 0}%`, 'substantial',
-        `${substantialNotes} notes >1k chars`);
+    api.card(grid, {
+        title: 'KNOWLEDGE DEPTH',
+        color: getColor('var(--color-green)'),
+        value: `${totalPages > 0 ? Math.round(substantialNotes / totalPages * 100) : 0}%`,
+        suffix: 'substantial',
+        subtitle: `${substantialNotes} notes >1k chars`
+    });
 
-    createCard(grid, 'INTERNAL LINKS', 'var(--color-purple)',
-        `${(totalInternalLinks / totalPages).toFixed(1)}`, 'per note',
-        `${totalInternalLinks} note-to-note`);
+    api.card(grid, {
+        title: 'INTERNAL LINKS',
+        color: getColor('var(--color-purple)'),
+        value: `${(totalInternalLinks / totalPages).toFixed(1)}`,
+        suffix: 'per note',
+        subtitle: `${totalInternalLinks} note-to-note`
+    });
 
-    createCard(grid, 'EXTERNAL LINKS', 'var(--color-blue)',
-        `${(totalExternalLinks / totalPages).toFixed(1)}`, 'per note',
-        `${totalExternalLinks} outside links`);
+    api.card(grid, {
+        title: 'EXTERNAL LINKS',
+        color: getColor('var(--color-blue)'),
+        value: `${(totalExternalLinks / totalPages).toFixed(1)}`,
+        suffix: 'per note',
+        subtitle: `${totalExternalLinks} outside links`
+    });
 
-    createCard(grid, 'FRESHNESS', 'var(--color-orange)',
-        `${Math.round(recentlyActive / totalPages * 100)}%`, 'active',
-        `${recentlyActive} updated this week`);
+    api.card(grid, {
+        title: 'FRESHNESS',
+        color: getColor('var(--color-orange)'),
+        value: `${Math.round(recentlyActive / totalPages * 100)}%`,
+        suffix: 'active',
+        subtitle: `${recentlyActive} updated this week`
+    });
 
-    createCard(grid, 'MAINTENANCE', 'var(--color-red)',
-        `${Math.round(staleNotes / totalPages * 100)}%`, 'stale',
-        `${staleNotes} notes >90 days old`);
+    api.card(grid, {
+        title: 'MAINTENANCE',
+        color: getColor('var(--color-red)'),
+        value: `${Math.round(staleNotes / totalPages * 100)}%`,
+        suffix: 'stale',
+        subtitle: `${staleNotes} notes >90 days old`
+    });
 
-    createCard(grid, 'ORGANIZATION', 'var(--color-yellow)',
-        `${Math.round(taggedNotes / totalPages * 100)}%`, 'tagged',
-        `${totalTags} tags total`);
+    api.card(grid, {
+        title: 'ORGANIZATION',
+        color: getColor('var(--color-yellow)'),
+        value: `${Math.round(taggedNotes / totalPages * 100)}%`,
+        suffix: 'tagged',
+        subtitle: `${totalTags} tags total`
+    });
 
-    createCard(grid, 'CONTENT QUALITY', 'var(--color-cyan)',
-        `${notesWithContent.length > 0 ? Math.round(developedNotes / notesWithContent.length * 100) : 0}%`, 'developed',
-        `${shortNotes} stub notes <200 chars`);
+    api.card(grid, {
+        title: 'CONTENT QUALITY',
+        color: getColor('var(--color-cyan)'),
+        value: `${notesWithContent.length > 0 ? Math.round(developedNotes / notesWithContent.length * 100) : 0}%`,
+        suffix: 'developed',
+        subtitle: `${shortNotes} stub notes <200 chars`
+    });
 
-    createCard(grid, 'KNOWLEDGE SIZE', 'var(--color-pink)',
-        `${totalPages}`, 'notes',
-        `${Math.round(totalSize / 1000)}k chars, ${Math.round(avgSize)} avg`);
+    api.card(grid, {
+        title: 'KNOWLEDGE SIZE',
+        color: getColor('var(--color-pink)'),
+        value: `${totalPages}`,
+        suffix: 'notes',
+        subtitle: `${Math.round(totalSize / 1000)}k chars, ${Math.round(avgSize)} avg`
+    });
 
     // Sections
     generateSectionDOM(el, 'Authorities', authorities.slice(0, 3), (a) => `[[${a.link}]] (${a.inlinks})`);
@@ -357,7 +354,7 @@ export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {
     },
     isMountable: false,
     does: [ComponentAction.READ],
-    styles: analyticsStyles,
+    styles: null,
     render: renderAnalytics,
     refresh: 'leafChanged',
     settings: {

@@ -136,6 +136,18 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                     this.plugin.updateGlobalStyles();
                 })
             );
+
+        // JavaScript execution setting
+        new Setting(containerEl)
+            .setName('Enable JavaScript blocks (ojs)')
+            .setDesc('Allow execution of JavaScript in ```ojs code blocks. Provides app, el, ctx, and api in scope.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.enableJsExecution)
+                .onChange(async (value) => {
+                    this.plugin.settings.enableJsExecution = value;
+                    await this.plugin.saveSettings();
+                })
+            );
     }
 
     updateComponentClickabilityInPlace(component: Component<readonly string[]>, nameEl: HTMLElement, isEnabled: boolean): void {
