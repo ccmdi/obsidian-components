@@ -8,6 +8,7 @@ export interface ComponentsSettings {
 	enableAutoComplete: boolean;
 	autoCompleteOpenModal: boolean;
 	modalArgSuggest: boolean;
+	enableJsExecution: boolean;
 }
 
 function generateDefaultSettings(): ComponentsSettings {
@@ -34,7 +35,8 @@ function generateDefaultSettings(): ComponentsSettings {
 		defaultContainerMargin: 6,
 		enableAutoComplete: false,
 		autoCompleteOpenModal: false,
-		modalArgSuggest: true
+		modalArgSuggest: true,
+		enableJsExecution: false
 	};
 }
 

@@ -209,9 +209,12 @@ export namespace Component {
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
         else if (component.refresh === 'leafChanged') {
-            const handler = () => instance.data.triggerRefresh();
-            app.workspace.on('active-leaf-change', handler);
-            ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
+            const isInSidebar = instance.element.closest('.in-sidebar') !== null;
+            if (isInSidebar) {
+                const handler = () => instance.data.triggerRefresh();
+                app.workspace.on('active-leaf-change', handler);
+                ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
+            }
         }
         else if (component.refresh === 'daily' || component.refresh === 'hourly') {
             const schedule = () => {
@@ -272,7 +275,8 @@ export namespace Component {
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
         // Dynamic context: use active file's path instead of source file's path
-        if (component.useDynamicContext) {
+        // Only apply in sidebar/widget-space context
+        if (component.useDynamicContext && !ctx.docId) {
             const activeFile = app.workspace.getActiveFile();
             if (activeFile) {
                 ctx = { ...ctx, sourcePath: activeFile.path };

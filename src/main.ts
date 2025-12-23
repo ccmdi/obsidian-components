@@ -8,6 +8,7 @@ import ComponentsSettingTab from 'native/settings';
 import ComponentSidebarView from 'native/sidebar';
 import ComponentSelectorModal, { PlaceComponentModal, ComponentArgsModal } from 'native/modal';
 import { ComponentAutoComplete } from 'native/autocomplete';
+import { executeOjs, injectOjsStyles } from 'ojs';
 
 export const COMPONENT_SIDEBAR_VIEW_TYPE = 'component-sidebar';
 
@@ -338,5 +339,14 @@ export default class ComponentsPlugin extends Plugin {
                 });
             }
         });
+
+        // Register ojs (JavaScript execution) processor if enabled
+        if (this.settings.enableJsExecution && !this.registeredProcessors.has('ojs')) {
+            injectOjsStyles();
+            this.registerMarkdownCodeBlockProcessor('ojs', async (source, el, ctx) => {
+                await executeOjs(source, el, ctx, this.app);
+            });
+            this.registeredProcessors.add('ojs');
+        }
     }
 }
