@@ -4,8 +4,9 @@
 	"description": "Components for Obsidian",
 	"main": "main.js",
 	"scripts": {
+		"predev": "node scripts/register.mjs",
 		"dev": "node esbuild.config.mjs",
-		"prebuild": "node scripts/generate-register.mjs",
+		"prebuild": "node scripts/register.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"vbump": "node version-bump.mjs"
 	},
