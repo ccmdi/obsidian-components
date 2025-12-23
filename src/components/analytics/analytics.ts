@@ -1,6 +1,6 @@
 import { Component, ComponentInstance, ComponentAction, ComponentSettingsData } from "components";
 import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
-import { renderMarkdownLinkToElement } from "utils";
+import { parseBoolean, renderMarkdownLinkToElement } from "utils";
 import { createApi, injectOjsStyles } from "ojs";
 
 interface LinkData {
@@ -50,12 +50,13 @@ const renderAnalytics = async (
     injectOjsStyles();
 
     const searchFolder = args.searchFolder || "";
-    const colors = args.colors || (componentSettings.colors as string | undefined);
-    const showTitle = args.showTitle === 'true' && componentSettings.showTitle !== false;
+    const colors = args.colors || "colorful";
+    const showTitle = parseBoolean(args.showTitle);
+    const showInlineList = parseBoolean(args.showInlineList);
 
     try {
         const data = await analyzeVault(app, searchFolder);
-        generateAnalyticsDOM(el, data, searchFolder, colors, showTitle);
+        generateAnalyticsDOM(el, data, searchFolder, colors, showTitle, showInlineList);
 
     } catch (error) {
         console.error('Analytics error:', error);
@@ -190,7 +191,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
     };
 }
 
-function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, colors: string = "colorful", showTitle: boolean = true): void {
+function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, colors: string = "colorful", showTitle: boolean = true, showInlineList: boolean = true): void {
     const {
         totalPages, islands, wellConnected, substantialNotes, totalInternalLinks,
         totalExternalLinks, recentlyActive, staleNotes, taggedNotes, totalTags,
@@ -290,13 +291,15 @@ function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder
     });
 
     // Sections
-    generateSectionDOM(el, 'Authorities', authorities.slice(0, 3), (a) => `[[${a.link}]] (${a.inlinks})`);
-    generateSectionDOM(el, 'Hubs', hubs.slice(0, 3), (h) => `[[${h.link}]] (${h.internalOutlinks})`);
-    generateSectionDOM(el, 'Bridges', wellConnected.slice(0, 3), (w) => `[[${w.link}]] (${w.inlinks}↔${w.internalOutlinks})`);
-    generateSectionDOM(el, 'Islands', islands.slice(0, 3), (i) => `[[${i.link}]]`);
-    generateSectionDOM(el, 'Dead-ends', deadEnds.slice(0, 3), (d) => `[[${d.link}]] (${d.inlinks}→)`);
-    generateSectionDOM(el, 'Orphans', orphans.slice(0, 3), (o) => `[[${o.link}]] (→${o.outlinks})`);
-    generateMissingLinksDOM(el, topMissingLinks);
+    if (showInlineList) {
+        generateSectionDOM(el, 'Authorities', authorities.slice(0, 3), (a) => `[[${a.link}]] (${a.inlinks})`);
+        generateSectionDOM(el, 'Hubs', hubs.slice(0, 3), (h) => `[[${h.link}]] (${h.internalOutlinks})`);
+        generateSectionDOM(el, 'Bridges', wellConnected.slice(0, 3), (w) => `[[${w.link}]] (${w.inlinks}↔${w.internalOutlinks})`);
+        generateSectionDOM(el, 'Islands', islands.slice(0, 3), (i) => `[[${i.link}]]`);
+        generateSectionDOM(el, 'Dead-ends', deadEnds.slice(0, 3), (d) => `[[${d.link}]] (${d.inlinks}→)`);
+        generateSectionDOM(el, 'Orphans', orphans.slice(0, 3), (o) => `[[${o.link}]] (→${o.outlinks})`);
+        generateMissingLinksDOM(el, topMissingLinks);
+    }
 }
 
 function generateSectionDOM<T>(el: HTMLElement, title: string, items: T[], formatter: (item: T) => string): void {
@@ -333,7 +336,7 @@ function generateMissingLinksDOM(el: HTMLElement, topMissingLinks: [string, numb
     });
 }
 
-export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {
+export const analytics: Component<['searchFolder', 'colors', 'showTitle', 'showInlineList']> = {
     keyName: 'analytics',
     name: 'Vault Analytics',
     description: 'Display comprehensive vault analytics and insights',
@@ -349,6 +352,10 @@ export const analytics: Component<['searchFolder', 'colors', 'showTitle']> = {
         },
         showTitle: {
             description: 'Show the "Vault Analytics" title',
+            default: 'true'
+        },
+        showInlineList: {
+            description: 'Show the additional section at the bottom including authorities, hubs, bridges, etc.',
             default: 'true'
         }
     },
