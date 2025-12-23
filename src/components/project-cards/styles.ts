@@ -12,13 +12,13 @@ export const projectCardsStyles = /*css*/`
 }
 
 .project-cards-status {
-    padding: 6px 12px;
+    padding: 4px 12px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
     background-color: var(--background-secondary);
     color: var(--text-normal);
     font-size: 0.95em;
-    line-height: 1.4;
+    line-height: normal;
     cursor: pointer;
     flex-shrink: 0;
 }
