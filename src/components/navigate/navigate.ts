@@ -3,7 +3,7 @@ import { formatDate, useTemplate } from "utils";
 import navigateStyles from "./styles";
 import { App, MarkdownPostProcessorContext } from "obsidian";
 
-const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date', 'dateFormat']>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings: ComponentSettingsData = {}) => {
+const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date', 'dateFormat', 'previous', 'next']>, el: HTMLElement, ctx: MarkdownPostProcessorContext, app: App, instance: ComponentInstance, componentSettings: ComponentSettingsData = {}) => {
     const folderPath = args.folder || ctx.sourcePath?.split('/').slice(0, -1).join('/') || '';
     const templatePath = args.template;
     const dateFormat = args.dateFormat || (componentSettings.dateFormat as string | undefined);
@@ -14,19 +14,30 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
     }
     const initiatorName = ctx.sourcePath.split('/').pop()?.replace(/\.md$/, '') || '';
 
-    const createNavigationButton = (dayOffset: number, label: string) => {
+    // Determine the "base" date for calculating yesterday/tomorrow
+    // Priority: args.today > initiatorName (if valid date) > actual today
+    const getBaseDate = (): Date => {
+        if (args.date && args.date.length === 10) {
+            const [year, month, day] = args.date.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        if (initiatorName.length === 10) {
+            const [year, month, day] = initiatorName.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        return new Date();
+    };
+
+    const baseDate = getBaseDate();
+
+    const createNavigationButton = (dayOffset: number, label: string, overrideTarget?: string) => {
         const btn = el.createEl('button', { cls: `daily-nav ${dayOffset < 0 ? 'yesterday' : 'tomorrow'}` });
         btn.type = 'button';
         btn.tabIndex = 0;
 
-        let targetDate: Date;
-        if (initiatorName.length == 10) {
-            const [year, month, day] = initiatorName.split('-').map(Number);
-            targetDate = new Date(year, month - 1, day + dayOffset);
-        } else {
-            targetDate = new Date();
-            targetDate.setDate(targetDate.getDate() + dayOffset);
-        }
+        // Calculate the target date relative to baseDate
+        const targetDate = new Date(baseDate);
+        targetDate.setDate(targetDate.getDate() + dayOffset);
 
         btn.textContent = dateFormat ? formatDate(targetDate, dateFormat) : label;
 
@@ -34,15 +45,13 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
             e.preventDefault();
             e.stopPropagation();
 
-            let targetName;
-            if (args.date) {
-                targetName = args.date;
-            } else if (initiatorName.length == 10) {
-                const [year, month, day] = initiatorName.split('-').map(Number);
-                const navDate = new Date(year, month - 1, day + dayOffset);
-                targetName = `${navDate.getFullYear()}-${String(navDate.getMonth() + 1).padStart(2, '0')}-${String(navDate.getDate()).padStart(2, '0')}`;
+            let targetName: string;
+            if (overrideTarget) {
+                // Use explicit override (previous/next args)
+                targetName = overrideTarget;
             } else {
-                const navDate = new Date();
+                // Calculate from baseDate + offset
+                const navDate = new Date(baseDate);
                 navDate.setDate(navDate.getDate() + dayOffset);
                 targetName = `${navDate.getFullYear()}-${String(navDate.getMonth() + 1).padStart(2, '0')}-${String(navDate.getDate()).padStart(2, '0')}`;
             }
@@ -63,15 +72,15 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
 
     const container = el.createEl('div', { cls: 'daily-nav-container' });
 
-    const yesterdayBtn = createNavigationButton(-1, 'Yesterday');
-    const tomorrowBtn = createNavigationButton(1, 'Tomorrow');
+    const yesterdayBtn = createNavigationButton(-1, 'Yesterday', args.previous);
+    const tomorrowBtn = createNavigationButton(1, 'Tomorrow', args.next);
 
     container.appendChild(yesterdayBtn);
     container.appendChild(tomorrowBtn);
     el.appendChild(container);
 };
 
-export const navigate: Component<['folder', 'date', 'template', 'dateFormat']> = {
+export const navigate: Component<['folder', 'date', 'template', 'dateFormat', 'previous', 'next']> = {
     name: 'Navigate',
     description: 'Navigate periodic notes',
     keyName: 'navigate',
@@ -82,7 +91,7 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat']> =
             default: ''
         },
         date: {
-            description: 'Date to navigate to',
+            description: 'Base date for navigation (YYYY-MM-DD). Yesterday/tomorrow are calculated relative to this.',
             default: ''
         },
         template: {
@@ -90,8 +99,16 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat']> =
             default: ''
         },
         dateFormat: {
-            description: 'Date format',
+            description: 'Date format for button labels',
             default: 'YYYY-MM-DD'
+        },
+        previous: {
+            description: 'Override target for the previous/yesterday button',
+            default: ''
+        },
+        next: {
+            description: 'Override target for the next/tomorrow button',
+            default: ''
         }
     },
     isMountable: true,
