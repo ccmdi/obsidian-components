@@ -87,7 +87,7 @@ function resolveCoverUrl(app: any, cover: any, sourcePath: string): string | nul
 function isProjectData(value: any): boolean {
     // Already an array
     if (Array.isArray(value)) return true;
-    
+
     // String that looks like a JSON array
     if (typeof value === 'string') {
         const trimmed = value.trim();
@@ -100,8 +100,26 @@ function isProjectData(value: any): boolean {
             }
         }
     }
-    
+
     return false;
+}
+
+type ProjectStatus = 'ongoing' | 'completed' | 'canceled';
+
+/**
+ * Determine project status based on progress, priority, and endDate
+ */
+function getProjectStatus(project: ProjectData): ProjectStatus {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (project.progress === 100 || (project.endDate && new Date(project.endDate) <= today)) {
+        return 'completed';
+    }
+    if (project.priority !== undefined && project.priority < 0) {
+        return 'canceled';
+    }
+    return 'ongoing';
 }
 
 export const projectCards: Component<[
@@ -261,8 +279,6 @@ export const projectCards: Component<[
                 return;
             }
 
-            const today = new Date();
-
             const collectFiles = (f: TFolder): TFile[] => {
                 const files: TFile[] = [];
                 for (const child of f.children) {
@@ -291,11 +307,6 @@ export const projectCards: Component<[
                 const fm = cache?.frontmatter;
                 if (!fm) continue;
 
-                // Skip completed or ended projects
-                if (fm.progress === 100) continue;
-                if (fm.priority !== undefined && fm.priority < 0) continue;
-                if (fm.endDate && new Date(fm.endDate) <= today) continue;
-
                 // Extract tags
                 const inlineTags = cache?.tags?.map(t => t.tag.replace(/^#/, '')) || [];
                 const fmTags = Array.isArray(fm.tags) ? fm.tags : (fm.tags ? [fm.tags] : []);
@@ -320,9 +331,15 @@ export const projectCards: Component<[
         // Store for filter updates
         instance.data.allProjects = projects;
         instance.data.currentFilter = '';
+        instance.data.currentStatus = 'ongoing' as ProjectStatus | 'all';
 
-        const renderProjects = (projectList: ProjectData[], filterStr: string = '') => {
+        const renderProjects = (projectList: ProjectData[], filterStr: string = '', status: ProjectStatus | 'all' = 'ongoing') => {
             let filtered = [...projectList];
+
+            // Apply status filter
+            if (status !== 'all') {
+                filtered = filtered.filter(p => getProjectStatus(p) === status);
+            }
 
             // Apply text filter
             if (filterStr) {
@@ -468,19 +485,35 @@ export const projectCards: Component<[
         // Build UI
         const wrapper = el.createEl('div', { cls: 'project-cards-wrapper' });
 
-        // Filter input
+        // Filter input and status dropdown
         if (showFilter) {
             const controls = wrapper.createEl('div', { cls: 'project-cards-controls' });
+
+            // Filter input (left)
             const filterInput = controls.createEl('input', {
                 cls: 'project-cards-filter',
                 attr: {
                     type: 'text',
-                    placeholder: 'Filter by project name or tags (comma-separated)'
+                    placeholder: 'Filter by name or tags'
                 }
             });
 
-            // Store reference for renderRefresh
+            // Status dropdown (right)
+            const statusSelect = controls.createEl('select', { cls: 'project-cards-status' });
+            const statusOptions = [
+                { value: 'ongoing', label: 'Ongoing' },
+                { value: 'completed', label: 'Completed' },
+                { value: 'canceled', label: 'Canceled' },
+                { value: 'all', label: 'All' }
+            ];
+            for (const opt of statusOptions) {
+                statusSelect.createEl('option', { value: opt.value, text: opt.label });
+            }
+            statusSelect.value = 'ongoing';
+
+            // Store references for renderRefresh
             instance.data.filterInput = filterInput;
+            instance.data.statusSelect = statusSelect;
 
             // Read initial filter from frontmatter
             const currentFile = app.vault.getAbstractFileByPath(ctx.sourcePath);
@@ -493,19 +526,38 @@ export const projectCards: Component<[
 
             // Debounce frontmatter save to avoid re-render loops
             let saveTimeout: NodeJS.Timeout | null = null;
-            
-            filterInput.addEventListener('input', (e) => {
-                const filterValue = (e.target as HTMLInputElement).value;
-                instance.data.currentFilter = filterValue;
 
+            const updateProjectsDisplay = () => {
                 const projectsContainer = wrapper.querySelector('.projects-container') as HTMLElement;
                 if (projectsContainer) {
                     projectsContainer.empty();
-                    const filteredProjects = renderProjects(instance.data.allProjects, filterValue);
-                    for (const project of filteredProjects) {
-                        createProjectCard(project, projectsContainer);
+                    const filteredProjects = renderProjects(
+                        instance.data.allProjects,
+                        instance.data.currentFilter,
+                        instance.data.currentStatus
+                    );
+                    if (filteredProjects.length === 0) {
+                        projectsContainer.createEl('div', {
+                            cls: 'project-cards-empty',
+                            text: 'No projects found'
+                        });
+                    } else {
+                        for (const project of filteredProjects) {
+                            createProjectCard(project, projectsContainer);
+                        }
                     }
                 }
+            };
+
+            statusSelect.addEventListener('change', () => {
+                instance.data.currentStatus = statusSelect.value as ProjectStatus | 'all';
+                updateProjectsDisplay();
+            });
+
+            filterInput.addEventListener('input', (e) => {
+                const filterValue = (e.target as HTMLInputElement).value;
+                instance.data.currentFilter = filterValue;
+                updateProjectsDisplay();
 
                 // Debounced save to frontmatter (500ms after typing stops)
                 if (saveTimeout) clearTimeout(saveTimeout);
@@ -536,10 +588,10 @@ export const projectCards: Component<[
         instance.data.renderProjects = renderProjects;
         instance.data.createProjectCard = createProjectCard;
         
-        const filteredProjects = renderProjects(projects, instance.data.currentFilter);
-        
+        const filteredProjects = renderProjects(projects, instance.data.currentFilter, instance.data.currentStatus);
+
         if (filteredProjects.length === 0) {
-            projectsContainer.createEl('div', { 
+            projectsContainer.createEl('div', {
                 cls: 'project-cards-empty',
                 text: 'No projects found'
             });
@@ -686,8 +738,6 @@ export const projectCards: Component<[
             
             if (!isPureQuery && !folder) return;
 
-            const today = new Date();
-
             const collectFiles = (f: TFolder): TFile[] => {
                 const files: TFile[] = [];
                 for (const child of f.children) {
@@ -711,10 +761,6 @@ export const projectCards: Component<[
 
                 const fm = cache?.frontmatter;
                 if (!fm) continue;
-
-                if (fm.progress === 100) continue;
-                if (fm.priority !== undefined && fm.priority < 0) continue;
-                if (fm.endDate && new Date(fm.endDate) <= today) continue;
 
                 const inlineTags = cache?.tags?.map(t => t.tag.replace(/^#/, '')) || [];
                 const fmTags = Array.isArray(fm.tags) ? fm.tags : (fm.tags ? [fm.tags] : []);
@@ -768,7 +814,7 @@ export const projectCards: Component<[
             const header = main.createEl('div', { cls: 'project-header' });
             
             const title = header.createEl('h2', { cls: 'project-title' });
-            title.createEl('a', { cls: 'internal-link', text: project.name, attr: { href: project.name } });
+            title.createEl('a', { cls: 'internal-link', text: project.name, attr: { href: project.path } });
 
             if (showBadges && sortBy !== 'date') {
                 const badges = header.createEl('div', { cls: 'project-badges' });
@@ -814,8 +860,14 @@ export const projectCards: Component<[
         };
 
         // Render filtered projects
-        const renderProjects = (projectList: ProjectData[], filterStr: string = '') => {
+        const renderProjects = (projectList: ProjectData[], filterStr: string = '', status: ProjectStatus | 'all' = 'ongoing') => {
             let filtered = [...projectList];
+
+            // Apply status filter
+            if (status !== 'all') {
+                filtered = filtered.filter(p => getProjectStatus(p) === status);
+            }
+
             if (filterStr) {
                 const terms = filterStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
                 filtered = filtered.filter(p =>
@@ -837,7 +889,7 @@ export const projectCards: Component<[
 
         // Clear and re-render projects only
         projectsContainer.empty();
-        const filteredProjects = renderProjects(projects, instance.data.currentFilter || '');
+        const filteredProjects = renderProjects(projects, instance.data.currentFilter || '', instance.data.currentStatus || 'ongoing');
         
         if (filteredProjects.length === 0) {
             projectsContainer.createEl('div', { cls: 'project-cards-empty', text: 'No projects found' });

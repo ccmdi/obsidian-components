@@ -6,11 +6,30 @@ export const projectCardsStyles = /*css*/`
 
 /* Filter Controls */
 .project-cards-controls {
+    display: flex;
+    gap: 10px;
     margin-bottom: 15px;
 }
 
+.project-cards-status {
+    padding: 6px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background-color: var(--background-secondary);
+    color: var(--text-normal);
+    font-size: 0.95em;
+    line-height: 1.4;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.project-cards-status:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
 .project-cards-filter {
-    width: 100%;
+    flex: 1;
     padding: 8px 12px;
     border: 1px solid var(--background-modifier-border);
     border-radius: 6px;
