@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext } from "obsidian";
+import { App, MarkdownPostProcessorContext, MarkdownRenderer } from "obsidian";
 
 export const ojsStyles = /*css*/`
 .vault-analytics-grid {
@@ -107,8 +107,8 @@ export async function executeOjs(
 
     try {
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-        const fn = new AsyncFunction('app', 'el', 'ctx', 'api', source);
-        await fn(app, el, ctx, api);
+        const fn = new AsyncFunction('app', 'el', 'ctx', 'api', 'MarkdownRenderer', source);
+        await fn(app, el, ctx, api, MarkdownRenderer);
     } catch (e) {
         const errorEl = el.createEl('div', { cls: 'ojs-error' });
         errorEl.createEl('strong', { text: 'ojs error: ' });

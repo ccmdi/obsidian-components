@@ -132,22 +132,52 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
         .sort((a, b) => b[1] - a[1])
         .slice(0, 30);
 
-    // Calculate analytics
-    const totalOutlinks = linkCounts.reduce((sum, p) => sum + p.outlinks, 0);
-    const totalInternalLinks = linkCounts.reduce((sum, p) => sum + p.internalOutlinks, 0);
-    const totalExternalLinks = linkCounts.reduce((sum, p) => sum + p.externalOutlinks, 0);
-    const islands = linkCounts.filter(p => p.inlinks === 0 && p.outlinks === 0);
-    const wellConnected = linkCounts.filter(p => p.inlinks >= 3 && p.internalOutlinks >= 3);
-    const hubs = linkCounts.filter(p => p.internalOutlinks >= 5).sort((a, b) => b.internalOutlinks - a.internalOutlinks);
-    const authorities = linkCounts.filter(p => p.inlinks >= 3).sort((a, b) => b.inlinks - a.inlinks);
-    const deadEnds = linkCounts.filter(p => p.inlinks > 0 && p.outlinks === 0);
-    const orphans = linkCounts.filter(p => p.inlinks === 0 && p.outlinks > 0);
+    // Calculate analytics in a single pass
+    let totalOutlinks = 0;
+    let totalInternalLinks = 0;
+    let totalExternalLinks = 0;
+    let totalSize = 0;
+    let totalTags = 0;
+    let substantialNotes = 0;
+    let shortNotes = 0;
+    let taggedNotes = 0;
 
-    const notesWithContent = linkCounts.filter(p => p.size > 0);
-    const totalSize = linkCounts.reduce((sum, p) => sum + p.size, 0);
+    const islands: LinkData[] = [];
+    const wellConnected: LinkData[] = [];
+    const hubs: LinkData[] = [];
+    const authorities: LinkData[] = [];
+    const deadEnds: LinkData[] = [];
+    const orphans: LinkData[] = [];
+    const notesWithContent: LinkData[] = [];
+
+    for (const p of linkCounts) {
+        // Accumulate totals
+        totalOutlinks += p.outlinks;
+        totalInternalLinks += p.internalOutlinks;
+        totalExternalLinks += p.externalOutlinks;
+        totalSize += p.size;
+        totalTags += p.tags;
+
+        // Categorize by link structure
+        if (p.inlinks === 0 && p.outlinks === 0) islands.push(p);
+        if (p.inlinks >= 3 && p.internalOutlinks >= 3) wellConnected.push(p);
+        if (p.internalOutlinks >= 5) hubs.push(p);
+        if (p.inlinks >= 3) authorities.push(p);
+        if (p.inlinks > 0 && p.outlinks === 0) deadEnds.push(p);
+        if (p.inlinks === 0 && p.outlinks > 0) orphans.push(p);
+
+        // Categorize by content
+        if (p.size > 0) notesWithContent.push(p);
+        if (p.size > 1000) substantialNotes++;
+        if (p.size > 0 && p.size < 200) shortNotes++;
+        if (p.tags > 0) taggedNotes++;
+    }
+
+    // Sort hubs and authorities after categorization
+    hubs.sort((a, b) => b.internalOutlinks - a.internalOutlinks);
+    authorities.sort((a, b) => b.inlinks - a.inlinks);
+
     const avgSize = totalPages > 0 ? totalSize / totalPages : 0;
-    const substantialNotes = linkCounts.filter(p => p.size > 1000).length;
-    const shortNotes = linkCounts.filter(p => p.size > 0 && p.size < 200).length;
     const developedNotes = notesWithContent.length - shortNotes;
 
     const now = Date.now();
@@ -161,9 +191,6 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
         if (now - page.stat.mtime < weekMs) recentlyActive++;
         if (now - page.stat.mtime > staleMs) staleNotes++;
     }
-
-    const totalTags = linkCounts.reduce((sum, p) => sum + p.tags, 0);
-    const taggedNotes = linkCounts.filter(p => p.tags > 0).length;
 
     return {
         totalPages,

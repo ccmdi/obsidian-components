@@ -39,6 +39,12 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         let currentRotation = 0;
         let iconContainer: HTMLElement | null = null;
         let decayTimeout: NodeJS.Timeout | null = null;
+        let spinTimeouts: NodeJS.Timeout[] = [];
+
+        ComponentInstance.addCleanup(instance, () => {
+            if (decayTimeout) clearTimeout(decayTimeout);
+            spinTimeouts.forEach(t => clearTimeout(t));
+        });
 
         const spinIcon = (degrees: number, duration: number = 300) => {
             if (!iconContainer) return;
@@ -63,13 +69,15 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                 // Full spin to 360, unwind to 0, then fetch
                 spinClicks = 0;
                 spinIcon(360, 500); // Complete one full rotation
-                setTimeout(() => {
+                const t1 = setTimeout(() => {
                     currentRotation = 0;
                     spinIcon(0, 500); // Unwind back to start
-                    setTimeout(() => {
+                    const t2 = setTimeout(() => {
                         fetchAndRender();
                     }, 500);
+                    spinTimeouts.push(t2);
                 }, 500);
+                spinTimeouts.push(t1);
             } else {
                 currentRotation += 60;
                 spinIcon(currentRotation);

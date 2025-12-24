@@ -95,29 +95,46 @@ export const noteEmbed: Component<['target']> = {
 		);
 
 		// Wait for DOM to settle before showing the container (prevents layout shift)
-		const waitForSettle = new Promise<void>((resolve) => {
-			let timeoutId: NodeJS.Timeout;
+		let settleTimeoutId: NodeJS.Timeout | null = null;
+		let settleObserver: MutationObserver | null = null;
 
-			const observer = new MutationObserver(() => {
+		const waitForSettle = new Promise<void>((resolve) => {
+			const cleanup = () => {
+				if (settleTimeoutId) {
+					clearTimeout(settleTimeoutId);
+					settleTimeoutId = null;
+				}
+				if (settleObserver) {
+					settleObserver.disconnect();
+					settleObserver = null;
+				}
+			};
+
+			settleObserver = new MutationObserver(() => {
 				// Reset timeout every time DOM changes
-				clearTimeout(timeoutId);
-				timeoutId = setTimeout(() => {
-					observer.disconnect();
+				if (settleTimeoutId) clearTimeout(settleTimeoutId);
+				settleTimeoutId = setTimeout(() => {
+					cleanup();
 					resolve();
 				}, 50); // No mutations for 50ms = settled
 			});
 
-			observer.observe(container, {
+			settleObserver.observe(container, {
 				childList: true,
 				subtree: true,
 				attributes: true
 			});
 
 			// Trigger initial timeout in case there are no mutations
-			timeoutId = setTimeout(() => {
-				observer.disconnect();
+			settleTimeoutId = setTimeout(() => {
+				cleanup();
 				resolve();
 			}, 50);
+		});
+
+		ComponentInstance.addCleanup(instance, () => {
+			if (settleTimeoutId) clearTimeout(settleTimeoutId);
+			if (settleObserver) settleObserver.disconnect();
 		});
 
 		await waitForSettle;

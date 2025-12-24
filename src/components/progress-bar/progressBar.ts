@@ -1,6 +1,4 @@
-import type { App, MarkdownPostProcessorContext } from 'obsidian';
 import type { Component } from 'components';
-import { ComponentInstance } from 'components';
 import { progressBarStyles } from './styles';
 
 function animateValue(element: HTMLElement, start: number, end: number, duration: number) {

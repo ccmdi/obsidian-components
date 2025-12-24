@@ -65,7 +65,7 @@ function median(arr: number[]): number {
  */
 function createFlagElement(container: HTMLElement, countryCode: string): void {
     if (!countryCode || countryCode.length !== 2) return;
-    const img = container.createEl('img', {
+    container.createEl('img', {
         cls: 'places-flag',
         attr: {
             src: `https://flagsapi.com/${countryCode.toUpperCase()}/flat/24.png`,

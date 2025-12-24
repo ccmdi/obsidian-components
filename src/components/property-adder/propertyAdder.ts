@@ -112,6 +112,10 @@ const renderPropertyAdder = async (
 
     btn.addEventListener('click', handleClick);
 
+    ComponentInstance.addCleanup(instance, () => {
+        btn.removeEventListener('click', handleClick);
+    });
+
     el.appendChild(container);
 };
 

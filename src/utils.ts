@@ -119,8 +119,12 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
     return resolved;
 }
 
+/** Frontmatter can contain any YAML-serializable value */
+type FrontmatterValue = string | number | boolean | null | FrontmatterValue[] | { [key: string]: FrontmatterValue };
+type Frontmatter = Record<string, FrontmatterValue>;
+
 export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
-    let fm: Record<string, any> | null = null;
+    let fm: Frontmatter | null = null;
 
     Object.keys(args).forEach(key => {
         if (args[key]?.startsWith('fm.')) {
@@ -146,7 +150,7 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
  * Use this when you need guaranteed fresh data (e.g., newly created files)
  */
 export function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
-    let fm: Record<string, any> | null = null;
+    let fm: Frontmatter | null = null;
 
     Object.keys(args).forEach(key => {
         if (args[key]?.startsWith('file.')) {
@@ -246,16 +250,19 @@ export function createColoredIcon(
     fetch(iconUrl)
         .then(response => response.text())
         .then(svgText => {
-            container.innerHTML = svgText;
-            const svg = container.querySelector('svg');
-            if (svg) {
+            // Safely parse SVG using DOMParser instead of innerHTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const svg = doc.querySelector('svg');
+            if (svg && !doc.querySelector('parsererror')) {
                 svg.style.width = '100%';
                 svg.style.height = '100%';
                 svg.style.fill = color;
+                container.appendChild(svg);
             }
         })
-        .catch(() => {
-            // Silently fail - icon just won't show
+        .catch((error) => {
+            console.error(`Failed to load icon "${iconName}":`, error);
         });
 
     return container;
@@ -316,25 +323,27 @@ export async function useNavigation(
  * Access a nested property using dot notation or array syntax.
  * Supports paths like "frontmatter.priority", "stat.mtime", "location[0]", or "nested.array[1]"
  */
-export function usePropertyAccess(obj: any, path: string): any {
+export function usePropertyAccess(obj: unknown, path: string): unknown {
     // Support dot notation like "frontmatter.priority" or "stat.mtime"
     // Also support array syntax like "location[0]" or "nested.array[1]"
-    return path.split('.').reduce((current: any, key: string) => {
+    return path.split('.').reduce((current: unknown, key: string) => {
+        if (current === null || current === undefined) return undefined;
+        const record = current as Record<string, unknown>;
         // Check for array syntax like "location[0]"
         const arrayMatch = key.match(/^(.+)\[(\d+)\]$/);
         if (arrayMatch) {
             const [, prop, index] = arrayMatch;
-            const value = current?.[prop];
+            const value = record[prop];
             return Array.isArray(value) ? value[parseInt(index)] : undefined;
         }
-        return current?.[key];
+        return record[key];
     }, obj);
 }
 
 /**
  * Access a property from a note's cached metadata with 'note.' prefix support.
  */
-export function useTargetNoteProperty(noteObj: CachedMetadata | null | undefined, propertyPath: string): any {
+export function useTargetNoteProperty(noteObj: CachedMetadata | null | undefined, propertyPath: string): unknown {
     // Handle note.* prefix for accessing target note properties
     if (propertyPath.startsWith('note.')) {
         const actualPath = propertyPath.slice(5); // Remove 'note.' prefix

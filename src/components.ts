@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext, TAbstractFile, TFile, MarkdownRenderChild } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild } from "obsidian";
 import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSpecialVariables, parseArgsAliases } from "utils";
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";

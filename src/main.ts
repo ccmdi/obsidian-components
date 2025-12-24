@@ -1,6 +1,6 @@
 // main.ts
 
-import { App, Plugin, PluginSettingTab, Setting, Modal, FuzzySuggestModal, ItemView, WorkspaceLeaf, Editor, Menu, TFile, MarkdownView } from 'obsidian';
+import { Plugin, Editor, Menu, TFile, MarkdownView } from 'obsidian';
 import { ComponentsSettings, DEFAULT_SETTINGS } from 'settings';
 import { COMPONENTS, Component, componentInstances } from 'components';
 

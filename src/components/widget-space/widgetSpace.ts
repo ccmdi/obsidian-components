@@ -1,11 +1,21 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
-import { App, Modal, Setting, TextComponent, Notice } from "obsidian";
+import { App, Modal } from "obsidian";
 import { widgetSpaceStyles } from "./styles";
 import ConfirmationModal from "native/confirmation";
 import { ComponentArgsModal } from "native/modal";
 import { COMPONENTS, componentInstances } from "components";
 import ComponentSidebarView from "native/sidebar";
 import Muuri from "muuri";
+
+/** Minimal Muuri item interface for the methods we use */
+interface MuuriItem {
+    getElement(): HTMLElement | undefined;
+}
+
+/** Extended Muuri grid with our custom resizeObserver */
+interface MuuriGridExt extends Muuri {
+    resizeObserver?: ResizeObserver;
+}
 
 interface WidgetConfig {
     id: string;
@@ -37,7 +47,9 @@ async function loadLayout(app: App, argsLayout: string): Promise<WidgetSpaceLayo
         } else if (argsLayout) {
             return JSON.parse(argsLayout);
         }
-    } catch { /* fall through */ }
+    } catch (error) {
+        console.error('Failed to load widget layout:', error);
+    }
     return { widgets: [] };
 }
 
@@ -158,7 +170,7 @@ export const widgetSpace: Component<['layout']> = {
         // State
         const activeWidgets = new Map<string, WidgetState>();
         let widgetCounter = 0;
-        let muuri: any;
+        let muuri!: MuuriGridExt; // Assigned in initMuuri() before any use
 
         // Width tracking
         const updateWidthVariable = () => {
@@ -172,13 +184,14 @@ export const widgetSpace: Component<['layout']> = {
         // Persistence
         const saveLayout = async () => {
             const widgets: WidgetConfig[] = muuri.getItems()
-                .map((item: any, index: number) => {
+                .map((item, index: number) => {
                     const element = item.getElement();
-                    const widgetData = activeWidgets.get(element.dataset.widgetId);
+                    if (!element) return null;
+                    const widgetData = activeWidgets.get(element.dataset.widgetId || '');
                     if (!widgetData || !document.contains(element)) return null;
 
                     return {
-                        id: element.dataset.widgetId,
+                        id: element.dataset.widgetId || '',
                         componentKey: widgetData.componentKey,
                         args: widgetData.args,
                         width: element.offsetWidth,
@@ -186,11 +199,13 @@ export const widgetSpace: Component<['layout']> = {
                         order: index
                     };
                 })
-                .filter(Boolean);
+                .filter((w): w is WidgetConfig => w !== null);
 
             try {
                 await app.vault.adapter.write(CONFIG_PATH(app), JSON.stringify({ widgets }, null, 2));
-            } catch { /* silent */ }
+            } catch (error) {
+                console.error('Failed to save widget layout:', error);
+            }
         };
 
         // Widget management
@@ -252,11 +267,12 @@ export const widgetSpace: Component<['layout']> = {
             // Position new widget below existing ones
             const existingItems = muuri.getItems();
             if (existingItems.length > 0) {
-                const maxBottom = existingItems.reduce((max: number, item: any) => {
-                    const el = item.getElement();
-                    const rect = el.getBoundingClientRect();
+                const maxBottom = existingItems.reduce((max: number, item) => {
+                    const itemEl = item.getElement();
+                    if (!itemEl) return max;
+                    const rect = itemEl.getBoundingClientRect();
                     const containerRect = grid.getBoundingClientRect();
-                    return Math.max(max, rect.bottom - containerRect.top + el.offsetHeight);
+                    return Math.max(max, rect.bottom - containerRect.top + itemEl.offsetHeight);
                 }, 0);
                 widget.style.transform = `translate3d(0px, ${maxBottom + 8}px, 0)`;
             }
@@ -272,7 +288,7 @@ export const widgetSpace: Component<['layout']> = {
             const widgetId = widget.dataset.widgetId!;
             const content = widget.querySelector('.widget-content');
 
-            muuri.resizeObserver?.unobserve(content);
+            if (content) muuri.resizeObserver?.unobserve(content);
             widget.remove();
             muuri.refreshItems();
             muuri.layout(true);
@@ -299,7 +315,7 @@ export const widgetSpace: Component<['layout']> = {
                     threshold: 50,
                     speed: Muuri.AutoScroller.smoothSpeed(500, 800, 1000)
                 }
-            });
+            }) as MuuriGridExt;
 
             muuri.on('layoutEnd', () => {
                 if (grid.dataset.initialLoadComplete === 'true' && !grid.classList.contains('initial-load-done')) {
@@ -314,40 +330,44 @@ export const widgetSpace: Component<['layout']> = {
                 }
             });
 
-            muuri.on('dragInit', (item: any) => {
-                const el = item.getElement();
+            muuri.on('dragInit', (item) => {
+                const itemEl = item.getElement();
+                if (!itemEl) return;
                 // Lock width to current value before moving to document.body
-                el.style.width = `${el.offsetWidth}px`;
+                itemEl.style.width = `${itemEl.offsetWidth}px`;
                 // Lock media element dimensions to prevent expansion
-                el.querySelectorAll('img, video').forEach((media: HTMLElement) => {
-                    media.style.width = `${media.offsetWidth}px`;
-                    media.style.height = `${media.offsetHeight}px`;
+                itemEl.querySelectorAll('img, video').forEach((media) => {
+                    (media as HTMLElement).style.width = `${(media as HTMLElement).offsetWidth}px`;
+                    (media as HTMLElement).style.height = `${(media as HTMLElement).offsetHeight}px`;
                 });
             });
 
-            muuri.on('dragStart', (item: any) => {
-                const el = item.getElement();
-                el.style.zIndex = '1000';
-                el.style.transform += ' scale(1.02)';
-                el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+            muuri.on('dragStart', (item) => {
+                const itemEl = item.getElement();
+                if (!itemEl) return;
+                itemEl.style.zIndex = '1000';
+                itemEl.style.transform += ' scale(1.02)';
+                itemEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
             });
 
-            muuri.on('dragEnd', async (item: any) => {
-                const el = item.getElement();
-                el.style.zIndex = '';
-                el.style.transform = el.style.transform.replace(' scale(1.02)', '');
-                el.style.boxShadow = '';
+            muuri.on('dragEnd', async (item) => {
+                const itemEl = item.getElement();
+                if (!itemEl) return;
+                itemEl.style.zIndex = '';
+                itemEl.style.transform = itemEl.style.transform.replace(' scale(1.02)', '');
+                itemEl.style.boxShadow = '';
                 await saveLayout();
             });
 
-            muuri.on('dragReleaseEnd', (item: any) => {
-                const el = item.getElement();
+            muuri.on('dragReleaseEnd', (item) => {
+                const itemEl = item.getElement();
+                if (!itemEl) return;
                 // Restore CSS variable-based width after release animation completes
-                el.style.width = '';
+                itemEl.style.width = '';
                 // Reset media element dimensions
-                el.querySelectorAll('img, video').forEach((media: HTMLElement) => {
-                    media.style.width = '';
-                    media.style.height = '';
+                itemEl.querySelectorAll('img, video').forEach((media) => {
+                    (media as HTMLElement).style.width = '';
+                    (media as HTMLElement).style.height = '';
                 });
             });
 
