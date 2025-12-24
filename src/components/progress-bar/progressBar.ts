@@ -31,7 +31,7 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 	icon: 'bar-chart-2',
 	args: {
 		progress: {
-			description: 'Progress value (0-100). Can use frontmatter: progress=fm.progress',
+			description: 'Progress value (0-100)',
 			default: '0',
 		},
 		height: {

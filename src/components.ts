@@ -278,7 +278,7 @@ export namespace Component {
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
         app: App,
-        options: { usesFm: boolean; usesFile: boolean; isInSidebarContext: boolean }
+        options: { usesFm: boolean; usesFile: boolean; usesSelf: boolean; isInSidebarContext: boolean }
     ): { instance: ComponentInstance; isNew: boolean } {
         const existingId = el.dataset.componentId;
 
@@ -323,7 +323,7 @@ export namespace Component {
         if (options.usesFile) {
             registerStrategy('fileModified');
         }
-        if ((options.usesFm || options.usesFile) && options.isInSidebarContext) {
+        if ((options.usesFm || options.usesFile || options.usesSelf) && options.isInSidebarContext) {
             registerStrategy('leafChanged');
         }
 
@@ -357,6 +357,7 @@ export namespace Component {
         const argValues = Object.values(originalArgs);
         const usesFm = argValues.some(v => v?.startsWith('fm.'));
         const usesFile = argValues.some(v => v?.startsWith('file.'));
+        const usesSelf = argValues.some(v => v?.includes('__SELF__'));
 
         const componentArgKeys = new Set(Component.getArgKeys(component));
 
@@ -397,6 +398,7 @@ export namespace Component {
         const { instance, isNew } = getOrCreateInstance(component, el, ctx, app, {
             usesFm,
             usesFile,
+            usesSelf,
             isInSidebarContext
         });
 
