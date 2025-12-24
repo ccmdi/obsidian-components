@@ -17,15 +17,23 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
     // Determine the "base" date for calculating yesterday/tomorrow
     // Priority: args.today > initiatorName (if valid date) > actual today
     const getBaseDate = (): Date => {
+        const otherwise = () => new Date();
+
         if (args.date && args.date.length === 10) {
             const [year, month, day] = args.date.split('-').map(Number);
+            if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                return otherwise();
+            }
             return new Date(year, month - 1, day);
         }
         if (initiatorName.length === 10) {
             const [year, month, day] = initiatorName.split('-').map(Number);
+            if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                return otherwise();
+            }
             return new Date(year, month - 1, day);
         }
-        return new Date();
+        return otherwise();
     };
 
     const baseDate = getBaseDate();
