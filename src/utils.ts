@@ -159,7 +159,11 @@ export async function parseFileContent(args: Record<string, string>, app: App, c
                 if (file instanceof TFile) {
                     const content = await app.vault.read(file);
                     const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-                    fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+                    try {
+                        fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+                    } catch (error) {
+                        fm = {};
+                    }
                 } else {
                     fm = {};
                 }

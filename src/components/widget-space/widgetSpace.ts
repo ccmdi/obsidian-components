@@ -292,6 +292,13 @@ export const widgetSpace: Component<['layout']> = {
             widget.remove();
             muuri.refreshItems();
             muuri.layout(true);
+
+            const componentInstanceKey = (activeWidgets.get(widgetId)!.element.querySelector('.widget-content') as HTMLElement).dataset.componentId!;
+            const componentInstance = componentInstances.get(componentInstanceKey)!;
+            if (componentInstance) {
+                componentInstance.destroy();
+            }
+
             activeWidgets.delete(widgetId);
             await saveLayout();
         };

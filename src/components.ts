@@ -218,27 +218,36 @@ export namespace Component {
         if (!refresh) return;
         if (refresh === 'metadataChanged') {
             const handler = (file: TFile) => {
-                if (file.path === ctx.sourcePath) instance.data.triggerRefresh();
+                // debug("RENDER REASON: metadataChanged", file.path, instance.element.dataset.componentSource);
+                if (file.path === instance.element.dataset.componentSource) instance.data.triggerRefresh();
             };
             app.metadataCache.on('changed', handler);
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
         else if (refresh === 'fileModified') {
             const handler = (file: TFile) => {
-                if (file.path === ctx.sourcePath) instance.data.triggerRefresh();
+                // debug("RENDER REASON: fileModified", file.path, instance.element.dataset.componentSource);
+                if (file.path === instance.element.dataset.componentSource) instance.data.triggerRefresh();
             };
             app.vault.on('modify', handler);
             ComponentInstance.addCleanup(instance, () => app.vault.off('modify', handler));
         }
         else if (refresh === 'anyMetadataChanged') {
-            const handler = () => instance.data.triggerRefresh();
+            const handler = () => {
+                // debug("RENDER REASON: anyMetadataChanged", instance.element.dataset.componentSource);
+                instance.data.triggerRefresh();
+            };
             app.metadataCache.on('changed', handler);
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
         else if (refresh === 'leafChanged') {
             const isInSidebar = instance.element.closest('.in-sidebar') !== null;
             if (isInSidebar) {
-                const handler = () => instance.data.triggerRefresh();
+                const handler = () => {
+                    //TODO double render fix
+                    // debug("RENDER REASON: leafChanged", instance.element.dataset.componentSource);
+                    instance.data.triggerRefresh();
+                };
                 app.workspace.on('active-leaf-change', handler);
                 ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
             }
@@ -274,7 +283,8 @@ export namespace Component {
         const existingId = el.dataset.componentId;
 
         if (existingId && componentInstances.has(existingId)) {
-            return { instance: componentInstances.get(existingId)!, isNew: false };
+            const instance = componentInstances.get(existingId)!;
+            return { instance, isNew: false };
         }
 
         const instance = ComponentInstance.create(el);
@@ -328,6 +338,7 @@ export namespace Component {
         app: App,
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
+        debug('render', component.keyName, el.dataset.componentSource);
         // Dynamic context: use active file's path instead of source file's path
         // Always apply in sidebar/widget-space context (no docId)
         const isInSidebarContext = !ctx.docId;
@@ -399,12 +410,11 @@ export namespace Component {
         // Internal global class
         el.addClass('component');
 
-        // Store component metadata for context menu editing
-        if (isNew && Component.hasArgs(component)) {
-            el.dataset.componentKey = component.keyName;
+        el.dataset.componentKey = component.keyName;
+        if (Component.hasArgs(component)) {
             el.dataset.componentArgs = JSON.stringify(originalArgs);
-            el.dataset.componentSource = ctx.sourcePath;
         }
+        el.dataset.componentSource = ctx.sourcePath;
 
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
