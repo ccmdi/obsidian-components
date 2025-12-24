@@ -117,13 +117,17 @@ export enum ComponentAction {
     EXTERNAL = 'EXTERNAL'
 }
 
-export type RefreshStrategy =
+export type RefreshStrategyOptions =
     | 'metadataChanged'
+    | 'fileModified'
+    | 'anyMetadataChanged'
     | 'leafChanged'
     | 'daily'
     | 'hourly'
     | { type: 'timeElapsed'; interval: number }
     | null;
+
+export type RefreshStrategy = RefreshStrategyOptions | RefreshStrategyOptions[] | null;
 
 export type ComponentArgs<TArgs extends readonly string[] = readonly string[]> = 
 Record<TArgs[number], string> & {
@@ -143,7 +147,6 @@ export interface Component<TArgs extends readonly string[]> {
     render: RenderFunction<TArgs>;
     renderRefresh?: RenderFunction<TArgs>;
     refresh?: RefreshStrategy;
-    useDynamicContext?: boolean; // Use active file's path instead of source file's path
     isMountable: boolean;
     settings?: {
         _render?: (containerEl: HTMLElement, app: App, plugin: ComponentsPlugin) => Promise<void> | void;
@@ -194,21 +197,45 @@ export namespace Component {
         return result;
     }
 
+    /**
+     * Refresh all instances of a specific component type.
+     */
+    export function refreshAllInstances(keyName: string): void {
+        componentInstances.forEach((instance) => {
+            if (instance.element.dataset.componentKey === keyName && instance.data.triggerRefresh) {
+                instance.data.triggerRefresh();
+            }
+        });
+    }
+
     function setupRefreshHandlers(
         component: Component<readonly string[]>,
         instance: ComponentInstance,
+        refresh: RefreshStrategyOptions,
         ctx: MarkdownPostProcessorContext,
         app: App
     ): void {
-        if (!component.refresh) return;
-        if (component.refresh === 'metadataChanged') {
+        if (!refresh) return;
+        if (refresh === 'metadataChanged') {
             const handler = (file: TFile) => {
                 if (file.path === ctx.sourcePath) instance.data.triggerRefresh();
             };
             app.metadataCache.on('changed', handler);
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
-        else if (component.refresh === 'leafChanged') {
+        else if (refresh === 'fileModified') {
+            const handler = (file: TFile) => {
+                if (file.path === ctx.sourcePath) instance.data.triggerRefresh();
+            };
+            app.vault.on('modify', handler);
+            ComponentInstance.addCleanup(instance, () => app.vault.off('modify', handler));
+        }
+        else if (refresh === 'anyMetadataChanged') {
+            const handler = () => instance.data.triggerRefresh();
+            app.metadataCache.on('changed', handler);
+            ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
+        }
+        else if (refresh === 'leafChanged') {
             const isInSidebar = instance.element.closest('.in-sidebar') !== null;
             if (isInSidebar) {
                 const handler = () => instance.data.triggerRefresh();
@@ -216,7 +243,7 @@ export namespace Component {
                 ComponentInstance.addCleanup(instance, () => app.workspace.off('active-leaf-change', handler));
             }
         }
-        else if (component.refresh === 'daily' || component.refresh === 'hourly') {
+        else if (refresh === 'daily' || refresh === 'hourly') {
             const schedule = () => {
                 const now = new Date();
                 const next = component.refresh === 'daily'
@@ -231,8 +258,8 @@ export namespace Component {
             schedule();
             ComponentInstance.addCleanup(instance, () => clearTimeout(instance.data.boundaryTimeout));
         }
-        else if (typeof component.refresh === 'object' && component.refresh.type === 'timeElapsed') {
-            const interval = setInterval(() => instance.data.triggerRefresh(), component.refresh.interval);
+        else if (refresh.type === 'timeElapsed') {
+            const interval = setInterval(() => instance.data.triggerRefresh(), refresh.interval);
             ComponentInstance.addInterval(instance, interval);
         }
     }
@@ -241,7 +268,8 @@ export namespace Component {
         component: Component<readonly string[]>,
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
-        app: App
+        app: App,
+        options: { usesFm: boolean; usesFile: boolean; isInSidebarContext: boolean }
     ): { instance: ComponentInstance; isNew: boolean } {
         const existingId = el.dataset.componentId;
 
@@ -258,9 +286,35 @@ export namespace Component {
             ctx.addChild(cleanupComponent);
         }
 
-        // Setup refresh handlers
+        const registeredStrategies = new Set<string>();
+
+        const registerStrategy = (refresh: RefreshStrategyOptions) => {
+            if (!refresh) return;
+            const key = typeof refresh === 'object' ? `timeElapsed:${refresh.interval}` : refresh;
+            if (!registeredStrategies.has(key)) {
+                registeredStrategies.add(key);
+                setupRefreshHandlers(component, instance, refresh, ctx, app);
+            }
+        };
+
+        // Setup explicit refresh handlers from component definition
         if (component.refresh) {
-            setupRefreshHandlers(component, instance, ctx, app);
+            if (Array.isArray(component.refresh)) {
+                component.refresh.forEach(registerStrategy);
+            } else {
+                registerStrategy(component.refresh);
+            }
+        }
+
+        // special variables mandate strategies
+        if (options.usesFm) {
+            registerStrategy('metadataChanged');
+        }
+        if (options.usesFile) {
+            registerStrategy('fileModified');
+        }
+        if ((options.usesFm || options.usesFile) && options.isInSidebarContext) {
+            registerStrategy('leafChanged');
         }
 
         return { instance, isNew: true };
@@ -275,8 +329,9 @@ export namespace Component {
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
         // Dynamic context: use active file's path instead of source file's path
-        // Only apply in sidebar/widget-space context
-        if (component.useDynamicContext && !ctx.docId) {
+        // Always apply in sidebar/widget-space context (no docId)
+        const isInSidebarContext = !ctx.docId;
+        if (isInSidebarContext) {
             const activeFile = app.workspace.getActiveFile();
             if (activeFile) {
                 ctx = { ...ctx, sourcePath: activeFile.path };
@@ -288,10 +343,15 @@ export namespace Component {
         const originalArgs = parseArguments(source);
         let args = { ...originalArgs };
 
+        const argValues = Object.values(originalArgs);
+        const usesFm = argValues.some(v => v?.startsWith('fm.'));
+        const usesFile = argValues.some(v => v?.startsWith('file.'));
+
         const componentArgKeys = new Set(Component.getArgKeys(component));
 
         args = parseFM(args, app, ctx);
-        args = parseFileContent(args, app, ctx);
+        args = await parseFileContent(args, app, ctx);
+
         // Handle special VALUES
         args = resolveSpecialVariables(args, ctx);
         args = parseArgsAliases(args, componentArgKeys);
@@ -323,7 +383,11 @@ export namespace Component {
             return;
         }
 
-        const { instance, isNew } = getOrCreateInstance(component, el, ctx, app);
+        const { instance, isNew } = getOrCreateInstance(component, el, ctx, app, {
+            usesFm,
+            usesFile,
+            isInSidebarContext
+        });
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {
@@ -345,7 +409,6 @@ export namespace Component {
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
 
-        // Update triggerRefresh on every render with fresh closure
         instance.data.triggerRefresh = async () => {
             if (!component.renderRefresh) el.empty();
             Component.render(component, source, el, ctx, app, componentSettings);

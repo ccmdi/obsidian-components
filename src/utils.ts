@@ -1,6 +1,6 @@
 // utils.ts
 
-import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, MarkdownView, parseYaml } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, parseYaml } from "obsidian";
 
 /**
  * Parses .env-style key-value pairs from a code block.
@@ -146,19 +146,23 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
 }
 
 /**
- * Parse frontmatter directly from active file content (bypasses metadata cache)
- * Use this when you need guaranteed fresh data (e.g., newly created files)
+ * Parse frontmatter directly from file on disk (bypasses metadata cache)
+ * Use this when you need guaranteed fresh data (e.g., reading mode edits)
  */
-export function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
+export async function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Promise<Record<string, string>> {
     let fm: Frontmatter | null = null;
 
-    Object.keys(args).forEach(key => {
+    for (const key of Object.keys(args)) {
         if (args[key]?.startsWith('file.')) {
             if (fm === null) {
-                const activeView = app.workspace.getActiveViewOfType(MarkdownView);
-                const content = activeView?.editor?.getValue() || '';
-                const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-                fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+                const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
+                if (file instanceof TFile) {
+                    const content = await app.vault.read(file);
+                    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+                    fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+                } else {
+                    fm = {};
+                }
             }
             const fmKey = args[key].slice(5);
             const value = fm?.[fmKey];
@@ -168,7 +172,7 @@ export function parseFileContent(args: Record<string, string>, app: App, ctx: Ma
                 args[key] = String(value);
             }
         }
-    });
+    }
 
     return args;
 }

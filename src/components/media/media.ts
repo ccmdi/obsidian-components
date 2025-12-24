@@ -9,6 +9,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
     keyName: 'media',
     icon: 'play-circle',
     aliases: ['random-media'],
+    refresh: 'leafChanged',
     args: {
         folder: {
             description: 'Folder to search for media files, or path to specific file',

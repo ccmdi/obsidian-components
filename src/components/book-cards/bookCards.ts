@@ -74,6 +74,7 @@ export const bookCards: Component<['source', 'limit']> = {
     description: 'Display book cards from a folder or frontmatter data',
     keyName: 'book-cards',
     icon: 'book-open',
+    refresh: 'anyMetadataChanged',
     args: {
         source: {
             description: 'Folder path to find books, OR use file.books to read from frontmatter',
@@ -264,27 +265,5 @@ export const bookCards: Component<['source', 'limit']> = {
             });
         }
 
-        // Metadata change listener for dynamic mode
-        if (!isBookData(source)) {
-            const handleMetadataChange = (changedFile: TFile) => {
-                let folderPath = source.trim();
-                if (folderPath.startsWith('"') && folderPath.endsWith('"')) {
-                    folderPath = folderPath.slice(1, -1);
-                }
-
-                // Check if the changed file is in our folder
-                if (!changedFile.path.startsWith(folderPath)) return;
-
-                // Trigger refresh
-                if (instance.data.triggerRefresh) {
-                    instance.data.triggerRefresh();
-                }
-            };
-
-            app.metadataCache.on('changed', handleMetadataChange);
-            ComponentInstance.addCleanup(instance, () => {
-                app.metadataCache.off('changed', handleMetadataChange);
-            });
-        }
     }
 };

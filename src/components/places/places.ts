@@ -82,6 +82,7 @@ export const places: Component<[
     description: 'Display visited places statistics from a folder or frontmatter data',
     keyName: 'places',
     icon: 'map',
+    refresh: 'anyMetadataChanged',
     args: {
         source: {
             description: 'Folder path to find places, OR use fm.places to read from frontmatter',
@@ -327,28 +328,5 @@ export const places: Component<[
 
         // Store data for potential refresh
         instance.data.places = places;
-
-        // Metadata change listener for dynamic mode
-        if (!isPlaceData(source)) {
-            const handleMetadataChange = (changedFile: TFile) => {
-                let folderPath = source.trim();
-                if (folderPath.startsWith('"') && folderPath.endsWith('"')) {
-                    folderPath = folderPath.slice(1, -1);
-                }
-
-                const isPureQuery = source.startsWith('#') || source.includes(' AND ') || source.includes(' OR ');
-
-                if (!isPureQuery && !changedFile.path.startsWith(folderPath)) return;
-
-                if (instance.data.triggerRefresh) {
-                    instance.data.triggerRefresh();
-                }
-            };
-
-            app.metadataCache.on('changed', handleMetadataChange);
-            ComponentInstance.addCleanup(instance, () => {
-                app.metadataCache.off('changed', handleMetadataChange);
-            });
-        }
     }
 };

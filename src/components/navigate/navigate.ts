@@ -17,23 +17,14 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
     // Determine the "base" date for calculating yesterday/tomorrow
     // Priority: args.today > initiatorName (if valid date) > actual today
     const getBaseDate = (): Date => {
-        const otherwise = () => new Date();
-
-        if (args.date && args.date.length === 10) {
-            const [year, month, day] = args.date.split('-').map(Number);
-            if (isNaN(year) || isNaN(month) || isNaN(day)) {
-                return otherwise();
-            }
-            return new Date(year, month - 1, day);
-        }
-        if (initiatorName.length === 10) {
-            const [year, month, day] = initiatorName.split('-').map(Number);
-            if (isNaN(year) || isNaN(month) || isNaN(day)) {
-                return otherwise();
-            }
-            return new Date(year, month - 1, day);
-        }
-        return otherwise();
+        const parseDate = (str: string | undefined): Date | null => {
+            if (!str || str.length !== 10) return null;
+            const [y, m, d] = str.split('-').map(Number);
+            if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+            return new Date(y, m - 1, d);
+        };
+    
+        return parseDate(args.date) || parseDate(initiatorName) || new Date();
     };
 
     const baseDate = getBaseDate();
@@ -95,7 +86,7 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat', 'p
     icon: 'arrow-left-right',
     args: {
         folder: {
-            description: 'Folder to navigate',
+            description: 'Folder to navigate. If unset, uses the current note\'s folder.',
             default: ''
         },
         date: {
@@ -122,7 +113,6 @@ export const navigate: Component<['folder', 'date', 'template', 'dateFormat', 'p
     isMountable: true,
     render: renderNavigate,
     refresh: 'leafChanged',
-    useDynamicContext: true,
     does: [ComponentAction.READ, ComponentAction.WRITE],
     styles: navigateStyles,
     settings: {

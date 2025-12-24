@@ -1,21 +1,9 @@
-import { Component, ComponentAction, ComponentInstance, componentInstances } from "components";
+import { Component, ComponentAction, ComponentInstance } from "components";
 import { App, TFile, TFolder } from "obsidian";
 import { parseBoolean, matchesQuery, useNavigation } from "utils";
 import { projectCardsStyles } from "./styles";
 import { projectCardsSettingsStyles } from "./settingsStyles";
 import ComponentsPlugin from "main";
-
-/**
- * Trigger refresh for all active project-cards instances
- */
-function refreshAllProjectCards() {
-    componentInstances.forEach((instance) => {
-        // Check if this is a project-cards instance by looking for our specific data
-        if (instance.data.projectsContainer && instance.data.triggerRefresh) {
-            instance.data.triggerRefresh();
-        }
-    });
-}
 
 interface ProjectData {
     name: string;
@@ -148,7 +136,7 @@ export const projectCards: Component<[
     description: 'Display project cards from a folder query or frontmatter data',
     keyName: 'project-cards',
     icon: 'layout-grid',
-    // No automatic refresh - we handle our own smart metadata listener
+    refresh: 'anyMetadataChanged',
     args: {
         source: {
             description: 'Folder path/query to find projects, OR use fm.projects to read from frontmatter',
@@ -619,48 +607,6 @@ export const projectCards: Component<[
             }
         }
 
-        // Smart metadata change listener for live updates (dynamic mode only)
-        if (!isProjectData(source)) {
-            const handleMetadataChange = (changedFile: TFile) => {
-                // Skip if we're currently saving our own filter
-                if (instance.data.isSavingFilter) return;
-                
-                // Skip if the changed file is our own source file
-                if (changedFile.path === ctx.sourcePath) return;
-                
-                // Check if the changed file is in our query scope
-                let folderPath = source.trim();
-                if (folderPath.startsWith('"') && folderPath.endsWith('"')) {
-                    folderPath = folderPath.slice(1, -1);
-                }
-                
-                const isPureQuery = source.startsWith('#') || source.includes(' AND ') || source.includes(' OR ');
-                
-                // For folder mode, check if file is in the folder
-                if (!isPureQuery) {
-                    if (!changedFile.path.startsWith(folderPath)) return;
-                }
-                
-                // For query mode, check if file matches query
-                if (isPureQuery || query) {
-                    const cache = app.metadataCache.getFileCache(changedFile);
-                    const fullQuery = isPureQuery 
-                        ? (query ? `${source} AND ${query}` : source)
-                        : (query || '');
-                    if (fullQuery && !matchesQuery(changedFile, cache, fullQuery)) return;
-                }
-                
-                // File is relevant - trigger refresh
-                if (instance.data.triggerRefresh) {
-                    instance.data.triggerRefresh();
-                }
-            };
-            
-            app.metadataCache.on('changed', handleMetadataChange);
-            ComponentInstance.addCleanup(instance, () => {
-                app.metadataCache.off('changed', handleMetadataChange);
-            });
-        }
     },
 
     // Incremental refresh - only update projects, preserve filter input focus
@@ -947,7 +893,7 @@ export const projectCards: Component<[
             const setAliases = async (arr: TagAliasEntry[]) => {
                 settings.tagAliases = JSON.stringify(arr);
                 await plugin.saveSettings();
-                refreshAllProjectCards();
+                Component.refreshAllInstances('project-cards');
             };
 
             const getColors = (): TagColorEntry[] => {
@@ -960,7 +906,7 @@ export const projectCards: Component<[
             const setColors = async (arr: TagColorEntry[]) => {
                 settings.tagColors = JSON.stringify(arr);
                 await plugin.saveSettings();
-                refreshAllProjectCards();
+                Component.refreshAllInstances('project-cards');
             };
 
             // ========== Tag Aliases Section ==========
