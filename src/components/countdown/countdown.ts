@@ -10,7 +10,7 @@ export const countdown: Component<['date', 'name', 'showTime']> = {
 	icon: 'timer',
 	args: {
 		date: {
-			description: 'Target date (YYYY-MM-DD or any format moment.js understands). Can use frontmatter: date=fm.eventDate',
+			description: 'Target date (YYYY-MM-DD or any format moment.js understands)',
 			required: true,
 		},
 		name: {

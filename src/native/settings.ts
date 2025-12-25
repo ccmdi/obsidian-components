@@ -7,6 +7,7 @@ import { renderExternalLinkToElement } from "utils";
 export default class ComponentsSettingTab extends PluginSettingTab {
     plugin: ComponentsPlugin;
     private currentView: 'general' | 'components' | string = 'components';
+    private searchQuery: string = '';
 
     constructor(app: App, plugin: ComponentsPlugin) {
         super(app, plugin);
@@ -176,6 +177,27 @@ export default class ComponentsSettingTab extends PluginSettingTab {
     displayMainMenu(): void {
         const { containerEl } = this;
 
+        // Search bar
+        const searchSetting = new Setting(containerEl)
+            .addSearch(search => {
+                search
+                    .setPlaceholder('Search components...')
+                    .setValue(this.searchQuery)
+                    .onChange((value) => {
+                        this.searchQuery = value;
+                        this.refreshComponentList(listContainer);
+                    });
+            });
+        searchSetting.settingEl.addClass('components-search-setting');
+
+        const listContainer = containerEl.createDiv();
+        this.refreshComponentList(listContainer);
+    }
+
+    private refreshComponentList(container: HTMLElement): void {
+        container.empty();
+        const query = this.searchQuery.toLowerCase();
+
         Object.values(GROUPS).forEach((group) => {
             group.members?.sort((a, b) => (a.name || a.keyName).localeCompare(b.name || b.keyName));
         });
@@ -199,9 +221,21 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
         sortedItems.forEach((item) => {
             if (typeof item === 'string') {
-                this.renderGroup(containerEl, item);
+                const groupMeta = GROUPS[item];
+                const groupMatches = groupMeta.name.toLowerCase().includes(query);
+                const memberMatches = groupMeta.members?.some(c =>
+                    (c.name || c.keyName).toLowerCase().includes(query) ||
+                    c.keyName.toLowerCase().includes(query)
+                );
+                if (!query || groupMatches || memberMatches) {
+                    this.renderGroup(container, item, query);
+                }
             } else {
-                this.renderComponent(containerEl, item, false);
+                const matches = (item.name || item.keyName).toLowerCase().includes(query) ||
+                    item.keyName.toLowerCase().includes(query);
+                if (!query || matches) {
+                    this.renderComponent(container, item, false);
+                }
             }
         });
     }
@@ -265,7 +299,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         this.updateComponentClickabilityInPlace(component, componentSetting.nameEl, isEnabledBySettings);
     }
 
-    renderGroup(containerEl: HTMLElement, group: ComponentGroup): void {
+    renderGroup(containerEl: HTMLElement, group: ComponentGroup, query: string = ''): void {
         const groupKey = group;
         const groupMetadata = GROUPS[groupKey];
         const components = groupMetadata.members!;
@@ -298,9 +332,13 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
         // Render child components if group is enabled
         if (isGroupEnabled) {
-            components.forEach(component => {
-                this.renderComponent(containerEl, component, true);
-            });
+            components
+                .filter(c => !query ||
+                    (c.name || c.keyName).toLowerCase().includes(query) ||
+                    c.keyName.toLowerCase().includes(query))
+                .forEach(component => {
+                    this.renderComponent(containerEl, component, true);
+                });
         }
     }
 

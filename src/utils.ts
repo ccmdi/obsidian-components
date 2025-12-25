@@ -1,6 +1,6 @@
 // utils.ts
 
-import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, MarkdownView, parseYaml } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, parseYaml } from "obsidian";
 
 /**
  * Parses .env-style key-value pairs from a code block.
@@ -76,11 +76,21 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
 
         // Context-dependent variables
         if (ctx) {
+            const dir = ctx.sourcePath.substring(0, ctx.sourcePath.lastIndexOf('/')) || '';
+
             if (value === '__SELF__') {
                 value = ctx.sourcePath;
             } else if (value.includes('__SELF__')) {
-                value = value.replace('__SELF__', ctx.sourcePath);
-            } else if (value === '__ROOT__') {
+                value = value.replace(/__SELF__/g, ctx.sourcePath);
+            }
+
+            if (value === '__DIR__') {
+                value = dir;
+            } else if (value.includes('__DIR__')) {
+                value = value.replace(/__DIR__/g, dir);
+            }
+
+            if (value === '__ROOT__') {
                 value = '';
             }
         }
@@ -113,14 +123,23 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
         value = value.replace(/__TIME__/g, formatTime(today));
         value = value.replace(/__TIMESTAMP__/g, String(Date.now()));
 
+        // Normalize paths containing relative segments (.. or .)
+        if (value.includes('/..') || value.includes('/./') || value.startsWith('./') || value.startsWith('../')) {
+            value = resolvePath('', value);
+        }
+
         resolved[key] = value;
     });
 
     return resolved;
 }
 
+/** Frontmatter can contain any YAML-serializable value */
+type FrontmatterValue = string | number | boolean | null | FrontmatterValue[] | { [key: string]: FrontmatterValue };
+type Frontmatter = Record<string, FrontmatterValue>;
+
 export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
-    let fm: Record<string, any> | null = null;
+    let fm: Frontmatter | null = null;
 
     Object.keys(args).forEach(key => {
         if (args[key]?.startsWith('fm.')) {
@@ -142,19 +161,27 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
 }
 
 /**
- * Parse frontmatter directly from active file content (bypasses metadata cache)
- * Use this when you need guaranteed fresh data (e.g., newly created files)
+ * Parse frontmatter directly from file on disk (bypasses metadata cache)
+ * Use this when you need guaranteed fresh data (e.g., reading mode edits)
  */
-export function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
-    let fm: Record<string, any> | null = null;
+export async function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Promise<Record<string, string>> {
+    let fm: Frontmatter | null = null;
 
-    Object.keys(args).forEach(key => {
+    for (const key of Object.keys(args)) {
         if (args[key]?.startsWith('file.')) {
             if (fm === null) {
-                const activeView = app.workspace.getActiveViewOfType(MarkdownView);
-                const content = activeView?.editor?.getValue() || '';
-                const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-                fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+                const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
+                if (file instanceof TFile) {
+                    const content = await app.vault.read(file);
+                    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+                    try {
+                        fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+                    } catch (error) {
+                        fm = {};
+                    }
+                } else {
+                    fm = {};
+                }
             }
             const fmKey = args[key].slice(5);
             const value = fm?.[fmKey];
@@ -164,7 +191,7 @@ export function parseFileContent(args: Record<string, string>, app: App, ctx: Ma
                 args[key] = String(value);
             }
         }
-    });
+    }
 
     return args;
 }
@@ -172,7 +199,12 @@ export function parseFileContent(args: Record<string, string>, app: App, ctx: Ma
 export function applyCssFromArgs(element: HTMLElement, args: Record<string, string>, handledKeys: Set<string> = new Set()) {
     Object.entries(args).forEach(([key, value]) => {
         if (!handledKeys.has(key)) {
-            const previousValue = element.style.getPropertyValue(key);
+            // Handle class/className specially
+            if (key === 'class' || key === 'className') {
+                value.split(/\s+/).filter(Boolean).forEach(cls => element.addClass(cls));
+                return;
+            }
+
             element.style.setProperty(key, value);
 
             if (element.style.getPropertyValue(key) !== value && value !== '') {
@@ -246,16 +278,19 @@ export function createColoredIcon(
     fetch(iconUrl)
         .then(response => response.text())
         .then(svgText => {
-            container.innerHTML = svgText;
-            const svg = container.querySelector('svg');
-            if (svg) {
+            // Safely parse SVG using DOMParser instead of innerHTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(svgText, 'image/svg+xml');
+            const svg = doc.querySelector('svg');
+            if (svg && !doc.querySelector('parsererror')) {
                 svg.style.width = '100%';
                 svg.style.height = '100%';
                 svg.style.fill = color;
+                container.appendChild(svg);
             }
         })
-        .catch(() => {
-            // Silently fail - icon just won't show
+        .catch((error) => {
+            console.error(`Failed to load icon "${iconName}":`, error);
         });
 
     return container;
@@ -316,25 +351,27 @@ export async function useNavigation(
  * Access a nested property using dot notation or array syntax.
  * Supports paths like "frontmatter.priority", "stat.mtime", "location[0]", or "nested.array[1]"
  */
-export function usePropertyAccess(obj: any, path: string): any {
+export function usePropertyAccess(obj: unknown, path: string): unknown {
     // Support dot notation like "frontmatter.priority" or "stat.mtime"
     // Also support array syntax like "location[0]" or "nested.array[1]"
-    return path.split('.').reduce((current: any, key: string) => {
+    return path.split('.').reduce((current: unknown, key: string) => {
+        if (current === null || current === undefined) return undefined;
+        const record = current as Record<string, unknown>;
         // Check for array syntax like "location[0]"
         const arrayMatch = key.match(/^(.+)\[(\d+)\]$/);
         if (arrayMatch) {
             const [, prop, index] = arrayMatch;
-            const value = current?.[prop];
+            const value = record[prop];
             return Array.isArray(value) ? value[parseInt(index)] : undefined;
         }
-        return current?.[key];
+        return record[key];
     }, obj);
 }
 
 /**
  * Access a property from a note's cached metadata with 'note.' prefix support.
  */
-export function useTargetNoteProperty(noteObj: CachedMetadata | null | undefined, propertyPath: string): any {
+export function useTargetNoteProperty(noteObj: CachedMetadata | null | undefined, propertyPath: string): unknown {
     // Handle note.* prefix for accessing target note properties
     if (propertyPath.startsWith('note.')) {
         const actualPath = propertyPath.slice(5); // Remove 'note.' prefix
@@ -524,6 +561,7 @@ export async function getTasks(app: App, file: TFile, options: {
  * - Tag queries: #tagname
  * - Quoted folder paths: "folder/path"
  * - Unquoted folder paths: folder/path
+ * - Property filters: [prop], [!prop], [prop=val], [prop!=val], [prop>5], [prop~=partial]
  * - AND operator: "#tag AND folder/path"
  * - OR operator: "#tag1 OR #tag2"
  * - Combined: "#tag1 OR #tag2 AND folder/path" (AND has higher precedence)
@@ -539,6 +577,68 @@ export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: s
 
     // Helper function to check if a single query part matches
     const matchesPart = (part: string): boolean => {
+        // Property filter: [prop], [!prop], [prop=val], [prop!=val], [prop>5], etc.
+        if (part.startsWith('[') && part.endsWith(']')) {
+            const inner = part.slice(1, -1).trim();
+
+            // [!property] - property doesn't exist or is falsy
+            if (inner.startsWith('!')) {
+                const prop = inner.slice(1).trim();
+                return !(prop in frontmatter) || frontmatter[prop] === null || frontmatter[prop] === undefined;
+            }
+
+            // Check for operators: !=, >=, <=, >, <, ~=, =
+            const operatorMatch = inner.match(/^([a-zA-Z0-9_-]+)\s*(!=|>=|<=|~=|>|<|=)\s*(.+)$/);
+            if (operatorMatch) {
+                const [, prop, operator, rawValue] = operatorMatch;
+                const propValue = frontmatter[prop];
+
+                // Property doesn't exist
+                if (propValue === undefined || propValue === null) {
+                    return operator === '!=';
+                }
+
+                // Parse the comparison value - remove quotes if present
+                let compareValue: string | number = rawValue.trim();
+                if ((compareValue.startsWith('"') && compareValue.endsWith('"')) ||
+                    (compareValue.startsWith("'") && compareValue.endsWith("'"))) {
+                    compareValue = compareValue.slice(1, -1);
+                }
+
+                // Try numeric comparison
+                const numCompare = parseFloat(compareValue as string);
+                const numProp = typeof propValue === 'number' ? propValue : parseFloat(String(propValue));
+                const useNumeric = !isNaN(numCompare) && !isNaN(numProp);
+
+                switch (operator) {
+                    case '=':
+                        if (useNumeric) return numProp === numCompare;
+                        return String(propValue).toLowerCase() === String(compareValue).toLowerCase();
+                    case '!=':
+                        if (useNumeric) return numProp !== numCompare;
+                        return String(propValue).toLowerCase() !== String(compareValue).toLowerCase();
+                    case '>':
+                        return useNumeric && numProp > numCompare;
+                    case '<':
+                        return useNumeric && numProp < numCompare;
+                    case '>=':
+                        return useNumeric && numProp >= numCompare;
+                    case '<=':
+                        return useNumeric && numProp <= numCompare;
+                    case '~=':
+                        return String(propValue).toLowerCase().includes(String(compareValue).toLowerCase());
+                }
+            }
+
+            // [property] - property exists and is truthy
+            const prop = inner.trim();
+            return prop in frontmatter &&
+                   frontmatter[prop] !== null &&
+                   frontmatter[prop] !== undefined &&
+                   frontmatter[prop] !== false &&
+                   frontmatter[prop] !== '';
+        }
+
         // Tag query
         if (part.startsWith('#')) {
             return allTags.some(tag => tag.includes(part.slice(1)));

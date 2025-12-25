@@ -1,4 +1,4 @@
-import { Component, ComponentArgs, ComponentAction, ComponentInstance } from "components";
+import { Component, ComponentArgs, ComponentAction } from "components";
 import propertyStatusStyles from "./styles";
 import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
 import { formatDate } from "utils";

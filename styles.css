@@ -7,6 +7,7 @@
   border: 0;
 }
 
+
 .setting-item-does {
   /* Base Style: All tags share these properties */
   font-size: 0.75em;
@@ -77,6 +78,20 @@
   margin-bottom: 20px;
 }
 
+.components-search-setting {
+  margin-bottom: 16px;
+  display: block;
+}
+
+.components-search-setting .setting-item-control {
+  display: block;
+}
+
+.components-search-setting input[type="search"] {
+  width: 100%;
+  max-width: 100%;
+}
+
 .setting-tab {
   padding: 10px 20px;
   cursor: pointer;
@@ -141,4 +156,53 @@
 }
 .in-sidebar .note-embed-container .component {
   margin: 0;
+}
+
+/* Component Args Modal Tabs */
+.component-args-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  /* border-bottom: 1px solid var(--background-modifier-border); */
+}
+
+.component-args-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.component-args-tab:hover {
+  color: var(--text-normal);
+  background: var(--background-secondary);
+}
+
+.component-args-tab.is-active {
+  color: var(--interactive-accent);
+  border-bottom-color: var(--interactive-accent);
+}
+
+.component-args-raw-textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 12px;
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  resize: vertical;
+  color: var(--text-normal);
+}
+
+.component-args-raw-textarea:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
 }

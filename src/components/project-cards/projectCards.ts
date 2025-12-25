@@ -1,21 +1,9 @@
-import { Component, ComponentAction, ComponentInstance, componentInstances } from "components";
-import { TFile, TFolder, Setting } from "obsidian";
+import { Component, ComponentAction, ComponentInstance } from "components";
+import { App, TFile, TFolder } from "obsidian";
 import { parseBoolean, matchesQuery, useNavigation } from "utils";
 import { projectCardsStyles } from "./styles";
 import { projectCardsSettingsStyles } from "./settingsStyles";
 import ComponentsPlugin from "main";
-
-/**
- * Trigger refresh for all active project-cards instances
- */
-function refreshAllProjectCards() {
-    componentInstances.forEach((instance) => {
-        // Check if this is a project-cards instance by looking for our specific data
-        if (instance.data.projectsContainer && instance.data.triggerRefresh) {
-            instance.data.triggerRefresh();
-        }
-    });
-}
 
 interface ProjectData {
     name: string;
@@ -28,7 +16,7 @@ interface ProjectData {
     showProgress?: boolean;
     tags?: string[];
     endDate?: string;
-    cover?: string;
+    cover?: unknown; // Can be string, object with path, or wikilink
 }
 
 interface TagConfig {
@@ -47,18 +35,35 @@ interface TagColorEntry {
     text: string;
 }
 
+/** Raw project data from frontmatter or JSON (before validation) */
+interface RawProjectData {
+    name?: unknown;
+    path?: unknown;
+    progress?: unknown;
+    description?: unknown;
+    subtask?: unknown;
+    priority?: unknown;
+    difficulty?: unknown;
+    showProgress?: unknown;
+    tags?: unknown;
+    endDate?: unknown;
+    cover?: unknown;
+}
+
 /**
  * Resolve a frontmatter `cover` value to a usable browser URL.
  */
-function resolveCoverUrl(app: any, cover: any, sourcePath: string): string | null {
+function resolveCoverUrl(app: App, cover: unknown, sourcePath: string): string | null {
     try {
         if (!cover) return null;
 
-        if (typeof cover === 'object') {
-            const linkPath = cover?.path || cover?.file?.path;
+        if (typeof cover === 'object' && cover !== null) {
+            const coverObj = cover as Record<string, unknown>;
+            const fileObj = coverObj.file as Record<string, unknown> | undefined;
+            const linkPath = (coverObj.path as string) || (fileObj?.path as string);
             if (linkPath) {
                 const tfile = app.vault.getAbstractFileByPath(linkPath);
-                return tfile ? app.vault.getResourcePath(tfile) : null;
+                return tfile instanceof TFile ? app.vault.getResourcePath(tfile) : null;
             }
         }
 
@@ -74,7 +79,7 @@ function resolveCoverUrl(app: any, cover: any, sourcePath: string): string | nul
             if (dest) return app.vault.getResourcePath(dest);
 
             const abs = app.vault.getAbstractFileByPath(linkInner);
-            if (abs) return app.vault.getResourcePath(abs);
+            if (abs instanceof TFile) return app.vault.getResourcePath(abs);
         }
     } catch (e) {
         console.warn('Failed to resolve cover URL', e);
@@ -85,7 +90,7 @@ function resolveCoverUrl(app: any, cover: any, sourcePath: string): string | nul
 /**
  * Check if a value looks like project data (array) rather than a query string
  */
-function isProjectData(value: any): boolean {
+function isProjectData(value: unknown): boolean {
     // Already an array
     if (Array.isArray(value)) return true;
 
@@ -131,7 +136,7 @@ export const projectCards: Component<[
     description: 'Display project cards from a folder query or frontmatter data',
     keyName: 'project-cards',
     icon: 'layout-grid',
-    // No automatic refresh - we handle our own smart metadata listener
+    refresh: 'anyMetadataChanged', //TODO: can target projects again somewhere
     args: {
         source: {
             description: 'Folder path/query to find projects, OR use fm.projects to read from frontmatter',
@@ -236,8 +241,8 @@ export const projectCards: Component<[
         // Check if source is already project data (array from fm.projects)
         if (isProjectData(source)) {
             // Static mode: source is project data array
-            let projectList: any[] = [];
-            
+            let projectList: RawProjectData[] = [];
+
             if (Array.isArray(source)) {
                 projectList = source;
             } else if (typeof source === 'string') {
@@ -246,17 +251,17 @@ export const projectCards: Component<[
                 } catch { /* ignore */ }
             }
 
-            projects = projectList.map((p: any) => ({
-                name: p.name || '',
-                path: p.path || '',
-                progress: p.progress,
-                description: p.description,
-                subtask: p.subtask,
-                priority: p.priority ?? 0,
-                difficulty: p.difficulty,
-                showProgress: p.showProgress,
-                tags: p.tags,
-                endDate: p.endDate,
+            projects = projectList.map((p) => ({
+                name: String(p.name || ''),
+                path: String(p.path || ''),
+                progress: typeof p.progress === 'number' ? p.progress : undefined,
+                description: typeof p.description === 'string' ? p.description : undefined,
+                subtask: typeof p.subtask === 'string' ? p.subtask : undefined,
+                priority: typeof p.priority === 'number' ? p.priority : 0,
+                difficulty: typeof p.difficulty === 'number' ? p.difficulty : undefined,
+                showProgress: typeof p.showProgress === 'boolean' ? p.showProgress : undefined,
+                tags: Array.isArray(p.tags) ? p.tags.map(String) : undefined,
+                endDate: typeof p.endDate === 'string' ? p.endDate : undefined,
                 cover: p.cover
             }));
         } else {
@@ -394,7 +399,14 @@ export const projectCards: Component<[
                 card.addEventListener('mousedown', async (e) => {
                     if (e.button === 1) {
                         e.preventDefault();
+                        e.stopPropagation();
                         await useNavigation(app, project.path, true);
+                    }
+                });
+
+                card.addEventListener('auxclick', (e) => {
+                    if (e.button === 1) {
+                        e.stopPropagation();
                     }
                 });
             }
@@ -568,7 +580,7 @@ export const projectCards: Component<[
                         // Mark that we're saving to prevent re-render from our own save
                         instance.data.isSavingFilter = true;
                         try {
-                            await app.fileManager.processFrontMatter(file, (fm: any) => {
+                            await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
                                 fm.tagFilter = filterValue;
                             });
                         } catch (e) {
@@ -600,49 +612,6 @@ export const projectCards: Component<[
             for (const project of filteredProjects) {
                 createProjectCard(project, projectsContainer);
             }
-        }
-
-        // Smart metadata change listener for live updates (dynamic mode only)
-        if (!isProjectData(source)) {
-            const handleMetadataChange = (changedFile: TFile) => {
-                // Skip if we're currently saving our own filter
-                if (instance.data.isSavingFilter) return;
-                
-                // Skip if the changed file is our own source file
-                if (changedFile.path === ctx.sourcePath) return;
-                
-                // Check if the changed file is in our query scope
-                let folderPath = source.trim();
-                if (folderPath.startsWith('"') && folderPath.endsWith('"')) {
-                    folderPath = folderPath.slice(1, -1);
-                }
-                
-                const isPureQuery = source.startsWith('#') || source.includes(' AND ') || source.includes(' OR ');
-                
-                // For folder mode, check if file is in the folder
-                if (!isPureQuery) {
-                    if (!changedFile.path.startsWith(folderPath)) return;
-                }
-                
-                // For query mode, check if file matches query
-                if (isPureQuery || query) {
-                    const cache = app.metadataCache.getFileCache(changedFile);
-                    const fullQuery = isPureQuery 
-                        ? (query ? `${source} AND ${query}` : source)
-                        : (query || '');
-                    if (fullQuery && !matchesQuery(changedFile, cache, fullQuery)) return;
-                }
-                
-                // File is relevant - trigger refresh
-                if (instance.data.triggerRefresh) {
-                    instance.data.triggerRefresh();
-                }
-            };
-            
-            app.metadataCache.on('changed', handleMetadataChange);
-            ComponentInstance.addCleanup(instance, () => {
-                app.metadataCache.off('changed', handleMetadataChange);
-            });
         }
     },
 
@@ -709,23 +678,23 @@ export const projectCards: Component<[
         let projects: ProjectData[] = [];
 
         if (isProjectData(source)) {
-            let projectList: any[] = [];
+            let projectList: RawProjectData[] = [];
             if (Array.isArray(source)) {
                 projectList = source;
             } else if (typeof source === 'string') {
                 try { projectList = JSON.parse(source); } catch { /* ignore */ }
             }
-            projects = projectList.map((p: any) => ({
-                name: p.name || '',
-                path: p.path || '',
-                progress: p.progress,
-                description: p.description,
-                subtask: p.subtask,
-                priority: p.priority ?? 0,
-                difficulty: p.difficulty,
-                showProgress: p.showProgress,
-                tags: p.tags,
-                endDate: p.endDate,
+            projects = projectList.map((p) => ({
+                name: String(p.name || ''),
+                path: String(p.path || ''),
+                progress: typeof p.progress === 'number' ? p.progress : undefined,
+                description: typeof p.description === 'string' ? p.description : undefined,
+                subtask: typeof p.subtask === 'string' ? p.subtask : undefined,
+                priority: typeof p.priority === 'number' ? p.priority : 0,
+                difficulty: typeof p.difficulty === 'number' ? p.difficulty : undefined,
+                showProgress: typeof p.showProgress === 'boolean' ? p.showProgress : undefined,
+                tags: Array.isArray(p.tags) ? p.tags.map(String) : undefined,
+                endDate: typeof p.endDate === 'string' ? p.endDate : undefined,
                 cover: p.cover
             }));
         } else {
@@ -805,7 +774,14 @@ export const projectCards: Component<[
                 card.addEventListener('mousedown', async (e) => {
                     if (e.button === 1) {
                         e.preventDefault();
+                        e.stopPropagation();
                         await useNavigation(app, project.path, true);
+                    }
+                });
+
+                card.addEventListener('auxclick', (e) => {
+                    if (e.button === 1) {
+                        e.stopPropagation();
                     }
                 });
             }
@@ -888,10 +864,11 @@ export const projectCards: Component<[
             return filtered;
         };
 
-        // Clear and re-render projects only
-        projectsContainer.empty();
+        // Check if data actually changed before re-rendering
         const filteredProjects = renderProjects(projects, instance.data.currentFilter || '', instance.data.currentStatus || 'ongoing');
-        
+
+        projectsContainer.empty();
+
         if (filteredProjects.length === 0) {
             projectsContainer.createEl('div', { cls: 'project-cards-empty', text: 'No projects found' });
         } else {
@@ -900,9 +877,8 @@ export const projectCards: Component<[
             }
         }
     },
-
     settings: {
-        _render: async (containerEl: HTMLElement, app: any, plugin: ComponentsPlugin) => {
+        _render: async (containerEl: HTMLElement, app: App, plugin: ComponentsPlugin) => {
             const componentKey = 'project-cards';
             
             // Inject settings-specific styles if not already present
@@ -931,7 +907,7 @@ export const projectCards: Component<[
             const setAliases = async (arr: TagAliasEntry[]) => {
                 settings.tagAliases = JSON.stringify(arr);
                 await plugin.saveSettings();
-                refreshAllProjectCards();
+                Component.refreshAllInstances('project-cards');
             };
 
             const getColors = (): TagColorEntry[] => {
@@ -944,7 +920,7 @@ export const projectCards: Component<[
             const setColors = async (arr: TagColorEntry[]) => {
                 settings.tagColors = JSON.stringify(arr);
                 await plugin.saveSettings();
-                refreshAllProjectCards();
+                Component.refreshAllInstances('project-cards');
             };
 
             // ========== Tag Aliases Section ==========

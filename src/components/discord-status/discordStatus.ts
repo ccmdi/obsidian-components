@@ -103,10 +103,17 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
         el.appendChild(tooltip);
 
         let ws: WebSocket | null = null;
-        let reconnectTimeout: NodeJS.Timeout;
+        let reconnectTimeout: NodeJS.Timeout | null = null;
         let heartbeatInterval: NodeJS.Timeout;
         let activityUpdateInterval: NodeJS.Timeout;
         let isDestroyed = false;
+
+        const clearReconnectTimeout = () => {
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+                reconnectTimeout = null;
+            }
+        };
         let currentActivities: DiscordActivity[] = [];
 
         const getStatusColor = (status: string) => {
@@ -430,6 +437,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
                 debug('Discord WebSocket closed:', event.code, event.reason);
                 connectionIndicator.classList.add('disconnected');
                 clearInterval(heartbeatInterval);
+                clearReconnectTimeout();
 
                 // Handle specific error codes
                 if (event.code === 4004 || event.code === 4006) {
@@ -441,7 +449,6 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
                             connectWebSocket();
                         }
                     }, 5000);
-                    ComponentInstance.addInterval(instance!, reconnectTimeout);
                 }
             };
 
@@ -461,6 +468,7 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
 
         ComponentInstance.addCleanup(instance, () => {
             isDestroyed = true;
+            clearReconnectTimeout();
             if (ws) {
                 ws.close();
                 ws = null;

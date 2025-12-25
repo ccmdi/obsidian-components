@@ -98,4 +98,14 @@ export const anthropicUsageStyles = /*css*/`
         color: var(--text-error);
         font-size: 12px;
     }
+
+    .anthropic-usage-retrying .anthropic-usage-error {
+        color: var(--text-muted);
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+    }
 `;

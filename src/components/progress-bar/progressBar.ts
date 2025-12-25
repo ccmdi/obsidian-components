@@ -1,6 +1,4 @@
-import type { App, MarkdownPostProcessorContext } from 'obsidian';
 import type { Component } from 'components';
-import { ComponentInstance } from 'components';
 import { progressBarStyles } from './styles';
 
 function animateValue(element: HTMLElement, start: number, end: number, duration: number) {
@@ -31,10 +29,9 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 	name: 'Progress Bar',
 	description: 'Display a progress bar with percentage.',
 	icon: 'bar-chart-2',
-	refresh: 'metadataChanged',
 	args: {
 		progress: {
-			description: 'Progress value (0-100). Can use frontmatter: progress=fm.progress',
+			description: 'Progress value (0-100)',
 			default: '0',
 		},
 		height: {

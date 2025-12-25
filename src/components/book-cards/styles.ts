@@ -99,4 +99,56 @@ p.book-progress {
     background: var(--background-secondary);
     border-radius: 6px;
 }
+
+/* ========== Sidebar / Widget Space Styles ========== */
+
+.in-sidebar .books-container,
+.widget-space .books-container {
+    padding: 8px;
+    gap: 8px;
+    background-color: transparent;
+}
+
+.in-sidebar .book-card,
+.widget-space .book-card {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    padding: 10px;
+    gap: 10px;
+}
+
+.in-sidebar .book-card:hover,
+.widget-space .book-card:hover {
+    border-color: var(--background-modifier-border-hover);
+}
+
+.in-sidebar .book-cover,
+.widget-space .book-cover {
+    width: 50px;
+    height: 75px;
+}
+
+.in-sidebar .book-title,
+.widget-space .book-title {
+    font-size: 1.1em;
+    margin: 0 0 4px 0;
+}
+
+.in-sidebar .book-author,
+.widget-space .book-author {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    margin: 0 0 8px 0;
+    font-weight: normal;
+}
+
+.in-sidebar .book-progress,
+.widget-space .book-progress {
+    font-size: 0.9em;
+}
+
+.in-sidebar .book-cards-empty,
+.widget-space .book-cards-empty {
+    padding: 20px 10px;
+}
 `;

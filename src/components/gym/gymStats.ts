@@ -67,7 +67,7 @@ export const gymStats: Component<['query']> = {
 
         // Aggregate data by exercise
         const exerciseData: { [key: string]: ExerciseData } = {};
-        let totalWorkouts = workoutFiles.length;
+        const totalWorkouts = workoutFiles.length;
         let totalSetsCompleted = 0;
 
         workoutFiles.forEach(workout => {

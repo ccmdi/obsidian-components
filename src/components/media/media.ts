@@ -9,6 +9,7 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
     keyName: 'media',
     icon: 'play-circle',
     aliases: ['random-media'],
+    refresh: 'leafChanged',
     args: {
         folder: {
             description: 'Folder to search for media files, or path to specific file',
@@ -91,22 +92,23 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
 
         files.sort((a, b) => a.name.localeCompare(b.name));
 
+        const sourceFile = app.vault.getFileByPath(ctx.sourcePath);
+        const sourceCache = sourceFile ? app.metadataCache.getFileCache(sourceFile) : null;
+        //TODO in the future could register this
+
         const selectRandomFile = (): TFile => {
-            const currentFile = app.workspace.getActiveFile();
-            const seed = currentFile ? currentFile.stat.ctime : Date.now();
+            const seed = sourceFile ? sourceFile.stat.ctime : Date.now();
             const index = Math.abs(seed) % files.length;
             return files[index];
         };
 
         let selectedFile: TFile | undefined = undefined;
-        const currentFile = app.workspace.getActiveFile();
 
-        if (writeFM && currentFile) {
-            const fileCache = app.metadataCache.getFileCache(currentFile);
-            const existingMedia = fileCache?.frontmatter?.[fmKey];
+        if (writeFM && sourceFile) {
+            const existingMedia = sourceCache?.frontmatter?.[fmKey];
 
             if (existingMedia) {
-                const existingFile = app.metadataCache.getFirstLinkpathDest(existingMedia.replace(/\[\[|\]\]/g, ''), currentFile.path);
+                const existingFile = app.metadataCache.getFirstLinkpathDest(existingMedia.replace(/\[\[|\]\]/g, ''), sourceFile.path);
                 if (existingFile && files.includes(existingFile)) {
                     selectedFile = existingFile;
                 }
@@ -138,9 +140,9 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
                 mediaContainer.empty();
                 renderMedia(selectedFile, mediaContainer);
 
-                if (writeFM && currentFile && selectedFile) {
+                if (writeFM && sourceFile && selectedFile) {
                     try {
-                        await app.fileManager.processFrontMatter(currentFile, (frontmatter) => {
+                        await app.fileManager.processFrontMatter(sourceFile, (frontmatter) => {
                             frontmatter[fmKey] = `[[${selectedFile!.path}]]`;
                         });
                     } catch (error) {
@@ -155,14 +157,13 @@ export const media: Component<['folder', 'centered', 'writeFM', 'interactive']> 
         renderMedia(selectedFile, mediaContainer);
         el.appendChild(mediaContainer);
 
-        if (writeFM && currentFile && !interactive) {
-            const fileCache = app.metadataCache.getFileCache(currentFile);
-            const existingMedia = fileCache?.frontmatter?.[fmKey];
+        if (writeFM && sourceFile && !interactive) {
+            const existingMedia = sourceCache?.frontmatter?.[fmKey];
             const expectedPath = `[[${selectedFile.path}]]`;
 
             if (existingMedia !== expectedPath) {
                 try {
-                    await app.fileManager.processFrontMatter(currentFile, (frontmatter) => {
+                    await app.fileManager.processFrontMatter(sourceFile, (frontmatter) => {
                         frontmatter[fmKey] = expectedPath;
                     });
                 } catch (error) {
