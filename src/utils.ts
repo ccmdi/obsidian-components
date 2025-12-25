@@ -561,6 +561,7 @@ export async function getTasks(app: App, file: TFile, options: {
  * - Tag queries: #tagname
  * - Quoted folder paths: "folder/path"
  * - Unquoted folder paths: folder/path
+ * - Property filters: [prop], [!prop], [prop=val], [prop!=val], [prop>5], [prop~=partial]
  * - AND operator: "#tag AND folder/path"
  * - OR operator: "#tag1 OR #tag2"
  * - Combined: "#tag1 OR #tag2 AND folder/path" (AND has higher precedence)
@@ -576,6 +577,68 @@ export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: s
 
     // Helper function to check if a single query part matches
     const matchesPart = (part: string): boolean => {
+        // Property filter: [prop], [!prop], [prop=val], [prop!=val], [prop>5], etc.
+        if (part.startsWith('[') && part.endsWith(']')) {
+            const inner = part.slice(1, -1).trim();
+
+            // [!property] - property doesn't exist or is falsy
+            if (inner.startsWith('!')) {
+                const prop = inner.slice(1).trim();
+                return !(prop in frontmatter) || frontmatter[prop] === null || frontmatter[prop] === undefined;
+            }
+
+            // Check for operators: !=, >=, <=, >, <, ~=, =
+            const operatorMatch = inner.match(/^([a-zA-Z0-9_-]+)\s*(!=|>=|<=|~=|>|<|=)\s*(.+)$/);
+            if (operatorMatch) {
+                const [, prop, operator, rawValue] = operatorMatch;
+                const propValue = frontmatter[prop];
+
+                // Property doesn't exist
+                if (propValue === undefined || propValue === null) {
+                    return operator === '!=';
+                }
+
+                // Parse the comparison value - remove quotes if present
+                let compareValue: string | number = rawValue.trim();
+                if ((compareValue.startsWith('"') && compareValue.endsWith('"')) ||
+                    (compareValue.startsWith("'") && compareValue.endsWith("'"))) {
+                    compareValue = compareValue.slice(1, -1);
+                }
+
+                // Try numeric comparison
+                const numCompare = parseFloat(compareValue as string);
+                const numProp = typeof propValue === 'number' ? propValue : parseFloat(String(propValue));
+                const useNumeric = !isNaN(numCompare) && !isNaN(numProp);
+
+                switch (operator) {
+                    case '=':
+                        if (useNumeric) return numProp === numCompare;
+                        return String(propValue).toLowerCase() === String(compareValue).toLowerCase();
+                    case '!=':
+                        if (useNumeric) return numProp !== numCompare;
+                        return String(propValue).toLowerCase() !== String(compareValue).toLowerCase();
+                    case '>':
+                        return useNumeric && numProp > numCompare;
+                    case '<':
+                        return useNumeric && numProp < numCompare;
+                    case '>=':
+                        return useNumeric && numProp >= numCompare;
+                    case '<=':
+                        return useNumeric && numProp <= numCompare;
+                    case '~=':
+                        return String(propValue).toLowerCase().includes(String(compareValue).toLowerCase());
+                }
+            }
+
+            // [property] - property exists and is truthy
+            const prop = inner.trim();
+            return prop in frontmatter &&
+                   frontmatter[prop] !== null &&
+                   frontmatter[prop] !== undefined &&
+                   frontmatter[prop] !== false &&
+                   frontmatter[prop] !== '';
+        }
+
         // Tag query
         if (part.startsWith('#')) {
             return allTags.some(tag => tag.includes(part.slice(1)));
