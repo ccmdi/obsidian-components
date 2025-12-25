@@ -493,16 +493,29 @@ export namespace Component {
             }
         });
 
-        if (!isEnabled) {
-            return;
-        }
-
+        // Create instance and register refresh handlers BEFORE checking enabled
+        // This ensures disabled components can still react to changes (e.g. enabled=fm.showWidget)
         const { instance, isNew } = getOrCreateInstance(component, el, ctx, app, {
             usesFm,
             usesFile,
             usesSelf,
             isInSidebarContext
         });
+
+        el.dataset.componentKey = component.keyName;
+        if (Component.hasArgs(component)) {
+            el.dataset.componentArgs = JSON.stringify(originalArgs);
+        }
+        el.dataset.componentSource = ctx.sourcePath;
+
+        instance.data.triggerRefresh = async () => {
+            if (!component.renderRefresh) el.empty();
+            Component.render(component, source, el, ctx, app, componentSettings);
+        };
+
+        if (!isEnabled) {
+            return;
+        }
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {
@@ -514,19 +527,8 @@ export namespace Component {
         // Internal global class
         el.addClass('component');
 
-        el.dataset.componentKey = component.keyName;
-        if (Component.hasArgs(component)) {
-            el.dataset.componentArgs = JSON.stringify(originalArgs);
-        }
-        el.dataset.componentSource = ctx.sourcePath;
-
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
-
-        instance.data.triggerRefresh = async () => {
-            if (!component.renderRefresh) el.empty();
-            Component.render(component, source, el, ctx, app, componentSettings);
-        };
         
         let renderFn: RenderFunction<readonly string[]>;
         if(!isNew && component.renderRefresh) {
