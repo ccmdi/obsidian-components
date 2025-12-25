@@ -100,6 +100,97 @@ export namespace ComponentInstance {
             addInterval(instance, interval);
         }
     }
+
+    export interface RetryOptions {
+        maxRetries?: number;
+        baseDelay?: number;
+        maxDelay?: number;
+        onError?: (error: Error, attempt: number, nextRetryMs: number | null) => void;
+        onSuccess?: () => void;
+    }
+
+    /**
+     * Creates a retryable async operation with exponential backoff.
+     * Automatically cleans up pending retries when the component is destroyed.
+     *
+     * @param instance - The component instance (for cleanup registration)
+     * @param operation - The async operation to run
+     * @param options - Retry configuration
+     * @returns Object with retry() to manually trigger and cancel() to stop retries
+     */
+    export function createRetryableOperation<T>(
+        instance: ComponentInstance,
+        operation: () => Promise<T>,
+        options: RetryOptions = {}
+    ): { retry: () => Promise<T | null>; cancel: () => void } {
+        const {
+            maxRetries = 5,
+            baseDelay = 5000,
+            maxDelay = 60000,
+            onError,
+            onSuccess
+        } = options;
+
+        let retryTimeout: NodeJS.Timeout | null = null;
+        let currentAttempt = 0;
+        let cancelled = false;
+
+        const cancel = () => {
+            cancelled = true;
+            if (retryTimeout) {
+                clearTimeout(retryTimeout);
+                retryTimeout = null;
+            }
+        };
+
+        addCleanup(instance, cancel);
+
+        const scheduleRetry = (attempt: number): Promise<T | null> => {
+            return new Promise((resolve) => {
+                if (cancelled) {
+                    resolve(null);
+                    return;
+                }
+
+                const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
+
+                retryTimeout = setTimeout(async () => {
+                    retryTimeout = null;
+                    const result = await executeWithRetry();
+                    resolve(result);
+                }, delay);
+            });
+        };
+
+        const executeWithRetry = async (): Promise<T | null> => {
+            if (cancelled) return null;
+
+            try {
+                const result = await operation();
+                currentAttempt = 0;
+                onSuccess?.();
+                return result;
+            } catch (error) {
+                currentAttempt++;
+                const canRetry = currentAttempt < maxRetries;
+                const nextDelay = canRetry
+                    ? Math.min(baseDelay * Math.pow(2, currentAttempt - 1), maxDelay)
+                    : null;
+
+                onError?.(error as Error, currentAttempt, nextDelay);
+
+                if (canRetry && !cancelled) {
+                    return scheduleRetry(currentAttempt - 1);
+                }
+                return null;
+            }
+        };
+
+        return {
+            retry: executeWithRetry,
+            cancel
+        };
+    }
 }
 
 export interface ComponentArg {
@@ -347,6 +438,7 @@ export namespace Component {
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
         debug('render', component.keyName, el.dataset.componentSource);
+        debug(ctx)
         const startTime = Date.now();
         
         // Dynamic context: use active file's path instead of source file's path

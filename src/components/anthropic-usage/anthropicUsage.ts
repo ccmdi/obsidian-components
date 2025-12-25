@@ -86,68 +86,98 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
             }
         };
 
-        const fetchAndRender = async () => {
-            try {
-                const response = await requestUrl({
-                    url: `https://claude.ai/api/organizations/${args.organizationId}/usage`,
-                    headers: {
-                        'Cookie': `sessionKey=${args.sessionKey}`
-                    }
-                });
-                const usageData: AnthropicUsageData = JSON.parse(response.text);
+        const renderSuccess = (usageData: AnthropicUsageData) => {
+            widget.empty();
+            widget.removeClass('anthropic-usage-retrying');
 
-                // Clear previous content
-                widget.empty();
+            // Icon
+            iconContainer = widget.createEl('div', { cls: 'anthropic-usage-icon' });
+            iconContainer.style.cursor = 'pointer';
+            iconContainer.addEventListener('click', handleIconClick);
+            const icon = createColoredIcon('claude');
+            iconContainer.appendChild(icon);
 
-                // Icon
-                iconContainer = widget.createEl('div', { cls: 'anthropic-usage-icon' });
-                iconContainer.style.cursor = 'pointer';
-                iconContainer.addEventListener('click', handleIconClick);
-                const icon = createColoredIcon('claude');
-                iconContainer.appendChild(icon);
+            // Percentage value
+            widget.createEl('div', {
+                cls: 'anthropic-usage-value',
+                text: `${usageData.five_hour.utilization}%`
+            });
 
-                // Percentage value
-                widget.createEl('div', {
-                    cls: 'anthropic-usage-value',
-                    text: `${usageData.five_hour.utilization}%`
-                });
+            // Bar and info wrapper
+            const barWrapper = widget.createEl('div', { cls: 'anthropic-usage-bar-wrapper' });
 
-                // Bar and info wrapper
-                const barWrapper = widget.createEl('div', { cls: 'anthropic-usage-bar-wrapper' });
+            // Top info row
+            const info = barWrapper.createEl('div', { cls: 'anthropic-usage-info' });
+            info.createEl('div', {
+                cls: 'anthropic-usage-label',
+                text: 'Usage'
+            });
 
-                // Top info row
-                const info = barWrapper.createEl('div', { cls: 'anthropic-usage-info' });
-                info.createEl('div', {
-                    cls: 'anthropic-usage-label',
-                    text: 'Usage'
-                });
-
-                // Only show reset time if resets_at is a valid date
-                if (usageData.five_hour.resets_at && window.moment(usageData.five_hour.resets_at).isValid()) {
-                    const resetMoment = window.moment(usageData.five_hour.resets_at);
-                    const resetTime = resetMoment.format('h:mm A');
-                    let resetText = `resets ${resetTime}`;
-                    if (parseBoolean(args.showRelativeTime)) {
-                        const relativeTime = resetMoment.fromNow(true);
-                        resetText += ` (${relativeTime})`;
-                    }
-                    info.createEl('div', {
-                        cls: 'anthropic-usage-reset',
-                        text: resetText
-                    });
+            // Only show reset time if resets_at is a valid date
+            if (usageData.five_hour.resets_at && window.moment(usageData.five_hour.resets_at).isValid()) {
+                const resetMoment = window.moment(usageData.five_hour.resets_at);
+                const resetTime = resetMoment.format('h:mm A');
+                let resetText = `resets ${resetTime}`;
+                if (parseBoolean(args.showRelativeTime)) {
+                    const relativeTime = resetMoment.fromNow(true);
+                    resetText += ` (${relativeTime})`;
                 }
-
-                // Progress bar
-                const bar = barWrapper.createEl('div', { cls: 'anthropic-usage-bar' });
-                bar.createEl('div', {
-                    cls: 'anthropic-usage-bar-fill',
-                    attr: { style: `width: ${usageData.five_hour.utilization}%` }
+                info.createEl('div', {
+                    cls: 'anthropic-usage-reset',
+                    text: resetText
                 });
+            }
 
-            } catch (error) {
-                widget.empty();
-                const errorDiv = widget.createEl('div', { cls: 'anthropic-usage-error' });
-                errorDiv.textContent = `Failed to fetch usage: ${error.message || 'Unknown error'}`;
+            // Progress bar
+            const bar = barWrapper.createEl('div', { cls: 'anthropic-usage-bar' });
+            bar.createEl('div', {
+                cls: 'anthropic-usage-bar-fill',
+                attr: { style: `width: ${usageData.five_hour.utilization}%` }
+            });
+        };
+
+        const renderError = (error: Error, attempt: number, nextRetryMs: number | null) => {
+            widget.empty();
+
+            const errorDiv = widget.createEl('div', { cls: 'anthropic-usage-error' });
+            const errorMsg = error.message || 'Unknown error';
+
+            if (nextRetryMs !== null) {
+                widget.addClass('anthropic-usage-retrying');
+                const seconds = Math.round(nextRetryMs / 1000);
+                errorDiv.textContent = `Failed to fetch. Retrying in ${seconds}s...`;
+            } else {
+                widget.removeClass('anthropic-usage-retrying');
+                errorDiv.textContent = `Failed to fetch usage: ${errorMsg}`;
+            }
+        };
+
+        const fetchUsage = async (): Promise<AnthropicUsageData> => {
+            const response = await requestUrl({
+                url: `https://claude.ai/api/organizations/${args.organizationId}/usage`,
+                headers: {
+                    'Cookie': `sessionKey=${args.sessionKey}`
+                }
+            });
+            return JSON.parse(response.text);
+        };
+
+        const { retry: fetchWithRetry } = ComponentInstance.createRetryableOperation(
+            instance,
+            fetchUsage,
+            {
+                maxRetries: 5,
+                baseDelay: 5000,
+                maxDelay: 60000,
+                onError: renderError,
+                onSuccess: () => widget.removeClass('anthropic-usage-retrying')
+            }
+        );
+
+        const fetchAndRender = async () => {
+            const data = await fetchWithRetry();
+            if (data) {
+                renderSuccess(data);
             }
         };
 
