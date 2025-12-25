@@ -79,14 +79,16 @@
 
 .components-search-setting {
   margin-bottom: 16px;
+  display: block;
 }
 
 .components-search-setting .setting-item-control {
-  width: 100%;
+  display: block;
 }
 
 .components-search-setting input[type="search"] {
   width: 100%;
+  max-width: 100%;
 }
 
 .setting-tab {
