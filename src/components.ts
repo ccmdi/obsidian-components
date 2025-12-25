@@ -71,22 +71,30 @@ export namespace ComponentInstance {
     }
 
     export function createUpdateLoop(
-        instance: ComponentInstance, 
-        updateFn: () => void, 
+        instance: ComponentInstance,
+        updateFn: () => void,
         intervalMs: number = 1000,
         syncToInterval: boolean = false
     ): void {
         updateFn();
-        
+
         if (syncToInterval) {
-            const now = Date.now();
-            const msUntilNextInterval = intervalMs - (now % intervalMs);
-            
-            setTimeout(() => {
-                updateFn();
-                const interval = setInterval(updateFn, intervalMs);
-                addInterval(instance, interval);
-            }, msUntilNextInterval);
+            const scheduleNext = () => {
+                const now = Date.now();
+                const msUntilNext = intervalMs - (now % intervalMs);
+                instance.data.pendingTimeout = setTimeout(() => {
+                    updateFn();
+                    scheduleNext();
+                }, msUntilNext);
+            };
+
+            scheduleNext();
+
+            addCleanup(instance, () => {
+                if (instance.data.pendingTimeout) {
+                    clearTimeout(instance.data.pendingTimeout);
+                }
+            });
         } else {
             const interval = setInterval(updateFn, intervalMs);
             addInterval(instance, interval);
