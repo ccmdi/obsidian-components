@@ -521,10 +521,18 @@ export namespace Component {
         if (!isEnabled) {
             el.empty();
             el.addClass('component-disabled');
+            // Only hide on re-render, not initial (Muuri needs to see item on init)
+            if (!isNew) {
+                const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
+                if (container) container.style.display = 'none';
+            }
             return;
         }
 
         el.removeClass('component-disabled');
+        // Show the container if it was hidden
+        const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
+        if (container) container.style.display = '';
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {
