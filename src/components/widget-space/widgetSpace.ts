@@ -172,6 +172,8 @@ export const widgetSpace: Component<['layout']> = {
         let widgetCounter = 0;
         let muuri!: MuuriGridExt; // Assigned in initMuuri() before any use
 
+        const isInSidebar = !!el.closest('.in-sidebar');
+
         // Width tracking
         const updateWidthVariable = () => {
             container.style.setProperty('--widget-space-width', `${grid.offsetWidth}px`);
@@ -211,7 +213,7 @@ export const widgetSpace: Component<['layout']> = {
         // Widget management
         const addWidget = async (componentKey: string, componentName: string, componentArgs: Record<string, string> = {}) => {
             const widgetId = `widget-${++widgetCounter}`;
-            const widget = el.createEl('div', { cls: 'widget-item' });
+            const widget = el.createEl('div', { cls: `widget-item${isInSidebar ? ' in-sidebar' : ''}` });
             widget.dataset.widgetId = widgetId;
             widget.dataset.componentKey = componentKey;
 
