@@ -1,4 +1,4 @@
-import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent } from "obsidian";
+import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent, setIcon } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import { renderExternalLinkToElement } from "utils";
@@ -87,6 +87,7 @@ export class ComponentArgsModal extends Modal {
     onSubmit?: (args: Record<string, string>) => void;
     mode: 'sidebar' | 'insert' | 'widget-space';
     submitText?: string;
+    currentTab: 'form' | 'raw' = 'form';
 
     constructor(
         app: App,
@@ -112,25 +113,114 @@ export class ComponentArgsModal extends Modal {
         return ComponentsPlugin.instance?.settings?.modalArgSuggest ?? true;
     }
 
+    private argsToRaw(): string {
+        return Object.entries(this.args)
+            .filter(([, value]) => value && value.trim() !== '')
+            .map(([key, value]) => `${key}="${value}"`)
+            .join('\n');
+    }
+
+    private rawToArgs(raw: string): void {
+        this.args = {};
+        const lines = raw.split('\n');
+        for (const line of lines) {
+            const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s*=\s*["']?(.*?)["']?\s*$/);
+            if (match) {
+                const [, key, value] = match;
+                this.args[key] = value;
+            }
+        }
+    }
+
     onOpen() {
         const { contentEl, titleEl } = this;
         contentEl.empty();
+        contentEl.addClass('component-args-modal');
 
-        // Set the title in the modal header
         titleEl.setText(`Configure ${this.component.name || this.component.keyName}`);
 
         this.scope.register([], 'Enter', (evt) => {
             const suggestEl = document.querySelector('.suggestion-container');
             if (suggestEl) return;
+            if (this.currentTab === 'raw') return; // Allow Enter in raw textarea
 
             evt.preventDefault();
             this.handleSubmit();
         });
 
-        // Create form for each arg
+        // Tab switcher
+        const tabContainer = contentEl.createEl('div', { cls: 'component-args-tabs' });
+        const formTab = tabContainer.createEl('button', { cls: 'component-args-tab is-active' });
+        setIcon(formTab, 'settings');
+        const rawTab = tabContainer.createEl('button', { cls: 'component-args-tab' });
+        setIcon(rawTab, 'code');
+
+        // Content containers
+        const formContent = contentEl.createEl('div', { cls: 'component-args-form-content' });
+        const rawContent = contentEl.createEl('div', { cls: 'component-args-raw-content' });
+        rawContent.style.display = 'none';
+
+        // Raw textarea
+        const rawTextarea = rawContent.createEl('textarea', {
+            cls: 'component-args-raw-textarea',
+            attr: { placeholder: 'key="value"\nkey2="value2"', rows: '10' }
+        });
+        rawTextarea.value = this.argsToRaw();
+
+        // Tab switching
+        formTab.onclick = () => {
+            if (this.currentTab === 'raw') {
+                this.rawToArgs(rawTextarea.value);
+                this.renderFormContent(formContent);
+            }
+            this.currentTab = 'form';
+            formTab.addClass('is-active');
+            rawTab.removeClass('is-active');
+            formContent.style.display = '';
+            rawContent.style.display = 'none';
+        };
+
+        rawTab.onclick = () => {
+            if (this.currentTab === 'form') {
+                rawTextarea.value = this.argsToRaw();
+            }
+            this.currentTab = 'raw';
+            rawTab.addClass('is-active');
+            formTab.removeClass('is-active');
+            rawContent.style.display = '';
+            formContent.style.display = 'none';
+        };
+
+        rawTextarea.oninput = () => {
+            this.rawToArgs(rawTextarea.value);
+        };
+
+        // Render form content
+        this.renderFormContent(formContent);
+
+        // Buttons
+        const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
+
+        const submitBtn = buttonContainer.createEl('button', {
+            text: this.submitText || (this.mode === 'insert' ? 'Insert Code Block' : this.mode === 'widget-space' ? 'Add Widget' : 'Open in Sidebar'),
+            cls: 'mod-cta'
+        });
+        submitBtn.onclick = () => {
+            this.handleSubmit();
+        };
+
+        const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
+        cancelBtn.onclick = () => {
+            this.close();
+        };
+    }
+
+    private renderFormContent(container: HTMLElement): void {
+        container.empty();
+
         if (Component.hasArgs(this.component)) {
             Object.entries(this.component.args).forEach(([argKey, argConfig]) => {
-                const setting = new Setting(contentEl)
+                const setting = new Setting(container)
                     .setName(argKey)
                     .addText(text => {
                         text.setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
@@ -150,30 +240,13 @@ export class ComponentArgsModal extends Modal {
                     renderExternalLinkToElement(description, setting.descEl);
                 }
 
-                // Mark required args
                 if (argConfig?.required === true) {
                     setting.nameEl.createSpan({ text: ' *', cls: 'mod-warning' });
                 }
             });
         } else {
-            contentEl.createEl('p', { text: 'This component has no configurable arguments.' });
+            container.createEl('p', { text: 'This component has no configurable arguments.' });
         }
-
-        // Buttons
-        const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
-
-        const submitBtn = buttonContainer.createEl('button', {
-            text: this.submitText || (this.mode === 'insert' ? 'Insert Code Block' : this.mode === 'widget-space' ? 'Add Widget' : 'Open in Sidebar'),
-            cls: 'mod-cta'
-        });
-        submitBtn.onclick = () => {
-            this.handleSubmit();
-        };
-
-        const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
-        cancelBtn.onclick = () => {
-            this.close();
-        };
     }
 
     /**
