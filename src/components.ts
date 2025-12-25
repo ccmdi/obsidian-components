@@ -347,6 +347,8 @@ export namespace Component {
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
         debug('render', component.keyName, el.dataset.componentSource);
+        const startTime = Date.now();
+        
         // Dynamic context: use active file's path instead of source file's path
         // Always apply in sidebar/widget-space context (no docId)
         const isInSidebarContext = !ctx.docId;
@@ -442,6 +444,9 @@ export namespace Component {
         }
 
         await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
+        
+        const endTime = Date.now();
+        debug(`render ${component.keyName} took ${endTime - startTime}ms`);
     }
 }
 
