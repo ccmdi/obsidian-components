@@ -1,5 +1,5 @@
 import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView } from "obsidian";
-import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSpecialVariables, parseArgsAliases } from "utils";
+import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
@@ -222,6 +222,7 @@ export type RefreshStrategyOptions =
     | 'metadataChanged'
     | 'fileModified'
     | 'anyMetadataChanged'
+    | 'queryMetadataChanged'
     | 'leafChanged'
     | 'daily'
     | 'hourly'
@@ -357,6 +358,17 @@ export namespace Component {
             app.metadataCache.on('changed', handler);
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
+        else if (refresh === 'queryMetadataChanged') {
+            const handler = (file: TFile, data: string, cache: CachedMetadata) => {
+                console.log("UPDATED", file, cache)
+                const query = instance.data.watchedQuery;
+                if (!query) return;
+                if (!matchesQuery(file, cache, query)) return;
+                instance.data.triggerRefresh();
+            };
+            app.metadataCache.on('changed', handler);
+            ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
+        }
         else if (refresh === 'leafChanged') {
             const isInSidebar = instance.element.closest('.in-sidebar') !== null;
             if (isInSidebar) {
@@ -422,7 +434,7 @@ export namespace Component {
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
         app: App,
-        options: { usesFm: boolean; usesFile: boolean; usesSelf: boolean; isInSidebarContext: boolean; fmKeys: string[]; fileKeys: string[] }
+        options: { usesFm: boolean; usesFile: boolean; usesSelf: boolean; isInSidebarContext: boolean; fmKeys: string[]; fileKeys: string[]; query?: string }
     ): { instance: ComponentInstance; isNew: boolean } {
         const existingId = el.dataset.componentId;
 
@@ -441,7 +453,8 @@ export namespace Component {
         }
 
         const registeredStrategies = new Set<string>();
-        instance.data.watchedKeys = { fmKeys: options.fmKeys, fileKeys: options.fileKeys }
+        instance.data.watchedKeys = { fmKeys: options.fmKeys, fileKeys: options.fileKeys };
+        instance.data.watchedQuery = options.query;
 
         const registerStrategy = (refresh: RefreshStrategyOptions) => {
             if (!refresh) return;
@@ -469,6 +482,9 @@ export namespace Component {
         }
         if ((options.usesFm || options.usesFile || options.usesSelf) && options.isInSidebarContext) {
             registerStrategy('leafChanged');
+        }
+        if (options.query) {
+            registerStrategy('queryMetadataChanged');
         }
 
         return { instance, isNew: true };
@@ -556,7 +572,8 @@ export namespace Component {
             usesSelf,
             isInSidebarContext,
             fmKeys,
-            fileKeys
+            fileKeys,
+            query: args.query
         });
         debug('INSTANCE',component.keyName, instance);
 
