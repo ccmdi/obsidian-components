@@ -288,9 +288,9 @@ export namespace Component {
     export function mergeWithDefaults(component: Component<readonly string[]>, args: Record<string, string>): Record<string, string> {
         const result = { ...args };
 
-        // Apply defaults for any missing args
+        // Apply defaults for any missing or empty args
         Object.entries(component.args || {}).forEach(([argKey, argConfig]) => {
-            if (!(argKey in result) && argConfig?.default !== undefined) {
+            if ((!(argKey in result) || result[argKey] === '') && argConfig?.default !== undefined) {
                 result[argKey] = argConfig.default;
             }
         });
