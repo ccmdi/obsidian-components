@@ -2,10 +2,10 @@
 
 ## Project Overview
 
-**Components** is an Obsidian plugin that adds custom, reusable widgets/components to Obsidian notes and sidebars. Users can embed these components using markdown code blocks (e.g., ````reminders``) with configurable arguments.
+**Components** is an Obsidian plugin that adds custom, reusable widgets/components to Obsidian notes and sidebars. Users can embed these components using markdown code blocks (e.g., `` ```reminders ``) with configurable arguments.
 
 - **Repository**: obsidian-components
-- **Version**: 0.2.0
+- **Version**: 0.4.0
 - **License**: MIT
 - **Author**: ccmdi
 - **Platform**: Cross-platform (not desktop-only)
@@ -30,11 +30,13 @@ limit=5
 ```
 
 ### Argument Parsing
-- **Standard args**: `KEY=value` → passed to component logic
-- **CSS override**: `KEY!=value` → forces CSS styling instead of component behavior
-- **Special keyword**: `enabled=false` → disables component rendering
-- **Special variables**: `$today`, `$now`, etc. → resolved at runtime
-- **Frontmatter support**: `path=@property` → reads from note's frontmatter
+- **Standard args**: `KEY=value` - passed to component logic
+- **CSS override**: `KEY!=value` - forces CSS styling instead of component behavior
+- **Class names**: `class=my-class` or `class="foo bar"` - adds CSS classes to element
+- **Special keyword**: `enabled=false` - disables component rendering
+- **Special variables**: `__TODAY__`, `__NOW__`, etc. - resolved at runtime
+- **Frontmatter support**: `path=fm.property` - reads from note's frontmatter
+- **File content**: `value=file.property` - reads from file's parsed content
 
 ## Architecture
 
@@ -43,12 +45,18 @@ limit=5
 obsidian-components/
 ├── src/
 │   ├── main.ts                 # Plugin entry point
-│   ├── components.ts           # Component registry & base interfaces
+│   ├── components.ts           # Component interfaces & lifecycle
+│   ├── components.register.ts  # Auto-generated component registry
 │   ├── settings.ts             # Plugin settings types
 │   ├── utils.ts                # Argument parsing & utilities
+│   ├── groups.ts               # Component grouping logic
+│   ├── debug.ts                # Debug logging utilities
+│   ├── ojs.ts                  # JavaScript execution (ojs blocks)
 │   ├── components/             # Individual component implementations
 │   │   ├── analytics/
 │   │   ├── anki-status/
+│   │   ├── anthropic-usage/
+│   │   ├── book-cards/
 │   │   ├── calendar/
 │   │   ├── clock/
 │   │   ├── countdown/
@@ -59,8 +67,11 @@ obsidian-components/
 │   │   ├── media/
 │   │   ├── navigate/
 │   │   ├── note-embed/
+│   │   ├── places/
 │   │   ├── progress-bar/
+│   │   ├── project-cards/
 │   │   ├── property-adder/
+│   │   ├── property-status/
 │   │   ├── reminders/
 │   │   ├── stat-chart/
 │   │   ├── timeline/
@@ -86,26 +97,39 @@ obsidian-components/
 - Handles settings persistence
 - Registers commands and sidebar views
 - Manages autocomplete feature
+- Registers ojs processor if enabled
 
 #### `src/components.ts`
-- Exports `COMPONENTS` array (all registered components)
 - Defines `Component<TArgs>` interface
 - Defines `ComponentInstance` for lifecycle management
+- Exports refresh strategy types
 - Provides `Component.render()` method that:
   1. Parses arguments from code block
-  2. Resolves special variables and frontmatter
-  3. Applies CSS overrides
+  2. Resolves special variables (fm.*, file.*, __TODAY__, etc.)
+  3. Applies CSS overrides and class names
   4. Validates required arguments
   5. Creates component instance
-  6. Renders component
-  7. Sets up cleanup hooks
+  6. Sets up refresh handlers
+  7. Renders component
+
+#### `src/components.register.ts`
+- **Auto-generated** by `scripts/auto-register-plugin.mjs`
+- Imports and exports all components
+- Do not edit manually - add/remove component files instead
 
 #### `src/utils.ts`
 - `parseArguments()`: Parses KEY=value pairs from code blocks
 - `validateArguments()`: Checks for required arguments
-- `parseFM()`: Resolves frontmatter references (@property)
-- `resolveSpecialVariables()`: Resolves $today, $now, etc.
-- `applyCssFromArgs()`: Applies CSS from arguments
+- `parseFM()`: Resolves frontmatter references (fm.property)
+- `parseFileContent()`: Resolves file content references (file.property)
+- `resolveSpecialVariables()`: Resolves __TODAY__, __NOW__, etc.
+- `applyCssFromArgs()`: Applies CSS and class names from arguments
+- `parseBoolean()`: Converts string args to boolean
+
+#### `src/ojs.ts`
+- Executes JavaScript in `` ```ojs `` code blocks
+- Provides `app`, `el`, `ctx`, `api`, and `obsidian` in scope
+- Users can destructure: `const { MarkdownRenderer } = obsidian;`
 
 ### Component Interface
 
@@ -114,17 +138,41 @@ interface Component<TArgs extends readonly string[]> {
     keyName: string;                    // Unique identifier
     name?: string;                      // Display name
     description?: string;               // Component description
+    icon?: string;                      // Icon identifier
+    enabled?: boolean;                  // Set false to disable (default true)
     args: Partial<Record<TArgs[number], ComponentArg>>;  // Argument definitions
     aliases?: string[];                 // Alternative names
     render: (args, el, ctx, app, instance, settings) => Promise<void>;
-    refresh?: boolean;                  // Auto-refresh on file changes
+    renderRefresh?: RenderFunction;     // Optional optimized refresh render
+    refresh?: RefreshStrategy;          // When to auto-refresh
     isMountable: boolean;              // Can be placed in sidebar
-    settings?: ComponentSetting[];      // Component-specific settings
+    settings?: ComponentSettings;       // Component-specific settings
     does?: ComponentAction[];          // Required permissions
     group?: ComponentGroup;            // Component grouping
     styles: string | null;             // Component-specific CSS
 }
 ```
+
+### Refresh Strategies
+
+Components can specify when they should automatically re-render:
+
+```typescript
+type RefreshStrategy =
+    | 'metadataChanged'    // When source file's metadata changes
+    | 'fileModified'       // When source file is modified
+    | 'anyMetadataChanged' // When any file's metadata changes
+    | 'leafChanged'        // When active leaf changes (sidebar only)
+    | 'daily'              // At midnight
+    | 'hourly'             // At the top of each hour
+    | { type: 'timeElapsed'; interval: number }  // Custom interval (ms)
+    | RefreshStrategy[]    // Multiple strategies
+    | null;
+```
+
+Strategies are also auto-inferred from argument usage:
+- `fm.*` args add `metadataChanged` + `leafChanged` (in sidebar)
+- `file.*` args add `fileModified` + `leafChanged` (in sidebar)
 
 ### Component Instance Lifecycle
 
@@ -136,6 +184,7 @@ interface ComponentInstance {
         intervals?: NodeJS.Timeout[];     // Auto-cleared on destroy
         observers?: MutationObserver[];   // Auto-disconnected on destroy
         cleanup?: (() => void)[];         // Custom cleanup functions
+        triggerRefresh?: () => void;      // Manual refresh trigger
         [key: string]: any;               // Component-specific data
     };
     destroy: () => void;
@@ -149,6 +198,8 @@ interface ComponentInstance {
 ### Core Components
 - **analytics** - Vault health metrics
 - **anki-status** - Anki review status
+- **anthropic-usage** - Anthropic API usage stats
+- **book-cards** - Book display cards
 - **calendar** - Calendar view
 - **clock** - Real-time clock
 - **countdown** - Countdown timer
@@ -158,8 +209,11 @@ interface ComponentInstance {
 - **media** - Media player
 - **navigate** - Navigate between periodic notes
 - **note-embed** - Embed note content
+- **places** - Location/places display
 - **progress-bar** - Progress visualization
+- **project-cards** - Project display cards
 - **property-adder** - Add properties to notes
+- **property-status** - Display property status
 - **reminders** - Due tasks from periodic notes
 - **stat-chart** - Chart date-mapped array data
 - **timeline** - Timeline of periodic notes
@@ -176,7 +230,7 @@ interface ComponentInstance {
 2. **Create component file**: `myComponent.ts`
 3. **Define component**:
 ```typescript
-import { Component } from "components";
+import { Component, ComponentInstance } from "components";
 
 export const myComponent: Component<['arg1', 'arg2']> = {
     keyName: 'my-component',
@@ -194,21 +248,42 @@ export const myComponent: Component<['arg1', 'arg2']> = {
     },
     isMountable: true,
     styles: `/* Component-specific CSS */`,
+    refresh: 'metadataChanged',  // or null, or array of strategies
     render: async (args, el, ctx, app, instance) => {
-        // Component logic here
         const container = el.createDiv({ cls: 'my-component' });
         container.textContent = args.arg1;
 
-        // Example: Add update interval
+        // Example: Add drift-free update interval
         ComponentInstance.createUpdateLoop(instance, () => {
             // Update logic
-        }, 1000);
+        }, 1000, true);  // true = sync to interval boundary
     }
 };
 ```
 
-4. **Register component**: Add to `COMPONENTS` array in `src/components.ts`
-5. **Import component**: Add import statement in `src/components.ts`
+4. **Run build** - Component is auto-registered via `scripts/auto-register-plugin.mjs`
+
+To disable a component without removing it, set `enabled: false` in the component definition.
+
+## OJS - JavaScript Execution
+
+Enable in settings to allow `` ```ojs `` code blocks:
+
+```js
+const { MarkdownRenderer, Notice } = obsidian;
+
+const container = el.createDiv();
+await MarkdownRenderer.render(app, '**Hello**', container, ctx.sourcePath, ctx);
+
+new Notice('Rendered!');
+```
+
+Available in scope:
+- `app` - Obsidian App instance
+- `el` - Container HTMLElement
+- `ctx` - MarkdownPostProcessorContext
+- `api` - Helper API (grid, card builders)
+- `obsidian` - Full obsidian module (destructure what you need)
 
 ## Component Settings
 
@@ -262,11 +337,11 @@ Automatically updates `manifest.json` and `versions.json`.
 
 ## Common Patterns
 
-### Periodic Updates
+### Drift-Free Periodic Updates
 ```typescript
 ComponentInstance.createUpdateLoop(instance, () => {
     // Update UI
-}, 1000, true);  // true = sync to interval boundary
+}, 1000, true);  // true = sync to interval boundary (no drift)
 ```
 
 ### Reading Files
@@ -284,14 +359,14 @@ const frontmatter = cache?.frontmatter;
 ```
 
 ### CSS from Arguments
-Arguments automatically become CSS custom properties:
+Non-component arguments automatically become inline CSS:
 ```
 ```my-component
 color=red
 font-size=16px
+class=custom-class
 ```
 ```
-These can be accessed in CSS as `var(--color)` and `var(--font-size)`.
 
 ### Obsidian API Access
 The `app` parameter provides access to:
@@ -299,10 +374,6 @@ The `app` parameter provides access to:
 - `app.workspace` - Workspace/UI operations
 - `app.metadataCache` - Metadata and frontmatter
 - `app.fileManager` - File management utilities
-
-## Integration with Templater
-
-Some components support Templater integration for template creation. This is optional but enhances the user experience when working with templates.
 
 ## Best Practices
 
@@ -314,6 +385,7 @@ Some components support Templater integration for template creation. This is opt
 6. **Test permissions**: Always declare required permissions in `does` array
 7. **Style isolation**: Use component-specific CSS classes to avoid conflicts
 8. **Mobile considerations**: Test on mobile if component uses Node.js APIs
+9. **Use renderRefresh**: For optimized re-renders that don't clear the element
 
 ## Dependencies
 
@@ -329,7 +401,7 @@ Some components support Templater integration for template creation. This is opt
 
 ### Component Not Rendering
 - Check if component is enabled in settings (`this.settings.componentStates[keyName]`)
-- Verify markdown processor is registered
+- Verify component file exports correctly (auto-registration will skip malformed exports)
 - Check for errors in console
 
 ### Arguments Not Parsing
@@ -347,25 +419,8 @@ Some components support Templater integration for template creation. This is opt
 - Avoid generic selectors
 - Inject component styles via `styles` property
 
-## Git Workflow
-
-This project uses feature branches:
-- **Development branch**: `claude/create-claude-md-01ToyWyF39LjfqUmAM86dxt2`
-- **Main branch**: (check git remote for production branch)
-
 ## Additional Resources
 
 - [Obsidian API Documentation](https://docs.obsidian.md/Plugins/Getting+started/Build+a+plugin)
 - [Obsidian Plugin Developer Docs](https://github.com/obsidianmd/obsidian-api)
 - [Community Plugins Guidelines](https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin)
-
-## Future Roadmap
-
-- Explicit mobile support
-- Custom aliases/alias management
-- Multiple column widget space
-- Additional components based on user needs
-
----
-
-**For AI Assistants**: This document provides context for understanding and modifying the codebase. When adding features, follow the established patterns and always consider component lifecycle, permissions, and cleanup.
