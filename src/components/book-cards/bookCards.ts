@@ -189,7 +189,15 @@ export const bookCards: Component<['source', 'limit']> = {
                 card.addEventListener('mousedown', async (e) => {
                     if (e.button === 1) {
                         e.preventDefault();
+                        e.stopPropagation();
                         await useNavigation(app, book.notePath, true);
+                    }
+                });
+
+                // Also stop auxclick to prevent widget-space's internal-link handler
+                card.addEventListener('auxclick', (e) => {
+                    if (e.button === 1) {
+                        e.stopPropagation();
                     }
                 });
             }

@@ -191,10 +191,6 @@ export const projectCardsStyles = /*css*/`
     -webkit-box-orient: vertical;
 }
 
-.project-description:hover {
-    cursor: help;
-}
-
 /* Progress Bar */
 .project-progress {
     margin-top: auto;

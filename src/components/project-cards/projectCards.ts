@@ -408,7 +408,14 @@ export const projectCards: Component<[
                 card.addEventListener('mousedown', async (e) => {
                     if (e.button === 1) {
                         e.preventDefault();
+                        e.stopPropagation();
                         await useNavigation(app, project.path, true);
+                    }
+                });
+
+                card.addEventListener('auxclick', (e) => {
+                    if (e.button === 1) {
+                        e.stopPropagation();
                     }
                 });
             }
@@ -779,7 +786,14 @@ export const projectCards: Component<[
                 card.addEventListener('mousedown', async (e) => {
                     if (e.button === 1) {
                         e.preventDefault();
+                        e.stopPropagation();
                         await useNavigation(app, project.path, true);
+                    }
+                });
+
+                card.addEventListener('auxclick', (e) => {
+                    if (e.button === 1) {
+                        e.stopPropagation();
                     }
                 });
             }
