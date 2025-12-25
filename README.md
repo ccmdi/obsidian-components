@@ -48,12 +48,12 @@ You can reference frontmatter properties from the current note:
 - `fm.propertyName` - Read from metadata cache (faster, may be slightly stale)
 - `file.propertyName` - Read directly from file (always fresh)
 
-```
+````
 ```navigate
 date=fm.date
 format=fm.dateFormat
 ```
-```
+````
 
 ## Query Syntax
 
@@ -68,11 +68,11 @@ Some components support querying notes with a flexible syntax:
 | `#tag1 OR #tag2` | Either condition matches |
 
 Example:
-```
+````
 ```reminders
 query=#tasks AND Daily/
 ```
-```
+````
 
 ## Tips
 - This plugin is best used with "Default view for new tabs" as "Reading view".
