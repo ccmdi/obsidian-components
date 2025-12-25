@@ -455,5 +455,90 @@ export const projectCardsStyles = /*css*/`
     border-bottom: 1px solid var(--background-modifier-border);
     margin-bottom: 16px;
 }
+
+/* ========== Sidebar / Widget Space Styles ========== */
+
+/* Sidebar and widget-space context */
+.in-sidebar .projects-container,
+.widget-space .projects-container {
+    grid-template-columns: 1fr;
+    padding: 8px;
+    gap: 10px;
+}
+
+.in-sidebar .project-cards-wrapper,
+.widget-space .project-cards-wrapper {
+    background: transparent;
+}
+
+.in-sidebar .project-card,
+.widget-space .project-card {
+    background-color: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    min-height: auto;
+    padding: 10px;
+}
+
+.in-sidebar .project-card:hover,
+.widget-space .project-card:hover {
+    border-color: var(--background-modifier-border-hover);
+}
+
+.in-sidebar .project-card.has-cover,
+.widget-space .project-card.has-cover {
+    border: none;
+}
+
+.in-sidebar .project-cards-controls,
+.widget-space .project-cards-controls {
+    margin-bottom: 10px;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.in-sidebar .project-cards-filter,
+.widget-space .project-cards-filter {
+    padding: 6px 10px;
+    font-size: 0.9em;
+}
+
+.in-sidebar .project-cards-status,
+.widget-space .project-cards-status {
+    width: 100%;
+}
+
+.in-sidebar .project-card-footer,
+.widget-space .project-card-footer {
+    margin: 0 -10px -10px;
+    padding: 5px 10px;
+    font-size: 0.85em;
+}
+
+.in-sidebar .project-difficulty,
+.widget-space .project-difficulty {
+    font-size: 0.75em;
+    color: var(--text-on-accent);
+    background-color: var(--color-accent-2);
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.in-sidebar .project-priority,
+.widget-space .project-priority {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    background-color: var(--background-modifier-border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.in-sidebar .project-title,
+.widget-space .project-title {
+    font-size: 1.1em;
+    margin: 0;
+    margin-right: 5px;
+}
 `;
 
