@@ -520,8 +520,11 @@ export namespace Component {
 
         if (!isEnabled) {
             el.empty();
+            el.addClass('component-disabled');
             return;
         }
+
+        el.removeClass('component-disabled');
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {

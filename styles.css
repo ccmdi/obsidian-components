@@ -7,6 +7,11 @@
   border: 0;
 }
 
+/* Hide widget container when component is disabled */
+.widget-item.in-sidebar:has(.component-disabled) {
+  display: none;
+}
+
 .setting-item-does {
   /* Base Style: All tags share these properties */
   font-size: 0.75em;
