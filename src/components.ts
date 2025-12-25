@@ -360,7 +360,6 @@ export namespace Component {
         }
         else if (refresh === 'queryMetadataChanged') {
             const handler = (file: TFile, data: string, cache: CachedMetadata) => {
-                console.log("UPDATED", file, cache)
                 const query = instance.data.watchedQuery;
                 if (!query) return;
                 if (!matchesQuery(file, cache, query)) return;
