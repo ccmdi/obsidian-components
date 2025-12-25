@@ -76,11 +76,21 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
 
         // Context-dependent variables
         if (ctx) {
+            const dir = ctx.sourcePath.substring(0, ctx.sourcePath.lastIndexOf('/')) || '';
+
             if (value === '__SELF__') {
                 value = ctx.sourcePath;
             } else if (value.includes('__SELF__')) {
-                value = value.replace('__SELF__', ctx.sourcePath);
-            } else if (value === '__ROOT__') {
+                value = value.replace(/__SELF__/g, ctx.sourcePath);
+            }
+
+            if (value === '__DIR__') {
+                value = dir;
+            } else if (value.includes('__DIR__')) {
+                value = value.replace(/__DIR__/g, dir);
+            }
+
+            if (value === '__ROOT__') {
                 value = '';
             }
         }
@@ -112,6 +122,11 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
         value = value.replace(/__NOW__/g, `${formatDate(today)} ${formatTime(today)}`);
         value = value.replace(/__TIME__/g, formatTime(today));
         value = value.replace(/__TIMESTAMP__/g, String(Date.now()));
+
+        // Normalize paths containing relative segments (.. or .)
+        if (value.includes('/..') || value.includes('/./') || value.startsWith('./') || value.startsWith('../')) {
+            value = resolvePath('', value);
+        }
 
         resolved[key] = value;
     });
