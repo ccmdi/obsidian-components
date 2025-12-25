@@ -97,6 +97,8 @@ export function createApi(): OjsApi {
     };
 }
 
+import * as obsidian from 'obsidian';
+
 export async function executeOjs(
     source: string,
     el: HTMLElement,
@@ -107,8 +109,8 @@ export async function executeOjs(
 
     try {
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-        const fn = new AsyncFunction('app', 'el', 'ctx', 'api', 'MarkdownRenderer', source);
-        await fn(app, el, ctx, api, MarkdownRenderer);
+        const fn = new AsyncFunction('app', 'el', 'ctx', 'api', 'obsidian', source);
+        await fn(app, el, ctx, api, obsidian);
     } catch (e) {
         const errorEl = el.createEl('div', { cls: 'ojs-error' });
         errorEl.createEl('strong', { text: 'ojs error: ' });
