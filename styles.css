@@ -77,6 +77,18 @@
   margin-bottom: 20px;
 }
 
+.components-search-setting {
+  margin-bottom: 16px;
+}
+
+.components-search-setting .setting-item-control {
+  width: 100%;
+}
+
+.components-search-setting input[type="search"] {
+  width: 100%;
+}
+
 .setting-tab {
   padding: 10px 20px;
   cursor: pointer;
