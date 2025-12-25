@@ -509,11 +509,17 @@ export namespace Component {
         el.dataset.componentSource = ctx.sourcePath;
 
         instance.data.triggerRefresh = async () => {
+            // Guard against concurrent renders - queue refresh if already rendering
+            if (instance.data._isRendering) {
+                instance.data._pendingRefresh = true;
+                return;
+            }
             if (!component.renderRefresh) el.empty();
             Component.render(component, source, el, ctx, app, componentSettings);
         };
 
         if (!isEnabled) {
+            el.empty();
             return;
         }
 
@@ -529,16 +535,28 @@ export namespace Component {
 
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
-        
+
         let renderFn: RenderFunction<readonly string[]>;
-        if(!isNew && component.renderRefresh) {
+        // Use renderRefresh only if instance exists AND element has content
+        // (element may have been cleared by disable, requiring full render)
+        if (!isNew && component.renderRefresh && el.hasChildNodes()) {
             renderFn = component.renderRefresh;
         } else {
             renderFn = component.render;
         }
 
-        await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
-        
+        instance.data._isRendering = true;
+        try {
+            await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
+        } finally {
+            instance.data._isRendering = false;
+            // Process queued refresh if one was requested during render
+            if (instance.data._pendingRefresh) {
+                instance.data._pendingRefresh = false;
+                instance.data.triggerRefresh();
+            }
+        }
+
         const endTime = Date.now();
         debug(`render ${component.keyName} took ${endTime - startTime}ms`);
     }
