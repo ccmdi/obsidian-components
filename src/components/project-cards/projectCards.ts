@@ -19,15 +19,6 @@ interface ProjectData {
     cover?: unknown; // Can be string, object with path, or wikilink
 }
 
-/** Generate a hash string for a list of projects to detect changes */
-function hashProjects(projects: ProjectData[]): string {
-    return JSON.stringify(projects.map(p => [
-        p.name, p.path, p.progress, p.description, p.subtask,
-        p.priority, p.difficulty, p.showProgress, p.tags, p.endDate,
-        typeof p.cover === 'string' ? p.cover : JSON.stringify(p.cover)
-    ]));
-}
-
 interface TagConfig {
     bg: string;
     text: string;
@@ -622,9 +613,6 @@ export const projectCards: Component<[
                 createProjectCard(project, projectsContainer);
             }
         }
-
-        // Store hash of rendered projects for change detection
-        instance.data.lastProjectsHash = hashProjects(filteredProjects);
     },
 
     // Incremental refresh - only update projects, preserve filter input focus
@@ -878,15 +866,7 @@ export const projectCards: Component<[
 
         // Check if data actually changed before re-rendering
         const filteredProjects = renderProjects(projects, instance.data.currentFilter || '', instance.data.currentStatus || 'ongoing');
-        const newHash = hashProjects(filteredProjects);
 
-        if (newHash === instance.data.lastProjectsHash) {
-            // Nothing changed, skip re-render
-            return;
-        }
-
-        // Data changed, update hash and re-render
-        instance.data.lastProjectsHash = newHash;
         projectsContainer.empty();
 
         if (filteredProjects.length === 0) {
