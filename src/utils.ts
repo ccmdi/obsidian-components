@@ -184,7 +184,12 @@ export async function parseFileContent(args: Record<string, string>, app: App, c
 export function applyCssFromArgs(element: HTMLElement, args: Record<string, string>, handledKeys: Set<string> = new Set()) {
     Object.entries(args).forEach(([key, value]) => {
         if (!handledKeys.has(key)) {
-            const previousValue = element.style.getPropertyValue(key);
+            // Handle class/className specially
+            if (key === 'class' || key === 'className') {
+                value.split(/\s+/).filter(Boolean).forEach(cls => element.addClass(cls));
+                return;
+            }
+
             element.style.setProperty(key, value);
 
             if (element.style.getPropertyValue(key) !== value && value !== '') {
