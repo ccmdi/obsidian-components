@@ -136,7 +136,7 @@ export const projectCards: Component<[
     description: 'Display project cards from a folder query or frontmatter data',
     keyName: 'project-cards',
     icon: 'layout-grid',
-    refresh: 'anyMetadataChanged',
+    refresh: 'anyMetadataChanged', //TODO: can target projects again somewhere
     args: {
         source: {
             description: 'Folder path/query to find projects, OR use fm.projects to read from frontmatter',

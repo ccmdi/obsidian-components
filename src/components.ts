@@ -1,9 +1,10 @@
-import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView } from "obsidian";
 import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSpecialVariables, parseArgsAliases } from "utils";
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
 import { debug } from "debug";
+import { parseYaml } from "obsidian";
 
 /**
  * Global instance registry for cleanup
@@ -30,6 +31,7 @@ export namespace ComponentInstance {
             id,
             element: el,
             data: {
+                watchedKeys: { fmKeys: [], fileKeys: [] },
                 intervals: [],
                 observers: [],
                 cleanup: []
@@ -312,20 +314,37 @@ export namespace Component {
         instance: ComponentInstance,
         refresh: RefreshStrategyOptions,
         ctx: MarkdownPostProcessorContext,
-        app: App
+        app: App,
     ): void {
         if (!refresh) return;
         if (refresh === 'metadataChanged') {
-            const handler = (file: TFile) => {
-                // debug("RENDER REASON: metadataChanged", file.path, instance.element.dataset.componentSource);
-                if (file.path === instance.element.dataset.componentSource) instance.data.triggerRefresh();
+            const handler = (file: TFile, data: string, cache: CachedMetadata) => {
+                if (file.path !== instance.element.dataset.componentSource) return;
+
+                if (instance.data.watchedKeys.fmKeys.length > 0) {
+                    const prevValues = instance.data._watchedFmValues || {};
+                    let changed = false;
+
+                    for (const key of instance.data.watchedKeys.fmKeys) {
+                        const newVal = cache?.frontmatter?.[key];
+                        // debug(newVal, prevValues[key]);
+                        // console.log('NEW VAL', newVal, prevValues[key]);
+                        if (JSON.stringify(newVal) !== JSON.stringify(prevValues[key])) {
+                            changed = true;
+                            break;
+                        }
+                    }
+
+                    if (!changed) return;
+                }
+
+                instance.data.triggerRefresh();
             };
             app.metadataCache.on('changed', handler);
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
         else if (refresh === 'fileModified') {
             const handler = (file: TFile) => {
-                // debug("RENDER REASON: fileModified", file.path, instance.element.dataset.componentSource);
                 if (file.path === instance.element.dataset.componentSource) instance.data.triggerRefresh();
             };
             app.vault.on('modify', handler);
@@ -333,7 +352,6 @@ export namespace Component {
         }
         else if (refresh === 'anyMetadataChanged') {
             const handler = () => {
-                // debug("RENDER REASON: anyMetadataChanged", instance.element.dataset.componentSource);
                 instance.data.triggerRefresh();
             };
             app.metadataCache.on('changed', handler);
@@ -342,9 +360,36 @@ export namespace Component {
         else if (refresh === 'leafChanged') {
             const isInSidebar = instance.element.closest('.in-sidebar') !== null;
             if (isInSidebar) {
-                const handler = () => {
-                    //TODO double render fix
-                    // debug("RENDER REASON: leafChanged", instance.element.dataset.componentSource);
+                const handler = (leaf: WorkspaceLeaf) => {
+                    if (!(leaf.view instanceof MarkdownView)) return;
+
+                    const fm = leaf.view.getViewData();
+                    const regexMatch = fm.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+                    const fmData = regexMatch ? (parseYaml(regexMatch[1]) || {}) : {};
+
+                    if (instance.data.watchedKeys.fmKeys.length > 0 || instance.data.watchedKeys.fileKeys.length > 0) {
+                        const prevPath = instance.data._watchedFilePath;
+
+                        const currentFile = leaf.view.file;
+                        if (!(currentFile instanceof TFile)) return;
+                        if (currentFile.path === prevPath) return;
+
+                        if (instance.data.watchedKeys.fmKeys.length > 0) {
+                            const prevValues = instance.data._watchedFmValues || {};
+                            let changed = false;
+
+                            for (const key of instance.data.watchedKeys.fmKeys) {
+                                const newVal = fmData?.[key];
+                                if (JSON.stringify(newVal) !== JSON.stringify(prevValues[key])) {
+                                    changed = true;
+                                    break;
+                                }
+                            }
+
+                            if (!changed) return;
+                        }
+                    }
+
                     instance.data.triggerRefresh();
                 };
                 app.workspace.on('active-leaf-change', handler);
@@ -377,7 +422,7 @@ export namespace Component {
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
         app: App,
-        options: { usesFm: boolean; usesFile: boolean; usesSelf: boolean; isInSidebarContext: boolean }
+        options: { usesFm: boolean; usesFile: boolean; usesSelf: boolean; isInSidebarContext: boolean; fmKeys: string[]; fileKeys: string[] }
     ): { instance: ComponentInstance; isNew: boolean } {
         const existingId = el.dataset.componentId;
 
@@ -396,6 +441,7 @@ export namespace Component {
         }
 
         const registeredStrategies = new Set<string>();
+        instance.data.watchedKeys = { fmKeys: options.fmKeys, fileKeys: options.fileKeys }
 
         const registerStrategy = (refresh: RefreshStrategyOptions) => {
             if (!refresh) return;
@@ -406,7 +452,6 @@ export namespace Component {
             }
         };
 
-        // Setup explicit refresh handlers from component definition
         if (component.refresh) {
             if (Array.isArray(component.refresh)) {
                 component.refresh.forEach(registerStrategy);
@@ -437,8 +482,9 @@ export namespace Component {
         app: App,
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
-        debug('render', component.keyName, el.dataset.componentSource);
-        debug(ctx)
+        // debug('render', component.keyName, el.dataset.componentSource);
+        debug('COMPONENT', component);
+        // debug(ctx)
         const startTime = Date.now();
         
         // Dynamic context: use active file's path instead of source file's path
@@ -461,7 +507,16 @@ export namespace Component {
         const usesFile = argValues.some(v => v?.startsWith('file.'));
         const usesSelf = argValues.some(v => v?.includes('__SELF__'));
 
+        // Extract specific fm/file keys being watched for smart refresh
+        const fmKeys = argValues
+            .filter(v => v?.startsWith('fm.'))
+            .map(v => v.slice(3));
+        const fileKeys = argValues
+            .filter(v => v?.startsWith('file.'))
+            .map(v => v.slice(5));
+
         const componentArgKeys = new Set(Component.getArgKeys(component));
+        debug(args)
 
         args = parseFM(args, app, ctx);
         args = await parseFileContent(args, app, ctx);
@@ -499,8 +554,18 @@ export namespace Component {
             usesFm,
             usesFile,
             usesSelf,
-            isInSidebarContext
+            isInSidebarContext,
+            fmKeys,
+            fileKeys
         });
+        debug('INSTANCE',component.keyName, instance);
+
+        instance.data._watchedFmValues = Object.fromEntries(
+            Object.entries(originalArgs)
+                .filter(([_, v]) => typeof v === 'string' && v.startsWith('fm.'))
+                .map(([k, v]) => [v.slice(3), args[k] === 'undefined' ? undefined : args[k]])
+        );
+        instance.data._watchedFilePath = ctx.sourcePath;
 
         el.dataset.componentKey = component.keyName;
         if (Component.hasArgs(component)) {
