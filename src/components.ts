@@ -385,8 +385,17 @@ export namespace Component {
         else if (refresh === 'fileCreated') {
             const handler = (file: TFile) => {
                 if (file.path !== instance.element.dataset.componentSource) return;
-                // Small delay to let file content settle after creation
-                setTimeout(() => instance.data.triggerRefresh(), 100);
+
+                // Wait for metadataCache to process the file - that's when content is truly ready
+                const cacheHandler = (changedFile: TFile) => {
+                    if (changedFile.path !== file.path) return;
+                    app.metadataCache.off('changed', cacheHandler);
+                    instance.data.triggerRefresh();
+                };
+                app.metadataCache.on('changed', cacheHandler);
+
+                // Cleanup if component is destroyed before cache updates
+                ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', cacheHandler));
             };
             app.vault.on('create', handler);
             ComponentInstance.addCleanup(instance, () => app.vault.off('create', handler));
