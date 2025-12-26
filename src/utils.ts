@@ -1,7 +1,7 @@
 // utils.ts
 
 import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, parseYaml } from "obsidian";
-
+import { debug } from "debug";
 /**
  * Parses .env-style key-value pairs from a code block.
  * e.g., `GITHUB_TOKEN="your_token_here"`
@@ -161,30 +161,31 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
 }
 
 /**
- * Parse frontmatter directly from file on disk (bypasses metadata cache)
- * Use this when you need guaranteed fresh data (e.g., reading mode edits)
+ * Parse frontmatter from metadata cache (sync).
+ * Like fm.* but returns whether any values were undefined (for recovery).
  */
-export async function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Promise<Record<string, string>> {
+export function parseFileContent(
+    args: Record<string, string>,
+    app: App,
+    ctx: MarkdownPostProcessorContext
+): { args: Record<string, string>; needsRecovery: boolean } {
     let fm: Frontmatter | null = null;
+    let needsRecovery = false;
 
     for (const key of Object.keys(args)) {
         if (args[key]?.startsWith('file.')) {
             if (fm === null) {
                 const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
-                if (file instanceof TFile) {
-                    const content = await app.vault.read(file);
-                    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-                    try {
-                        fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
-                    } catch (error) {
-                        fm = {};
-                    }
-                } else {
-                    fm = {};
-                }
+                fm = file instanceof TFile ? app.metadataCache.getFileCache(file)?.frontmatter || {} : {};
             }
+
             const fmKey = args[key].slice(5);
             const value = fm?.[fmKey];
+
+            if (value === undefined) {
+                needsRecovery = true;
+            }
+
             if (value !== null && typeof value === 'object') {
                 args[key] = JSON.stringify(value);
             } else {
@@ -193,7 +194,7 @@ export async function parseFileContent(args: Record<string, string>, app: App, c
         }
     }
 
-    return args;
+    return { args, needsRecovery };
 }
 
 export function applyCssFromArgs(element: HTMLElement, args: Record<string, string>, handledKeys: Set<string> = new Set()) {
