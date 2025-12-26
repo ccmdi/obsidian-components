@@ -161,53 +161,25 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
 }
 
 /**
- * Read frontmatter from file on disk with retry for newly created files.
- * Returns null if file has no frontmatter after all retries.
- */
-async function readFrontmatterWithRetry(
-    app: App,
-    file: TFile,
-    maxAttempts: number = 4,
-    baseDelay: number = 50
-): Promise<Frontmatter> {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        const content = await app.vault.read(file);
-        const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-
-        if (fmMatch) {
-            try {
-                return parseYaml(fmMatch[1]) || {};
-            } catch {
-                return {};
-            }
-        }
-
-        // No frontmatter found - if not last attempt, wait and retry
-        if (attempt < maxAttempts - 1) {
-            const delay = baseDelay * Math.pow(2, attempt); // 50, 100, 200, 400ms
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-
-    return {};
-}
-
-/**
  * Parse frontmatter directly from file on disk (bypasses metadata cache)
  * Use this when you need guaranteed fresh data (e.g., reading mode edits)
- * Retries with exponential backoff for newly created files where content may not be ready
+ * For newly created files, the fileCreated refresh strategy handles re-rendering
  */
 export async function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Promise<Record<string, string>> {
     let fm: Frontmatter | null = null;
 
     for (const key of Object.keys(args)) {
         if (args[key]?.startsWith('file.')) {
-            const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
-
-            // Lazy-load disk frontmatter with retry
             if (fm === null) {
+                const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
                 if (file instanceof TFile) {
-                    fm = await readFrontmatterWithRetry(app, file);
+                    const content = await app.vault.read(file);
+                    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+                    try {
+                        fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+                    } catch {
+                        fm = {};
+                    }
                 } else {
                     fm = {};
                 }

@@ -221,6 +221,7 @@ export enum ComponentAction {
 export type RefreshStrategyOptions =
     | 'metadataChanged'
     | 'fileModified'
+    | 'fileCreated'
     | 'anyMetadataChanged'
     | 'queryMetadataChanged'
     | 'leafChanged'
@@ -381,6 +382,15 @@ export namespace Component {
             app.metadataCache.on('changed', handler);
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
+        else if (refresh === 'fileCreated') {
+            const handler = (file: TFile) => {
+                if (file.path !== instance.element.dataset.componentSource) return;
+                // Small delay to let file content settle after creation
+                setTimeout(() => instance.data.triggerRefresh(), 100);
+            };
+            app.vault.on('create', handler);
+            ComponentInstance.addCleanup(instance, () => app.vault.off('create', handler));
+        }
         else if (refresh === 'queryMetadataChanged') {
             const handler = (file: TFile, data: string, cache: CachedMetadata) => {
                 const query = instance.data.watchedQuery;
@@ -514,6 +524,7 @@ export namespace Component {
         }
         if (options.usesFile) {
             registerStrategy('fileModified');
+            registerStrategy('fileCreated');
         }
         if ((options.usesFm || options.usesFile || options.usesSelf) && options.isInSidebarContext) {
             registerStrategy('leafChanged');
