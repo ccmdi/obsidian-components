@@ -161,46 +161,60 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
 }
 
 /**
+ * Read frontmatter from file on disk with retry for newly created files.
+ * Returns null if file has no frontmatter after all retries.
+ */
+async function readFrontmatterWithRetry(
+    app: App,
+    file: TFile,
+    maxAttempts: number = 4,
+    baseDelay: number = 50
+): Promise<Frontmatter> {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const content = await app.vault.read(file);
+        const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+
+        if (fmMatch) {
+            try {
+                return parseYaml(fmMatch[1]) || {};
+            } catch {
+                return {};
+            }
+        }
+
+        // No frontmatter found - if not last attempt, wait and retry
+        if (attempt < maxAttempts - 1) {
+            const delay = baseDelay * Math.pow(2, attempt); // 50, 100, 200, 400ms
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+
+    return {};
+}
+
+/**
  * Parse frontmatter directly from file on disk (bypasses metadata cache)
  * Use this when you need guaranteed fresh data (e.g., reading mode edits)
- * Falls back to metadata cache if disk read returns undefined (e.g., file just created)
+ * Retries with exponential backoff for newly created files where content may not be ready
  */
 export async function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Promise<Record<string, string>> {
     let fm: Frontmatter | null = null;
-    let cacheFm: Frontmatter | null = null;
 
     for (const key of Object.keys(args)) {
         if (args[key]?.startsWith('file.')) {
             const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
 
-            // Lazy-load disk frontmatter
+            // Lazy-load disk frontmatter with retry
             if (fm === null) {
                 if (file instanceof TFile) {
-                    const content = await app.vault.read(file);
-                    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-                    try {
-                        fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
-                    } catch (error) {
-                        fm = {};
-                    }
+                    fm = await readFrontmatterWithRetry(app, file);
                 } else {
                     fm = {};
                 }
             }
 
             const fmKey = args[key].slice(5);
-            let value = fm?.[fmKey];
-
-            // Fallback: if disk read returned undefined, try metadata cache
-            // This handles edge cases like file creation where disk may be stale
-            if (value === undefined || value === null) {
-                if (cacheFm === null) {
-                    cacheFm = file instanceof TFile
-                        ? app.metadataCache.getFileCache(file)?.frontmatter || {}
-                        : {};
-                }
-                value = cacheFm[fmKey];
-            }
+            const value = fm?.[fmKey];
 
             if (value !== null && value !== undefined && typeof value === 'object') {
                 args[key] = JSON.stringify(value);
