@@ -1,4 +1,5 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
+import { debug } from "debug";
 import { App, TFile, TFolder } from "obsidian";
 import { parseBoolean, matchesQuery, useNavigation } from "utils";
 import { projectCardsStyles } from "./styles";
@@ -334,8 +335,9 @@ export const projectCards: Component<[
             }
         }
 
-        // Store for filter updates
+        // Store for filter updates (also sets initial hash)
         instance.data.allProjects = projects;
+        ComponentInstance.hasDataChanged(instance, 'projects', projects);
         instance.data.currentFilter = '';
         instance.data.currentStatus = 'ongoing' as ProjectStatus | 'all';
 
@@ -752,7 +754,13 @@ export const projectCards: Component<[
             }
         }
 
-        // Update stored projects
+        // Skip re-render if data unchanged
+        if (!ComponentInstance.hasDataChanged(instance, 'projects', projects)) {
+            debug('green', 'project-cards: skipped re-render (no changes)');
+            return;
+        }
+        debug("PROJECTS", projects);
+
         instance.data.allProjects = projects;
 
         // Helper to create cards (duplicated for renderRefresh scope)

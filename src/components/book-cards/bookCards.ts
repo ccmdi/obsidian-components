@@ -1,4 +1,5 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
+import { debug } from "debug";
 import { TFile, TFolder } from "obsidian";
 import { useNavigation } from "utils";
 import { bookCardsStyles } from "./styles";
@@ -172,8 +173,9 @@ export const bookCards: Component<['source', 'limit']> = {
             books = books.slice(0, limit);
         }
 
-        // Store for potential refresh
+        // Store for potential refresh (also sets initial hash)
         instance.data.allBooks = books;
+        ComponentInstance.hasDataChanged(instance, 'books', books);
 
         const createBookCard = (book: BookData, container: HTMLElement, isLast: boolean) => {
             const coverUrl = resolveCoverUrl(app, book.cover, ctx.sourcePath);
@@ -273,5 +275,145 @@ export const bookCards: Component<['source', 'limit']> = {
             });
         }
 
+    },
+
+    renderRefresh: async (args, el, ctx, app, instance: ComponentInstance) => {
+        const source = args.source;
+        const limit = args.limit ? parseInt(args.limit) : undefined;
+
+        let books: BookData[] = [];
+
+        // Re-collect book data (same logic as render)
+        if (isBookData(source)) {
+            let bookList: any[] = [];
+            if (Array.isArray(source)) {
+                bookList = source;
+            } else if (typeof source === 'string') {
+                try { bookList = JSON.parse(source); } catch { /* ignore */ }
+            }
+            books = bookList.map((b: any) => ({
+                noteTitle: b.noteTitle || '',
+                notePath: b.notePath || b.path || '',
+                bookTitle: b.bookTitle || b.title || '',
+                author: b.author,
+                pageCount: b.pageCount || b.pages,
+                cover: b.bookCover || b.cover,
+                progress: b.progress || b.currentpage
+            }));
+        } else {
+            let folderPath = source.trim();
+            if (folderPath.startsWith('"') && folderPath.endsWith('"')) {
+                folderPath = folderPath.slice(1, -1);
+            }
+
+            const folder = app.vault.getFolderByPath(folderPath);
+            if (!folder) return;
+
+            const collectFiles = (f: TFolder): TFile[] => {
+                const files: TFile[] = [];
+                for (const child of f.children) {
+                    if (child instanceof TFile && child.extension === 'md') {
+                        files.push(child);
+                    } else if (child instanceof TFolder) {
+                        files.push(...collectFiles(child));
+                    }
+                }
+                return files;
+            };
+
+            const files = collectFiles(folder);
+            for (const file of files) {
+                const cache = app.metadataCache.getFileCache(file);
+                const fm = cache?.frontmatter;
+                if (!fm) continue;
+                if (fm.status !== 'reading') continue;
+
+                books.push({
+                    noteTitle: file.basename,
+                    notePath: file.path,
+                    bookTitle: fm.title || file.basename,
+                    author: fm.author,
+                    pageCount: fm.pages,
+                    cover: fm.cover,
+                    progress: fm.currentpage
+                });
+            }
+        }
+
+        if (limit && limit > 0) {
+            books = books.slice(0, limit);
+        }
+
+        // Skip re-render if data unchanged
+        if (!ComponentInstance.hasDataChanged(instance, 'books', books)) {
+            debug('green', 'book-cards: skipped re-render (no changes)');
+            return;
+        }
+
+        instance.data.allBooks = books;
+
+        const booksContainer = instance.data.booksContainer as HTMLElement;
+        if (!booksContainer) return;
+
+        booksContainer.empty();
+
+        if (books.length === 0) {
+            booksContainer.createEl('div', {
+                cls: 'book-cards-empty',
+                text: 'No books found'
+            });
+        } else {
+            books.forEach((book, index) => {
+                const coverUrl = resolveCoverUrl(app, book.cover, ctx.sourcePath);
+                const card = booksContainer.createEl('div', { cls: 'book-card' });
+
+                if (book.notePath) {
+                    card.addEventListener('click', async () => {
+                        await useNavigation(app, book.notePath, false);
+                    });
+                    card.addEventListener('mousedown', async (e) => {
+                        if (e.button === 1) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            await useNavigation(app, book.notePath, true);
+                        }
+                    });
+                    card.addEventListener('auxclick', (e) => {
+                        if (e.button === 1) e.stopPropagation();
+                    });
+                }
+
+                if (coverUrl) {
+                    card.createEl('img', {
+                        cls: 'book-cover',
+                        attr: { src: coverUrl, alt: `${book.bookTitle} cover` }
+                    });
+                }
+
+                const details = card.createEl('div', { cls: 'book-details' });
+                const title = details.createEl('h2', { cls: 'book-title' });
+                title.createEl('a', {
+                    cls: 'internal-link',
+                    text: book.bookTitle,
+                    attr: { 'data-href': book.notePath, href: book.notePath }
+                });
+
+                if (book.author) {
+                    details.createEl('h4', { cls: 'book-author', text: `by ${book.author}` });
+                }
+
+                if (book.progress && book.pageCount) {
+                    const progressEl = details.createEl('p', { cls: 'book-progress' });
+                    const percentage = Math.round((book.progress / book.pageCount) * 100);
+                    progressEl.createEl('span', { cls: 'progress-amount', text: `${book.progress}/${book.pageCount}` });
+                    progressEl.appendText(' pages ');
+                    progressEl.createEl('span', { cls: 'progress-percentage', text: `(${percentage}%)` });
+                }
+
+                if (index !== books.length - 1) {
+                    booksContainer.createEl('hr', { cls: 'book-separator' });
+                }
+            });
+        }
     }
 };
