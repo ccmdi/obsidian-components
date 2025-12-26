@@ -163,14 +163,18 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
 /**
  * Parse frontmatter directly from file on disk (bypasses metadata cache)
  * Use this when you need guaranteed fresh data (e.g., reading mode edits)
+ * Falls back to metadata cache if disk read returns undefined (e.g., file just created)
  */
 export async function parseFileContent(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Promise<Record<string, string>> {
     let fm: Frontmatter | null = null;
+    let cacheFm: Frontmatter | null = null;
 
     for (const key of Object.keys(args)) {
         if (args[key]?.startsWith('file.')) {
+            const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
+
+            // Lazy-load disk frontmatter
             if (fm === null) {
-                const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
                 if (file instanceof TFile) {
                     const content = await app.vault.read(file);
                     const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -183,9 +187,22 @@ export async function parseFileContent(args: Record<string, string>, app: App, c
                     fm = {};
                 }
             }
+
             const fmKey = args[key].slice(5);
-            const value = fm?.[fmKey];
-            if (value !== null && typeof value === 'object') {
+            let value = fm?.[fmKey];
+
+            // Fallback: if disk read returned undefined, try metadata cache
+            // This handles edge cases like file creation where disk may be stale
+            if (value === undefined || value === null) {
+                if (cacheFm === null) {
+                    cacheFm = file instanceof TFile
+                        ? app.metadataCache.getFileCache(file)?.frontmatter || {}
+                        : {};
+                }
+                value = cacheFm[fmKey];
+            }
+
+            if (value !== null && value !== undefined && typeof value === 'object') {
                 args[key] = JSON.stringify(value);
             } else {
                 args[key] = String(value);
