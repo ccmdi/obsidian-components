@@ -345,8 +345,31 @@ export namespace Component {
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
         else if (refresh === 'fileModified') {
-            const handler = (file: TFile) => {
-                if (file.path === instance.element.dataset.componentSource) instance.data.triggerRefresh();
+            const handler = async (file: TFile) => {
+                if (file.path !== instance.element.dataset.componentSource) return;
+
+                // Smart refresh: only trigger if watched file.* keys actually changed
+                if (instance.data.watchedKeys.fileKeys.length > 0) {
+                    const prevValues = instance.data._watchedFileValues || {};
+                    let changed = false;
+
+                    // Read fresh frontmatter from disk
+                    const content = await app.vault.read(file);
+                    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+                    const fm = fmMatch ? (parseYaml(fmMatch[1]) || {}) : {};
+
+                    for (const key of instance.data.watchedKeys.fileKeys) {
+                        const newVal = fm?.[key];
+                        if (JSON.stringify(newVal) !== JSON.stringify(prevValues[key])) {
+                            changed = true;
+                            break;
+                        }
+                    }
+
+                    if (!changed) return;
+                }
+
+                instance.data.triggerRefresh();
             };
             app.vault.on('modify', handler);
             ComponentInstance.addCleanup(instance, () => app.vault.off('modify', handler));
@@ -385,9 +408,10 @@ export namespace Component {
                         if (!(currentFile instanceof TFile)) return;
                         if (currentFile.path === prevPath) return;
 
+                        let changed = false;
+
                         if (instance.data.watchedKeys.fmKeys.length > 0) {
                             const prevValues = instance.data._watchedFmValues || {};
-                            let changed = false;
 
                             for (const key of instance.data.watchedKeys.fmKeys) {
                                 const newVal = fmData?.[key];
@@ -396,9 +420,21 @@ export namespace Component {
                                     break;
                                 }
                             }
-
-                            if (!changed) return;
                         }
+
+                        if (!changed && instance.data.watchedKeys.fileKeys.length > 0) {
+                            const prevValues = instance.data._watchedFileValues || {};
+
+                            for (const key of instance.data.watchedKeys.fileKeys) {
+                                const newVal = fmData?.[key];
+                                if (JSON.stringify(newVal) !== JSON.stringify(prevValues[key])) {
+                                    changed = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!changed) return;
                     }
 
                     instance.data.triggerRefresh();
@@ -580,6 +616,11 @@ export namespace Component {
             Object.entries(originalArgs)
                 .filter(([_, v]) => typeof v === 'string' && v.startsWith('fm.'))
                 .map(([k, v]) => [v.slice(3), args[k] === 'undefined' ? undefined : args[k]])
+        );
+        instance.data._watchedFileValues = Object.fromEntries(
+            Object.entries(originalArgs)
+                .filter(([_, v]) => typeof v === 'string' && v.startsWith('file.'))
+                .map(([k, v]) => [v.slice(5), args[k] === 'undefined' ? undefined : args[k]])
         );
         instance.data._watchedFilePath = ctx.sourcePath;
 
