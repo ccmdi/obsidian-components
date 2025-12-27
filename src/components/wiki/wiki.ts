@@ -3,7 +3,6 @@ import { wikiStyles } from './styles';
 
 interface WikiSummary {
     title: string;
-    displaytitle: string;
     description?: string;
     extract: string;
     extract_html?: string;
@@ -137,15 +136,16 @@ function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean)
 
     // Title with external link icon
     const titleEl = info.createEl('h3', { cls: 'wiki-title' });
-    const titleLink = titleEl.createEl('a', {
-        text: data.displaytitle || data.title,
+    titleEl.createEl('a', {
+        text: data.title,
         attr: {
             href: data.content_urls.desktop.page,
             target: '_blank',
             rel: 'noopener noreferrer'
         }
     });
-    titleEl.innerHTML = titleLink.outerHTML + `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+    // External link icon
+    titleEl.insertAdjacentHTML('beforeend', `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`);
 
     // Description (short tagline)
     if (data.description) {
