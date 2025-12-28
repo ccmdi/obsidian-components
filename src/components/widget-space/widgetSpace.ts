@@ -186,6 +186,25 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             app.workspace.requestSaveLayout();
         };
 
+        // Calculate where a new widget will be positioned based on current items
+        const calculateNewWidgetPosition = (): { x: number; y: number } => {
+            const items = muuri?.getItems() || [];
+            const newIndex = items.length;
+            const col = newIndex % columns;
+            const colWidth = getWidgetWidth() + MARGIN * 2;
+
+            // Sum heights of all items in the same column
+            let y = 0;
+            items.forEach((item, i) => {
+                if (i % columns === col) {
+                    const el = item.getElement();
+                    y += el ? el.offsetHeight + MARGIN * 2 : 100;
+                }
+            });
+
+            return { x: col * colWidth, y };
+        };
+
         const addWidget = async (componentKey: string, componentName: string, componentArgs: Record<string, string> = {}, initialPos?: { x: number; y: number }) => {
             const widgetId = `widget-${++widgetCounter}`;
             const widget = grid.createEl('div', { cls: `widget-item${isInSidebar ? ' in-sidebar' : ''}` });
@@ -195,6 +214,10 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             // Set initial position before Muuri takes over (prevents animation from origin)
             if (initialPos && initialPos.x !== undefined && initialPos.y !== undefined) {
                 widget.style.transform = `translateX(${initialPos.x}px) translateY(${initialPos.y}px)`;
+            } else if (muuri) {
+                // New widget - precalculate where it will land
+                const pos = calculateNewWidgetPosition();
+                widget.style.transform = `translateX(${pos.x}px) translateY(${pos.y}px)`;
             }
 
             activeWidgets.set(widgetId, { element: widget, componentKey, args: componentArgs });
@@ -237,10 +260,15 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 }
             }
 
+            // Disable transitions while adding so it doesn't animate from 0,0
+            grid.classList.remove('transitions-enabled');
             muuri.add(widget);
             muuri.refreshItems();
             muuri.layout(false);
             muuri.resizeObserver?.observe(content);
+            requestAnimationFrame(() => {
+                grid.classList.add('transitions-enabled');
+            });
             saveLayout();
         };
 
