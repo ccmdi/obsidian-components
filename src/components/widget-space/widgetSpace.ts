@@ -5,14 +5,11 @@ import ConfirmationModal from "native/confirmation";
 import { ComponentArgsModal } from "native/modal";
 import { COMPONENTS, componentInstances } from "components";
 import ComponentSidebarView from "native/sidebar";
+import { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import Muuri from "muuri";
 
-/** Minimal Muuri item interface for the methods we use */
-interface MuuriItem {
-    getElement(): HTMLElement | undefined;
-}
+const MARGIN = 4;
 
-/** Extended Muuri grid with our custom resizeObserver */
 interface MuuriGridExt extends Muuri {
     resizeObserver?: ResizeObserver;
 }
@@ -21,9 +18,9 @@ interface WidgetConfig {
     id: string;
     componentKey: string;
     args: Record<string, string>;
-    width: number;
-    height: number;
     order: number;
+    x: number;
+    y: number;
 }
 
 interface WidgetSpaceLayout {
@@ -34,37 +31,26 @@ interface WidgetState {
     element: HTMLElement;
     componentKey: string;
     args: Record<string, string>;
-    componentInstance: ComponentInstance | null;
 }
 
-const CONFIG_PATH = (app: App) => `${app.vault.configDir}/plugins/components/components-widget-layout.json`;
-
-async function loadLayout(app: App, argsLayout: string): Promise<WidgetSpaceLayout> {
+export function parseLayout(layoutBase64: string): WidgetSpaceLayout {
+    if (!layoutBase64) return { widgets: [] };
     try {
-        const configPath = CONFIG_PATH(app);
-        if (await app.vault.adapter.exists(configPath)) {
-            return JSON.parse(await app.vault.adapter.read(configPath));
-        } else if (argsLayout) {
-            return JSON.parse(argsLayout);
-        }
-    } catch (error) {
-        console.error('Failed to load widget layout:', error);
+        // Decode from base64, then parse JSON
+        const json = atob(layoutBase64);
+        return JSON.parse(json);
+    } catch {
+        return { widgets: [] };
     }
-    return { widgets: [] };
 }
 
-function createSkeleton(parent: HTMLElement, count: number): HTMLElement {
+function createSkeleton(parent: HTMLElement, count: number, columns: number): HTMLElement {
     const skeleton = parent.createEl('div', { cls: 'widget-space-skeleton' });
-    Object.assign(skeleton.style, {
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        bottom: '0',
-        backgroundColor: 'var(--background-primary)',
-        zIndex: '10'
-    });
-
+    skeleton.style.cssText = `
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background-color: var(--background-primary); z-index: 10;
+        display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: 8px; padding: 12px;
+    `;
     for (let i = 0; i < Math.max(3, count); i++) {
         skeleton.createEl('div', { cls: 'widget-skeleton' });
     }
@@ -72,63 +58,44 @@ function createSkeleton(parent: HTMLElement, count: number): HTMLElement {
 }
 
 function argsToSource(args: Record<string, string>): string {
-    return Object.entries(args)
-        .map(([key, value]) => `${key}="${value}"`)
-        .join('\n');
+    return Object.entries(args).map(([k, v]) => `${k}="${v}"`).join('\n');
 }
 
 class ComponentSelectorModal extends Modal {
-    private availableComponents: Component<readonly string[]>[];
-    private onSelect: (component: Component<readonly string[]>) => void;
-
-    constructor(app: App, components: Component<readonly string[]>[], onSelect: (comp: Component<readonly string[]>) => void) {
+    constructor(
+        app: App,
+        private components: Component<readonly string[]>[],
+        private onSelect: (comp: Component<readonly string[]>) => void
+    ) {
         super(app);
-        this.availableComponents = components;
-        this.onSelect = onSelect;
     }
 
     onOpen() {
-        const { contentEl, titleEl } = this;
-        contentEl.empty();
-        titleEl.setText('Add Widget');
+        this.titleEl.setText('Add Widget');
+        this.contentEl.empty();
 
-        this.availableComponents.forEach(component => {
-            const option = contentEl.createEl('div', { cls: 'clickable-icon' });
-            option.createEl('div', {
-                text: component.name || component.keyName,
-                cls: 'nav-file-title-content'
-            });
-            option.createEl('div', {
-                text: component.description || '',
-                cls: 'nav-file-tag'
-            });
+        this.components.forEach(comp => {
+            const option = this.contentEl.createEl('div', { cls: 'clickable-icon' });
+            option.createEl('div', { text: comp.name || comp.keyName, cls: 'nav-file-title-content' });
+            option.createEl('div', { text: comp.description || '', cls: 'nav-file-tag' });
 
             option.addEventListener('click', async () => {
                 this.close();
-                if (component.keyName === 'widget-space') {
-                    await this.openWidgetSpaceSidebar();
+                if (comp.keyName === 'widget-space') {
+                    const leaf = this.app.workspace.getLeavesOfType('component-sidebar')
+                        .find(l => (l.view as ComponentSidebarView).componentKey === 'widget-space');
+                    if (leaf) {
+                        this.app.workspace.revealLeaf(leaf);
+                    } else {
+                        const newLeaf = this.app.workspace.getRightLeaf(false);
+                        await newLeaf?.setViewState({ type: 'component-sidebar', state: { componentKey: 'widget-space' } });
+                        if (newLeaf) this.app.workspace.revealLeaf(newLeaf);
+                    }
                 } else {
-                    this.onSelect(component);
+                    this.onSelect(comp);
                 }
             });
         });
-    }
-
-    private async openWidgetSpaceSidebar() {
-        const existingLeaf = this.app.workspace.getLeavesOfType('component-sidebar').find(leaf =>
-            (leaf.view as ComponentSidebarView).componentKey === 'widget-space'
-        );
-
-        if (existingLeaf) {
-            this.app.workspace.revealLeaf(existingLeaf);
-        } else {
-            const leaf = this.app.workspace.getRightLeaf(false);
-            await leaf?.setViewState({
-                type: 'component-sidebar',
-                state: { componentKey: 'widget-space' }
-            });
-            this.app.workspace.revealLeaf(leaf!);
-        }
     }
 
     onClose() {
@@ -136,93 +103,101 @@ class ComponentSelectorModal extends Modal {
     }
 }
 
-
-
-export const widgetSpace: Component<['layout']> = {
+export const widgetSpace: Component<['layout', 'columns']> = {
     name: 'Widget Space',
     description: 'A modular container for multiple components with drag & drop',
     keyName: 'widget-space',
     icon: 'layout-grid',
     isMountable: false,
     args: {
-        layout: {
-            description: 'JSON layout configuration (optional)',
-            default: ''
-        }
+        layout: { description: 'JSON layout configuration (optional)', default: '' },
+        columns: { description: 'Number of columns (default: 1)', default: '1' }
     },
-    does: [ComponentAction.READ, ComponentAction.WRITE],
+    does: [ComponentAction.READ],
     styles: widgetSpaceStyles,
 
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
-        const layout = await loadLayout(app, args.layout);
+        const layout = parseLayout(args.layout);
+        const columns = Math.max(1, parseInt(args.columns) || 1);
 
         el.style.position = 'relative';
 
-        // DOM setup
         const container = el.createEl('div', { cls: 'widget-space-container' });
         const grid = el.createEl('div', { cls: 'widget-space-grid' });
-        const skeleton = createSkeleton(el, layout.widgets.length);
+        const skeleton = createSkeleton(el, layout.widgets.length, columns);
 
-        container.appendChild(grid);
-        container.appendChild(skeleton);
+        container.append(grid, skeleton);
         el.appendChild(container);
 
-        // State
         const activeWidgets = new Map<string, WidgetState>();
         let widgetCounter = 0;
-        let muuri!: MuuriGridExt; // Assigned in initMuuri() before any use
+        let muuri!: MuuriGridExt;
 
+        // Find sidebar view for state persistence (check if we're inside a sidebar)
         const isInSidebar = !!el.closest('.in-sidebar');
-
-        // Width tracking
-        const updateWidthVariable = () => {
-            container.style.setProperty('--widget-space-width', `${grid.offsetWidth}px`);
+        const getSidebarView = (): ComponentSidebarView | undefined => {
+            for (const leaf of app.workspace.getLeavesOfType(COMPONENT_SIDEBAR_VIEW_TYPE)) {
+                const view = leaf.view as ComponentSidebarView;
+                if (view.containerEl?.contains(el)) return view;
+            }
+            return undefined;
         };
-        updateWidthVariable();
 
-        const gridResizeObserver = new ResizeObserver(updateWidthVariable);
+        const getWidgetWidth = () => Math.floor((grid.offsetWidth - columns * MARGIN * 2) / columns);
+
+        const updateWidgetWidths = () => {
+            const width = getWidgetWidth();
+            grid.querySelectorAll<HTMLElement>('.widget-item').forEach(w => w.style.width = `${width}px`);
+            muuri?.refreshItems();
+            muuri?.layout(false);
+        };
+
+        const gridResizeObserver = new ResizeObserver(updateWidgetWidths);
         gridResizeObserver.observe(grid);
 
-        // Persistence
-        const saveLayout = async () => {
-            const widgets: WidgetConfig[] = muuri.getItems()
-                .map((item, index: number) => {
-                    const element = item.getElement();
-                    if (!element) return null;
-                    const widgetData = activeWidgets.get(element.dataset.widgetId || '');
-                    if (!widgetData || !document.contains(element)) return null;
+        const saveLayout = () => {
+            const sidebarView = getSidebarView();
+            if (!sidebarView) return;
 
+            const widgets: WidgetConfig[] = muuri.getItems()
+                .map((item, index) => {
+                    const itemEl = item.getElement();
+                    if (!itemEl) return null;
+                    const data = activeWidgets.get(itemEl.dataset.widgetId || '');
+                    if (!data || !document.contains(itemEl)) return null;
+                    // Capture current position from Muuri item
+                    const pos = item.getPosition();
                     return {
-                        id: element.dataset.widgetId || '',
-                        componentKey: widgetData.componentKey,
-                        args: widgetData.args,
-                        width: element.offsetWidth,
-                        height: element.offsetHeight,
-                        order: index
+                        id: itemEl.dataset.widgetId || '',
+                        componentKey: data.componentKey,
+                        args: data.args,
+                        order: index,
+                        x: pos.left,
+                        y: pos.top
                     };
                 })
                 .filter((w): w is WidgetConfig => w !== null);
 
-            try {
-                await app.vault.adapter.write(CONFIG_PATH(app), JSON.stringify({ widgets }, null, 2));
-            } catch (error) {
-                console.error('Failed to save widget layout:', error);
-            }
+            sidebarView.componentArgs = {
+                ...sidebarView.componentArgs,
+                columns: String(columns),
+                layout: btoa(JSON.stringify({ widgets }))
+            };
+            app.workspace.requestSaveLayout();
         };
 
-        // Widget management
-        const addWidget = async (componentKey: string, componentName: string, componentArgs: Record<string, string> = {}) => {
+        const addWidget = async (componentKey: string, componentName: string, componentArgs: Record<string, string> = {}, initialPos?: { x: number; y: number }) => {
             const widgetId = `widget-${++widgetCounter}`;
-            const widget = el.createEl('div', { cls: `widget-item${isInSidebar ? ' in-sidebar' : ''}` });
+            const widget = grid.createEl('div', { cls: `widget-item${isInSidebar ? ' in-sidebar' : ''}` });
             widget.dataset.widgetId = widgetId;
-            widget.dataset.componentKey = componentKey;
+            widget.style.width = `${getWidgetWidth()}px`;
 
-            activeWidgets.set(widgetId, {
-                element: widget,
-                componentKey,
-                args: componentArgs,
-                componentInstance: null
-            });
+            // Set initial position before Muuri takes over (prevents animation from origin)
+            if (initialPos && initialPos.x !== undefined && initialPos.y !== undefined) {
+                widget.style.transform = `translateX(${initialPos.x}px) translateY(${initialPos.y}px)`;
+            }
+
+            activeWidgets.set(widgetId, { element: widget, componentKey, args: componentArgs });
 
             widget.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
@@ -238,89 +213,83 @@ export const widgetSpace: Component<['layout']> = {
                     mode: 'widget-space',
                     initialArgs: activeWidgets.get(widgetId)!.args,
                     submitText: 'Update Widget',
-                    onSubmit: (args) => {
-                        activeWidgets.get(widgetId)!.args = args;
-                        const content = activeWidgets.get(widgetId)!.element.querySelector('.widget-content') as HTMLElement;
-                        const component = componentInstances.get(content.dataset.componentId!)!;
-                        if (component) component.destroy();
+                    onSubmit: (newArgs) => {
+                        activeWidgets.get(widgetId)!.args = newArgs;
+                        const content = widget.querySelector('.widget-content') as HTMLElement;
+                        const inst = componentInstances.get(content.dataset.componentId!);
+                        inst?.destroy();
                         content.empty();
-                        Component.render(COMPONENTS.find(c => c.keyName === componentKey)!, argsToSource(args), content, ctx, app, componentSettings);
+                        Component.render(COMPONENTS.find(c => c.keyName === componentKey)!, argsToSource(newArgs), content, ctx, app, componentSettings);
                         saveLayout();
                     }
                 }).open();
-            })
+            });
 
             const content = widget.createEl('div', { cls: 'widget-content' });
             content.dataset.widgetId = widgetId;
-            content.dataset.componentKey = componentKey;
 
-            const component = COMPONENTS.find(c => c.keyName === componentKey);
-            if (component) {
+            const comp = COMPONENTS.find(c => c.keyName === componentKey);
+            if (comp) {
                 try {
-                    await Component.render(component, argsToSource(componentArgs), content, ctx, app, componentSettings);
+                    await Component.render(comp, argsToSource(componentArgs), content, ctx, app, componentSettings);
                 } catch (error) {
-                    content.createEl('div', {
-                        attr: { style: 'color: var(--text-error); padding: 8px;' },
-                        text: `Error loading ${componentName}: ${error.message}`
-                    });
+                    content.createEl('div', { attr: { style: 'color: var(--text-error); padding: 8px;' }, text: `Error: ${error.message}` });
                 }
             }
 
-            // Position new widget below existing ones
-            const existingItems = muuri.getItems();
-            if (existingItems.length > 0) {
-                const maxBottom = existingItems.reduce((max: number, item) => {
-                    const itemEl = item.getElement();
-                    if (!itemEl) return max;
-                    const rect = itemEl.getBoundingClientRect();
-                    const containerRect = grid.getBoundingClientRect();
-                    return Math.max(max, rect.bottom - containerRect.top + itemEl.offsetHeight);
-                }, 0);
-                widget.style.transform = `translate3d(0px, ${maxBottom + 8}px, 0)`;
-            }
-
-            grid.appendChild(widget);
-            muuri.add(widget, { index: existingItems.length });
-            setTimeout(() => muuri?.layout(false), 0);
+            muuri.add(widget);
+            muuri.refreshItems();
+            muuri.layout(false);
             muuri.resizeObserver?.observe(content);
-            await saveLayout();
+            saveLayout();
         };
 
-        const removeWidget = async (widget: HTMLElement) => {
+        const removeWidget = (widget: HTMLElement) => {
             const widgetId = widget.dataset.widgetId!;
             const content = widget.querySelector('.widget-content');
-
             if (content) muuri.resizeObserver?.unobserve(content);
+
+            const inst = componentInstances.get((content as HTMLElement)?.dataset.componentId!);
+            inst?.destroy();
+
             widget.remove();
             muuri.refreshItems();
             muuri.layout(true);
-
-            const componentInstanceKey = (activeWidgets.get(widgetId)!.element.querySelector('.widget-content') as HTMLElement).dataset.componentId!;
-            const componentInstance = componentInstances.get(componentInstanceKey)!;
-            if (componentInstance) {
-                componentInstance.destroy();
-            }
-
             activeWidgets.delete(widgetId);
-            await saveLayout();
+            saveLayout();
         };
 
-        // Muuri initialization
         const initMuuri = () => {
             muuri = new Muuri(grid, {
                 items: '.widget-item',
                 dragEnabled: true,
-                dragContainer: document.body,
-                dragSortHeuristics: { sortInterval: 10, minDragDistance: 5, minBounceBackAngle: Math.PI / 2 },
-                layout: { fillGaps: true, horizontal: false, alignRight: false, alignBottom: false, rounding: true },
+                dragSortHeuristics: { sortInterval: 100, minDragDistance: 10, minBounceBackAngle: 1 },
+                layout: (_, layoutId, items, __, ___, callback) => {
+                    const colWidth = getWidgetWidth() + MARGIN * 2;
+                    const columnY = new Array(columns).fill(0);
+                    const slots: number[] = [];
+
+                    items.forEach((item, i) => {
+                        const col = i % columns;
+                        const el = item.getElement();
+                        const h = el ? el.offsetHeight + MARGIN * 2 : 100;
+                        slots.push(col * colWidth, columnY[col]);
+                        columnY[col] += h;
+                    });
+
+                    callback({
+                        id: layoutId,
+                        items,
+                        slots,
+                        styles: { height: `${Math.max(...columnY, 0)}px` }
+                    });
+                },
                 layoutDuration: 0,
-                layoutEasing: 'ease',
                 dragStartPredicate: { distance: 10, delay: 0 },
                 dragSort: true,
+                dragSortPredicate: { threshold: 50, action: 'move' },
                 dragAutoScroll: {
-                    targets: [
-                        { element: container, priority: 0, axis: Muuri.AutoScroller.AXIS_Y }
-                    ],
+                    targets: [{ element: container, priority: 0, axis: Muuri.AutoScroller.AXIS_Y }],
                     threshold: 50,
                     speed: Muuri.AutoScroller.smoothSpeed(500, 800, 1000)
                 }
@@ -328,56 +297,23 @@ export const widgetSpace: Component<['layout']> = {
 
             muuri.on('layoutEnd', () => {
                 if (grid.dataset.initialLoadComplete === 'true' && !grid.classList.contains('initial-load-done')) {
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            grid.classList.add('initial-load-done');
-                            skeleton.style.display = 'none';
-                            // Enable transitions after items have settled
-                            setTimeout(() => grid.classList.add('transitions-enabled'), 50);
-                        });
-                    });
+                    requestAnimationFrame(() => requestAnimationFrame(() => {
+                        grid.classList.add('initial-load-done');
+                        skeleton.style.display = 'none';
+                        setTimeout(() => grid.classList.add('transitions-enabled'), 50);
+                    }));
                 }
             });
 
-            muuri.on('dragInit', (item) => {
-                const itemEl = item.getElement();
-                if (!itemEl) return;
-                // Lock width to current value before moving to document.body
-                itemEl.style.width = `${itemEl.offsetWidth}px`;
-                // Lock media element dimensions to prevent expansion
-                itemEl.querySelectorAll('img, video').forEach((media) => {
-                    (media as HTMLElement).style.width = `${(media as HTMLElement).offsetWidth}px`;
-                    (media as HTMLElement).style.height = `${(media as HTMLElement).offsetHeight}px`;
-                });
-            });
-
             muuri.on('dragStart', (item) => {
-                const itemEl = item.getElement();
-                if (!itemEl) return;
-                itemEl.style.zIndex = '1000';
-                itemEl.style.transform += ' scale(1.02)';
-                itemEl.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)';
+                const el = item.getElement();
+                if (el) { el.style.zIndex = '1000'; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; }
             });
 
-            muuri.on('dragEnd', async (item) => {
-                const itemEl = item.getElement();
-                if (!itemEl) return;
-                itemEl.style.zIndex = '';
-                itemEl.style.transform = itemEl.style.transform.replace(' scale(1.02)', '');
-                itemEl.style.boxShadow = '';
-                await saveLayout();
-            });
-
-            muuri.on('dragReleaseEnd', (item) => {
-                const itemEl = item.getElement();
-                if (!itemEl) return;
-                // Restore CSS variable-based width after release animation completes
-                itemEl.style.width = '';
-                // Reset media element dimensions
-                itemEl.querySelectorAll('img, video').forEach((media) => {
-                    (media as HTMLElement).style.width = '';
-                    (media as HTMLElement).style.height = '';
-                });
+            muuri.on('dragEnd', (item) => {
+                const el = item.getElement();
+                if (el) { el.style.zIndex = ''; el.style.boxShadow = ''; }
+                saveLayout();
             });
 
             muuri.resizeObserver = new ResizeObserver((entries) => {
@@ -388,7 +324,6 @@ export const widgetSpace: Component<['layout']> = {
             });
         };
 
-        // Event handlers
         const availableComponents = COMPONENTS.filter(c => c.isMountable);
 
         container.addEventListener('dblclick', (e) => {
@@ -397,86 +332,80 @@ export const widgetSpace: Component<['layout']> = {
                     new ComponentArgsModal(app, comp, {
                         mode: 'widget-space',
                         submitText: 'Add Widget',
-                        onSubmit: (args) => {
-                            addWidget(comp.keyName, comp.name || comp.keyName, args);
-                        }
+                        onSubmit: (args) => addWidget(comp.keyName, comp.name || comp.keyName, args)
                     }).open();
                 }).open();
             }
         });
 
-        const handleInternalLink = async (e: MouseEvent) => {
+        container.addEventListener('click', handleLink);
+        container.addEventListener('auxclick', handleLink);
+
+        async function handleLink(e: MouseEvent) {
             const target = e.target as HTMLElement;
             if (!target.classList.contains('internal-link')) return;
             if (e.type === 'click' && e.button !== 0) return;
             if (e.type === 'auxclick' && e.button !== 1) return;
-
             e.preventDefault();
             e.stopPropagation();
-
-            const linkTarget = target.getAttribute('data-href');
-            if (linkTarget) {
-                const widget = target.closest('.widget-item') as HTMLElement;
-                const isNewTab = e.button === 1 || e.ctrlKey || e.metaKey;
-                await app.workspace.openLinkText(linkTarget, widget?.dataset.componentKey || '', isNewTab ? 'tab' : false);
+            const href = target.getAttribute('data-href');
+            if (href) {
+                await app.workspace.openLinkText(href, '', e.button === 1 || e.ctrlKey || e.metaKey ? 'tab' : false);
             }
-        };
-        container.addEventListener('click', handleInternalLink);
-        container.addEventListener('auxclick', handleInternalLink);
+        }
 
-        // Initialize
         initMuuri();
 
-        for (const widgetConfig of [...layout.widgets].sort((a, b) => (a.order || 0) - (b.order || 0))) {
-            const component = COMPONENTS.find(c => c.keyName === widgetConfig.componentKey);
-            if (component) {
-                await addWidget(widgetConfig.componentKey, component.name || component.keyName, widgetConfig.args);
+        for (const cfg of [...layout.widgets].sort((a, b) => (a.order || 0) - (b.order || 0))) {
+            const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
+            if (comp) {
+                // Pass saved position so widgets appear in correct place immediately
+                const initialPos = (cfg.x !== undefined && cfg.y !== undefined) ? { x: cfg.x, y: cfg.y } : undefined;
+                await addWidget(cfg.componentKey, comp.name || comp.keyName, cfg.args, initialPos);
             }
         }
 
         grid.dataset.initialLoadComplete = 'true';
         if (layout.widgets.length === 0) {
             skeleton.style.display = 'none';
-            grid.classList.add('initial-load-done');
-            grid.classList.add('transitions-enabled');
+            grid.classList.add('initial-load-done', 'transitions-enabled');
         } else {
+            muuri.refreshItems();
             muuri.layout(false);
         }
 
-        // Visibility handling for sidebar tab switching
-        let hasBeenVisibleOnce = false;
         const visibilityObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
-                if (!grid.classList.contains('initial-load-done') && !hasBeenVisibleOnce) {
-                    if (entry.isIntersecting) hasBeenVisibleOnce = true;
-                    return;
-                }
-
-                if (!entry.isIntersecting) {
-                    grid.classList.remove('initial-load-done');
-                    grid.classList.remove('transitions-enabled');
-                    skeleton.style.display = '';
-                } else if (!grid.classList.contains('initial-load-done')) {
-                    muuri.refreshItems();
-                    muuri.layout(false);
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
+                if (entry.isIntersecting) {
+                    if (!grid.classList.contains('initial-load-done')) {
+                        // Initial load - show after positioning
+                        muuri.refreshItems();
+                        muuri.layout(false);
+                        requestAnimationFrame(() => requestAnimationFrame(() => {
                             grid.classList.add('initial-load-done');
                             skeleton.style.display = 'none';
                             setTimeout(() => grid.classList.add('transitions-enabled'), 50);
-                        });
-                    });
+                        }));
+                    } else {
+                        // Returning from leaf switch - reposition then hide skeleton
+                        grid.classList.remove('transitions-enabled');
+                        muuri.refreshItems();
+                        muuri.layout(false);
+                        requestAnimationFrame(() => requestAnimationFrame(() => {
+                            skeleton.style.display = 'none';
+                            grid.classList.add('transitions-enabled');
+                        }));
+                    }
+                } else if (grid.classList.contains('initial-load-done')) {
+                    // Leaving visibility - show skeleton to cover next entrance
+                    skeleton.style.display = '';
                 }
             });
         }, { threshold: 0.01 });
         visibilityObserver.observe(container);
 
-        // Observe existing widget contents
-        grid.querySelectorAll('.widget-content').forEach(content => {
-            muuri.resizeObserver?.observe(content);
-        });
+        grid.querySelectorAll('.widget-content').forEach(c => muuri.resizeObserver?.observe(c));
 
-        // Cleanup
         ComponentInstance.addCleanup(instance, () => {
             visibilityObserver.disconnect();
             gridResizeObserver.disconnect();
