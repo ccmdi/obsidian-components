@@ -8,6 +8,13 @@ export default /*css*/`
     border-radius: 8px;
     border: 1px solid var(--background-modifier-border);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    container-type: inline-size;
+}
+
+@container (max-width: 250px) {
+    .calendar-day-has-note::after {
+        display: none;
+    }
 }
 
 .calendar-header {
