@@ -44,7 +44,6 @@ export const widgetSpaceStyles = /*css*/`
     }
     .widget-item {
         position: absolute;
-        margin: 4px;
         background: var(--background-secondary);
         border: 1px solid var(--background-modifier-border);
         border-radius: 6px;
