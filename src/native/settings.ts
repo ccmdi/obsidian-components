@@ -64,7 +64,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         const { containerEl } = this;
 
         // Autocomplete modal sub-option (will be updated dynamically)
-        let modalSetting: Setting;
+        const modalSetting = new Setting(containerEl);
         let modalToggle: ToggleComponent;
 
         // Autocomplete setting
@@ -92,7 +92,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
             );
 
         // Autocomplete modal sub-option (disabled if autocomplete is off)
-        modalSetting = new Setting(containerEl)
+        modalSetting
             .setName('Open argument modal on select')
             .setDesc('When selecting a component from autocomplete, open a modal to configure arguments. If disabled, just inserts the component name.')
             .addToggle(toggle => {
@@ -240,8 +240,6 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
     renderComponent(containerEl: HTMLElement, component: Component<readonly string[]>, isIndented: boolean): void {
         const isEnabledBySettings = this.plugin.settings.componentStates[component.keyName] ?? false;
-        const hasSettings = component.settings && Object.keys(component.settings).length > 0;
-        const hasArgs = Component.hasArgs(component);
 
         const displayName = component.name || component.keyName;
         const description = component.description || '';

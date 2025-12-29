@@ -25,14 +25,14 @@ interface StateStats {
 /**
  * Get a nested property from an object using dot notation
  */
-function getNestedProperty(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+function getNestedProperty(obj: unknown, path: string): unknown {
+    return path.split('.').reduce((current, key) => (current as Record<string, unknown>)?.[key], obj);
 }
 
 /**
  * Check if a value looks like place data (array) rather than a query string
  */
-function isPlaceData(value: any): boolean {
+function isPlaceData(value: unknown): boolean {
     if (Array.isArray(value)) return true;
 
     if (typeof value === 'string') {
@@ -140,7 +140,7 @@ export const places: Component<[
 
         // Check if source is already place data (array from frontmatter)
         if (isPlaceData(source)) {
-            let placeList: any[] = [];
+            let placeList: PlaceData[] = [];
 
             if (Array.isArray(source)) {
                 placeList = source;
@@ -150,13 +150,13 @@ export const places: Component<[
                 } catch { /* ignore */ }
             }
 
-            places = placeList.map((p: any) => ({
-                name: p.name || '',
-                path: p.path || '',
-                country: getNestedProperty(p, countryField) || p.country,
-                state: getNestedProperty(p, stateField) || p.state,
-                locality: getNestedProperty(p, localityField) || p.locality,
-                score: getNestedProperty(p, scoreField) ?? p.score
+            places = placeList.map((p: PlaceData) => ({
+                name: p.name,
+                path: p.path,
+                country: getNestedProperty(p, countryField) as string | undefined || p.country,
+                state: getNestedProperty(p, stateField) as string | undefined || p.state,
+                locality: getNestedProperty(p, localityField) as string | undefined || p.locality,
+                score: getNestedProperty(p, scoreField) as number | undefined ?? p.score
             }));
         } else {
             // Dynamic mode: resolve source as folder path or query
@@ -188,7 +188,11 @@ export const places: Component<[
                 return files;
             };
 
-            const files = isPureQuery ? app.vault.getMarkdownFiles() : collectFiles(folder!);
+            if (!(folder instanceof TFolder)) {
+                return;
+            }
+
+            const files = isPureQuery ? app.vault.getMarkdownFiles() : collectFiles(folder);
             const fullQuery = isPureQuery
                 ? (query ? `${source} AND ${query}` : source)
                 : (query || '');
@@ -219,9 +223,9 @@ export const places: Component<[
                 places.push({
                     name: fm.name || file.basename,
                     path: file.path,
-                    country,
-                    state,
-                    locality,
+                    country: country as string | undefined,
+                    state: state as string | undefined,
+                    locality: locality as string | undefined,
                     score: typeof score === 'number' ? score : undefined
                 });
             }

@@ -22,11 +22,12 @@ export interface ComponentInstance {
     destroy: () => void;
 }
 
+/* eslint-disable @typescript-eslint/no-namespace */
 export namespace ComponentInstance {
     /**
      * Simple djb2 hash for change detection
      */
-    function hashData(data: unknown): string {
+    export function hashData(data: unknown): string {
         const str = JSON.stringify(data);
         let hash = 5381;
         for (let i = 0; i < str.length; i++) {
@@ -303,6 +304,7 @@ function injectComponentStyles(component: Component<readonly string[]>): void {
     document.head.appendChild(styleEl);
 }
 
+/* eslint-disable @typescript-eslint/no-namespace */
 export namespace Component {
     export function getArgKeys(component: Component<readonly string[]>): string[] {
         return Object.keys(component.args || {});
@@ -342,7 +344,7 @@ export namespace Component {
         });
     }
 
-    function setupRefreshHandlers(
+    export function setupRefreshHandlers(
         component: Component<readonly string[]>,
         instance: ComponentInstance,
         refresh: RefreshStrategyOptions,
@@ -478,7 +480,7 @@ export namespace Component {
         }
     }
 
-    function getOrCreateInstance(
+    export function getOrCreateInstance(
         component: Component<readonly string[]>,
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
@@ -547,7 +549,6 @@ export namespace Component {
         // debug('render', component.keyName, el.dataset.componentSource);
         // debug('COMPONENT', component);
         // debug(ctx)
-        const startTime = Date.now();
         
         // Dynamic context: use active file's path instead of source file's path
         // Always apply in sidebar/widget-space context (no docId)
@@ -708,8 +709,7 @@ export namespace Component {
             }
         }
 
-        const endTime = Date.now();
-        // debug(`render ${component.keyName} took ${endTime - startTime}ms`);
+        // debug(`render took ${Date.now()}ms`);
 
         // Recovery: if file.* args were undefined, wait for cache update then refresh
         if (needsFileRecovery && isNew) {
