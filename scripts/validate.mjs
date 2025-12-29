@@ -3,45 +3,74 @@
 /**
  * Generic validation script for build-time checks
  * Outputs GitHub Actions compatible warnings
- * Add new validators to the VALIDATORS array below
+ * Parses component files statically - no bundling required
  */
 
-import { execSync } from 'child_process';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readdirSync, readFileSync } from 'fs';
+import { join } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+/**
+ * Scan component files and extract metadata statically
+ */
+function discoverComponents() {
+	const componentsDir = 'src/components';
+	const entries = readdirSync(componentsDir, { withFileTypes: true });
+	const components = [];
 
-// Build components.ts into an importable bundle
-console.log('Building components bundle for validation...');
-execSync('node scripts/build-for-validation.mjs', {
-	cwd: dirname(__dirname),
-	stdio: 'inherit'
-});
+	for (const entry of entries) {
+		if (!entry.isDirectory()) continue;
 
-// Import the bundled COMPONENTS array
-const { COMPONENTS } = await import('./.components-bundle.mjs');
+		const dirPath = join(componentsDir, entry.name);
+		const files = readdirSync(dirPath);
+
+		for (const file of files) {
+			if (!file.endsWith('.ts') || file.includes('styles.ts') || file.includes('Styles.ts')) continue;
+
+			const filePath = join(dirPath, file);
+			const content = readFileSync(filePath, 'utf-8');
+
+			// Check if this is a component file
+			const componentMatch = content.match(/export\s+const\s+(\w+)\s*:\s*Component/);
+			if (!componentMatch) continue;
+
+			const exportName = componentMatch[1];
+
+			// Check if disabled
+			const enabledMatch = content.match(/enabled\s*:\s*(true|false)/);
+			const enabled = enabledMatch ? enabledMatch[1] === 'true' : true;
+			if (!enabled) continue;
+
+			// Extract keyName
+			const keyNameMatch = content.match(/keyName\s*:\s*['"]([^'"]+)['"]/);
+			const keyName = keyNameMatch ? keyNameMatch[1] : exportName;
+
+			// Check for icon property
+			const hasIcon = /icon\s*:/.test(content);
+
+			components.push({
+				exportName,
+				keyName,
+				filePath,
+				hasIcon
+			});
+		}
+	}
+
+	return components;
+}
 
 // ============================================================================
 // VALIDATORS
 // ============================================================================
 
-/**
- * Validator function type
- * @returns {Array<{message: string, file?: string, line?: number}>} Array of warnings
- */
-
-/**
- * Check for components missing icon property
- */
-function validateComponentIcons() {
+function validateComponentIcons(components) {
 	const warnings = [];
 
-	for (const component of COMPONENTS) {
-		if (!component.icon) {
+	for (const component of components) {
+		if (!component.hasIcon) {
 			warnings.push({
 				message: `Component "${component.keyName}" is missing an icon property`,
-				file: 'src/components.ts',
+				file: component.filePath,
 				line: 1
 			});
 		}
@@ -56,8 +85,6 @@ function validateComponentIcons() {
 
 const VALIDATORS = [
 	{ name: 'Component Icons', fn: validateComponentIcons },
-	// Add more validators here:
-	// { name: 'My Validator', fn: myValidatorFunction },
 ];
 
 // ============================================================================
@@ -75,33 +102,32 @@ function formatGitHubWarning(warning) {
 }
 
 function main() {
+	const components = discoverComponents();
+	console.log(`Found ${components.length} enabled components\n`);
+
 	let totalWarnings = 0;
 
 	console.log('Running validations...\n');
 
 	for (const validator of VALIDATORS) {
-		const warnings = validator.fn();
+		const warnings = validator.fn(components);
 
 		if (warnings.length > 0) {
-			console.log(`⚠️  ${validator.name}: ${warnings.length} warning(s)`);
+			console.log(`[!] ${validator.name}: ${warnings.length} warning(s)`);
 
 			for (const warning of warnings) {
-				// Output GitHub Actions format
 				console.log(formatGitHubWarning(warning));
-				// Also output human-readable format for local development
 				console.log(`   - ${warning.message}`);
 			}
 
 			console.log('');
 			totalWarnings += warnings.length;
 		} else {
-			console.log(`✓ ${validator.name}: OK`);
+			console.log(`[ok] ${validator.name}`);
 		}
 	}
 
 	console.log(`\nValidation complete: ${totalWarnings} warning(s) found`);
-
-	// Exit with 0 (success) even with warnings - we don't want to fail the build
 	process.exit(0);
 }
 

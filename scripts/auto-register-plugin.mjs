@@ -92,7 +92,7 @@ ${componentsArray}
 export const autoRegisterComponents = {
 	name: 'auto-register-components',
 	setup(build) {
-		const isWatch = !build.initialOptions.minify;
+		const isWatch = build.initialOptions.watch || process.argv.includes('--watch');
 
 		build.onStart(() => {
 			generateRegisterFile();
