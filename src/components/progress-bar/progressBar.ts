@@ -1,5 +1,8 @@
 import type { Component } from 'components';
 import { progressBarStyles } from './styles';
+import { parseBoolean } from 'utils';
+
+type LabelPosition = 'center' | 'left' | 'right' | 'above' | 'below' | 'inside-left' | 'inside-right' | 'none';
 
 function animateValue(element: HTMLElement, start: number, end: number, duration: number) {
 	const startTime = performance.now();
@@ -24,7 +27,18 @@ function animateValue(element: HTMLElement, start: number, end: number, duration
 	requestAnimationFrame(step);
 }
 
-export const progressBar: Component<['progress', 'height', 'backgroundColor', 'barColor', 'textColor', 'borderRadius', 'showLabel']> = {
+function formatLabel(progress: number, format: string): string {
+	return format
+		.replace('{value}', String(Math.round(progress)))
+		.replace('{decimal}', progress.toFixed(1))
+		.replace('{percent}', `${Math.round(progress)}%`);
+}
+
+export const progressBar: Component<[
+	'progress', 'height', 'backgroundColor', 'barColor', 'textColor',
+	'borderRadius', 'showLabel', 'labelPosition', 'labelFormat',
+	'striped', 'animated', 'showGlow'
+]> = {
 	keyName: 'progress-bar',
 	name: 'Progress Bar',
 	description: 'Display a progress bar with percentage.',
@@ -36,27 +50,47 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		},
 		height: {
 			description: 'Height of the progress bar in pixels',
-			default: '30',
+			default: '24',
 		},
 		backgroundColor: {
-			description: 'Background color of the progress bar',
-			default: '#363636',
+			description: 'Background color of the progress bar track',
+			default: 'var(--background-modifier-border)',
 		},
 		barColor: {
-			description: 'Color of the progress fill (CSS class or color)',
+			description: 'Color of the progress fill',
 			default: 'var(--color-accent)',
 		},
 		textColor: {
 			description: 'Color of the percentage text',
-			default: 'white',
+			default: 'var(--text-on-accent)',
 		},
 		borderRadius: {
 			description: 'Border radius in pixels',
-			default: '5',
+			default: '4',
 		},
 		showLabel: {
-			description: 'Whether to show the percentage label',
+			description: 'Whether to show the percentage label (deprecated, use labelPosition=none)',
 			default: 'true',
+		},
+		labelPosition: {
+			description: 'Position of the label: center, left, right, above, below, inside-left, inside-right, or none',
+			default: 'center',
+		},
+		labelFormat: {
+			description: 'Custom label format. Use {value}, {decimal}, or {percent}',
+			default: '{percent}',
+		},
+		striped: {
+			description: 'Show striped pattern on the progress bar',
+			default: 'false',
+		},
+		animated: {
+			description: 'Animate the striped pattern (requires striped=true)',
+			default: 'false',
+		},
+		showGlow: {
+			description: 'Show a subtle glow effect on the progress bar',
+			default: 'false',
 		},
 	},
 	isMountable: true,
@@ -67,50 +101,98 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		let progress = parseFloat(args.progress) || 0;
 		progress = Math.max(0, Math.min(100, progress));
 
-		const height = args.height;
+		const height = parseInt(args.height) || 24;
 		const backgroundColor = args.backgroundColor;
 		const barColor = args.barColor;
 		const textColor = args.textColor;
 		const borderRadius = args.borderRadius;
-		const showLabel = args.showLabel === 'true';
+		const showLabel = parseBoolean(args.showLabel, true);
+		const labelPosition = (showLabel ? (args.labelPosition || 'center') : 'none') as LabelPosition;
+		const labelFormat = args.labelFormat || '{percent}';
+		const striped = parseBoolean(args.striped, false);
+		const animated = parseBoolean(args.animated, false);
+		const showGlow = parseBoolean(args.showGlow, false);
 
-		const container = el.createDiv({ cls: 'progress-bar-container' });
-		container.style.position = 'relative';
-		container.style.width = '100%';
+		// Wrapper for above/below label positions
+		const wrapper = el.createDiv({ cls: 'progress-bar-wrapper' });
+
+		// Above label
+		let aboveLabel: HTMLElement | null = null;
+		if (labelPosition === 'above') {
+			aboveLabel = wrapper.createDiv({ cls: 'progress-bar-label-external progress-bar-label-above' });
+			aboveLabel.textContent = formatLabel(progress, labelFormat);
+			aboveLabel.style.color = 'var(--text-normal)';
+		}
+
+		// Container with left/right external labels
+		const rowContainer = wrapper.createDiv({ cls: 'progress-bar-row' });
+
+		// Left external label
+		let leftLabel: HTMLElement | null = null;
+		if (labelPosition === 'left') {
+			leftLabel = rowContainer.createDiv({ cls: 'progress-bar-label-external progress-bar-label-left' });
+			leftLabel.textContent = formatLabel(progress, labelFormat);
+			leftLabel.style.color = 'var(--text-normal)';
+		}
+
+		// Main container
+		const container = rowContainer.createDiv({ cls: 'progress-bar-container' });
 		container.style.height = `${height}px`;
 		container.style.backgroundColor = backgroundColor;
 		container.style.borderRadius = `${borderRadius}px`;
-		container.style.overflow = 'hidden';
 
-		const progressFill = container.createDiv({ cls: 'progress-bar-fill' });
-		progressFill.style.position = 'absolute';
-		progressFill.style.left = '0';
-		progressFill.style.top = '0';
+		// Progress fill
+		const fillClasses = ['progress-bar-fill'];
+		if (striped) fillClasses.push('progress-bar-striped');
+		if (animated) fillClasses.push('progress-bar-animated');
+		if (showGlow) fillClasses.push('progress-bar-glow');
+
+		const progressFill = container.createDiv({ cls: fillClasses.join(' ') });
 		progressFill.style.width = `${progress}%`;
-		progressFill.style.height = '100%';
-		progressFill.style.transition = 'width 0.5s ease-in-out';
 		progressFill.style.backgroundColor = barColor;
+		progressFill.style.borderRadius = `${borderRadius}px`;
 
-		let label: HTMLElement | null = null;
-		if (showLabel) {
-			const labelOverlay = container.createDiv({ cls: 'progress-bar-label' });
-			labelOverlay.style.position = 'absolute';
-			labelOverlay.style.width = '100%';
-			labelOverlay.style.height = '100%';
-			labelOverlay.style.display = 'flex';
-			labelOverlay.style.alignItems = 'center';
-			labelOverlay.style.justifyContent = 'center';
+		if (showGlow) {
+			progressFill.style.boxShadow = `0 0 8px ${barColor}`;
+		}
 
-			label = labelOverlay.createEl('span');
-			label.textContent = `${progress}%`;
-			label.style.color = textColor;
-			label.style.fontWeight = 'bold';
+		// Internal labels (center, inside-left, inside-right)
+		let internalLabel: HTMLElement | null = null;
+		if (['center', 'inside-left', 'inside-right'].includes(labelPosition)) {
+			const labelOverlay = container.createDiv({
+				cls: `progress-bar-label progress-bar-label-${labelPosition}`
+			});
+
+			internalLabel = labelOverlay.createEl('span');
+			internalLabel.textContent = formatLabel(progress, labelFormat);
+			internalLabel.style.color = textColor;
+		}
+
+		// Right external label
+		let rightLabel: HTMLElement | null = null;
+		if (labelPosition === 'right') {
+			rightLabel = rowContainer.createDiv({ cls: 'progress-bar-label-external progress-bar-label-right' });
+			rightLabel.textContent = formatLabel(progress, labelFormat);
+			rightLabel.style.color = 'var(--text-normal)';
+		}
+
+		// Below label
+		let belowLabel: HTMLElement | null = null;
+		if (labelPosition === 'below') {
+			belowLabel = wrapper.createDiv({ cls: 'progress-bar-label-external progress-bar-label-below' });
+			belowLabel.textContent = formatLabel(progress, labelFormat);
+			belowLabel.style.color = 'var(--text-normal)';
 		}
 
 		// Store refs for renderRefresh
 		instance.data.progressFill = progressFill;
-		instance.data.label = label;
+		instance.data.internalLabel = internalLabel;
+		instance.data.aboveLabel = aboveLabel;
+		instance.data.belowLabel = belowLabel;
+		instance.data.leftLabel = leftLabel;
+		instance.data.rightLabel = rightLabel;
 		instance.data.currentProgress = progress;
+		instance.data.labelFormat = labelFormat;
 	},
 
 	renderRefresh: async (args, el, ctx, app, instance) => {
@@ -120,12 +202,31 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		const oldProgress = instance.data.currentProgress;
 		instance.data.currentProgress = newProgress;
 
-		// Animate the bar (CSS transition handles this)
-		instance.data.progressFill.style.width = `${newProgress}%`;
+		const labelFormat = args.labelFormat || instance.data.labelFormat || '{percent}';
 
-		// Animate the label count
-		if (instance.data.label) {
-			animateValue(instance.data.label, oldProgress, newProgress, 500);
+		// Animate the bar (CSS transition handles this)
+		if (instance.data.progressFill) {
+			instance.data.progressFill.style.width = `${newProgress}%`;
+		}
+
+		// Animate internal label
+		if (instance.data.internalLabel) {
+			animateValue(instance.data.internalLabel, oldProgress, newProgress, 500);
+		}
+
+		// Update external labels (no animation for simplicity)
+		const formattedLabel = formatLabel(newProgress, labelFormat);
+		if (instance.data.aboveLabel) {
+			instance.data.aboveLabel.textContent = formattedLabel;
+		}
+		if (instance.data.belowLabel) {
+			instance.data.belowLabel.textContent = formattedLabel;
+		}
+		if (instance.data.leftLabel) {
+			instance.data.leftLabel.textContent = formattedLabel;
+		}
+		if (instance.data.rightLabel) {
+			instance.data.rightLabel.textContent = formattedLabel;
 		}
 	},
 };

@@ -1,5 +1,6 @@
 import { Component, ComponentAction, ComponentInstance } from 'components';
 import { wikiStyles } from './styles';
+import { parseBoolean } from 'utils';
 
 interface WikiSummary {
     title: string;
@@ -29,6 +30,30 @@ interface WikiSearchResponse {
         search: WikiSearchResult[];
     };
 }
+
+// Common Wikipedia language codes
+const WIKI_LANGUAGES: Record<string, string> = {
+    en: 'English',
+    es: 'Spanish',
+    fr: 'French',
+    de: 'German',
+    it: 'Italian',
+    pt: 'Portuguese',
+    ru: 'Russian',
+    ja: 'Japanese',
+    zh: 'Chinese',
+    ko: 'Korean',
+    ar: 'Arabic',
+    nl: 'Dutch',
+    pl: 'Polish',
+    sv: 'Swedish',
+    uk: 'Ukrainian',
+    he: 'Hebrew',
+    vi: 'Vietnamese',
+    id: 'Indonesian',
+    tr: 'Turkish',
+    th: 'Thai',
+};
 
 /**
  * Extract a clean topic from a filename
@@ -69,10 +94,19 @@ function extractTopic(filename: string): string {
 }
 
 /**
+ * Get the base URL for a Wikipedia language
+ */
+function getWikiBaseUrl(lang: string): string {
+    const validLang = WIKI_LANGUAGES[lang] ? lang : 'en';
+    return `https://${validLang}.wikipedia.org`;
+}
+
+/**
  * Search Wikipedia for a topic (fuzzy matching)
  */
-async function searchWikipedia(query: string): Promise<string | null> {
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=1&format=json&origin=*`;
+async function searchWikipedia(query: string, lang: string = 'en'): Promise<string | null> {
+    const baseUrl = getWikiBaseUrl(lang);
+    const searchUrl = `${baseUrl}/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=1&format=json&origin=*`;
 
     const response = await fetch(searchUrl);
     if (!response.ok) return null;
@@ -89,8 +123,9 @@ async function searchWikipedia(query: string): Promise<string | null> {
 /**
  * Get Wikipedia summary for a page title
  */
-async function getWikiSummary(title: string): Promise<WikiSummary | null> {
-    const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+async function getWikiSummary(title: string, lang: string = 'en'): Promise<WikiSummary | null> {
+    const baseUrl = getWikiBaseUrl(lang);
+    const summaryUrl = `${baseUrl}/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
 
     const response = await fetch(summaryUrl);
     if (!response.ok) return null;
@@ -106,9 +141,34 @@ async function getWikiSummary(title: string): Promise<WikiSummary | null> {
 }
 
 /**
+ * Render skeleton loading state that matches final layout
+ */
+function renderLoadingSkeleton(el: HTMLElement): void {
+    el.empty();
+
+    const container = el.createEl('div', { cls: 'wiki-container wiki-loading-skeleton' });
+
+    // Header skeleton
+    const header = container.createEl('div', { cls: 'wiki-header' });
+    header.createEl('div', { cls: 'wiki-thumbnail-placeholder loading-placeholder' });
+
+    const info = header.createEl('div', { cls: 'wiki-info' });
+    info.createEl('div', { cls: 'wiki-title-skeleton loading-placeholder' });
+    info.createEl('div', { cls: 'wiki-description-skeleton loading-placeholder' });
+
+    // Extract skeleton
+    container.createEl('div', { cls: 'wiki-extract-skeleton loading-placeholder' });
+    container.createEl('div', { cls: 'wiki-extract-skeleton wiki-extract-skeleton-short loading-placeholder' });
+
+    // Footer skeleton
+    const footer = container.createEl('div', { cls: 'wiki-footer' });
+    footer.createEl('div', { cls: 'wiki-footer-skeleton loading-placeholder' });
+}
+
+/**
  * Render the wiki content into the element
  */
-function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean): void {
+function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean, lang: string): void {
     el.empty();
 
     const container = el.createEl('div', { cls: 'wiki-container' });
@@ -118,7 +178,7 @@ function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean)
 
     // Thumbnail
     if (data.thumbnail?.source) {
-        header.createEl('img', {
+        const img = header.createEl('img', {
             cls: 'wiki-thumbnail',
             attr: {
                 src: data.thumbnail.source,
@@ -126,6 +186,9 @@ function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean)
                 loading: 'lazy'
             }
         });
+        // Fade in on load
+        img.style.opacity = '0';
+        img.onload = () => { img.style.opacity = '1'; };
     } else {
         const placeholder = header.createEl('div', { cls: 'wiki-thumbnail-placeholder' });
         placeholder.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
@@ -156,7 +219,7 @@ function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean)
     }
 
     // Extract (main content)
-    const extractEl = container.createEl('p', {
+    container.createEl('p', {
         cls: compact ? 'wiki-extract wiki-extract-short' : 'wiki-extract',
         text: data.extract
     });
@@ -166,7 +229,8 @@ function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean)
 
     const source = footer.createEl('span', { cls: 'wiki-source' });
     source.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
-    source.appendText(' Wikipedia');
+    const langLabel = WIKI_LANGUAGES[lang] || 'English';
+    source.appendText(` Wikipedia (${langLabel})`);
 
     footer.createEl('a', {
         cls: 'wiki-read-more',
@@ -179,18 +243,12 @@ function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean)
     });
 }
 
-function renderLoading(el: HTMLElement, topic: string): void {
+function renderNotFound(el: HTMLElement, topic: string, lang: string): void {
     el.empty();
-    const loading = el.createEl('div', { cls: 'wiki-loading' });
-    loading.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="loading-spinner"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`;
-    loading.appendText(`Searching for "${topic}"...`);
-}
-
-function renderNotFound(el: HTMLElement, topic: string): void {
-    el.empty();
+    const langLabel = WIKI_LANGUAGES[lang] || 'English';
     el.createEl('div', {
         cls: 'wiki-not-found',
-        text: `No Wikipedia article found for "${topic}"`
+        text: `No ${langLabel} Wikipedia article found for "${topic}"`
     });
 }
 
@@ -202,7 +260,7 @@ function renderError(el: HTMLElement, message: string): void {
     });
 }
 
-export const wiki: Component<['topic', 'compact']> = {
+export const wiki: Component<['topic', 'compact', 'lang', 'showThumbnail']> = {
     name: 'Wikipedia',
     description: 'Show Wikipedia summary for the current note topic',
     keyName: 'wiki',
@@ -217,6 +275,14 @@ export const wiki: Component<['topic', 'compact']> = {
         compact: {
             description: 'Show compact view with truncated extract',
             default: 'true'
+        },
+        lang: {
+            description: 'Wikipedia language code (e.g., en, es, fr, de, ja, zh)',
+            default: 'en'
+        },
+        showThumbnail: {
+            description: 'Show the article thumbnail image',
+            default: 'true'
         }
     },
     isMountable: true,
@@ -224,7 +290,9 @@ export const wiki: Component<['topic', 'compact']> = {
     styles: wikiStyles,
 
     render: async (args, el, ctx, app, instance) => {
-        const compact = args.compact !== 'false';
+        const compact = parseBoolean(args.compact, true);
+        const lang = args.lang || 'en';
+        const showThumbnail = parseBoolean(args.showThumbnail, true);
 
         // Get topic: from args, or extract from filename
         let topic = args.topic;
@@ -241,30 +309,39 @@ export const wiki: Component<['topic', 'compact']> = {
         // Store for refresh
         instance.data.topic = topic;
         instance.data.compact = compact;
+        instance.data.lang = lang;
+        instance.data.showThumbnail = showThumbnail;
 
-        renderLoading(el, topic);
+        // Show skeleton loading state
+        renderLoadingSkeleton(el);
 
         try {
             // Search first (fuzzy match)
-            const matchedTitle = await searchWikipedia(topic);
+            const matchedTitle = await searchWikipedia(topic, lang);
 
             if (!matchedTitle) {
-                renderNotFound(el, topic);
+                renderNotFound(el, topic, lang);
                 return;
             }
 
             // Get summary
-            const summary = await getWikiSummary(matchedTitle);
+            const summary = await getWikiSummary(matchedTitle, lang);
 
             if (!summary) {
-                renderNotFound(el, topic);
+                renderNotFound(el, topic, lang);
                 return;
+            }
+
+            // Optionally hide thumbnail
+            if (!showThumbnail) {
+                delete summary.thumbnail;
             }
 
             // Store for potential refresh comparison
             instance.data.lastTitle = matchedTitle;
+            instance.data.cachedSummary = summary;
 
-            renderWikiContent(el, summary, compact);
+            renderWikiContent(el, summary, compact, lang);
         } catch (error) {
             console.error('Wiki component error:', error);
             renderError(el, 'Failed to fetch Wikipedia data');
@@ -272,7 +349,9 @@ export const wiki: Component<['topic', 'compact']> = {
     },
 
     renderRefresh: async (args, el, ctx, app, instance) => {
-        const compact = args.compact !== 'false';
+        const compact = parseBoolean(args.compact, true);
+        const lang = args.lang || 'en';
+        const showThumbnail = parseBoolean(args.showThumbnail, true);
 
         // Get new topic
         let topic = args.topic;
@@ -281,40 +360,60 @@ export const wiki: Component<['topic', 'compact']> = {
             topic = extractTopic(filename);
         }
 
-        // Skip if topic hasn't changed
-        if (topic === instance.data.topic) {
+        // Skip if nothing changed
+        if (topic === instance.data.topic && lang === instance.data.lang) {
+            // Check if compact or showThumbnail changed - re-render with cached data
+            if (compact !== instance.data.compact || showThumbnail !== instance.data.showThumbnail) {
+                instance.data.compact = compact;
+                instance.data.showThumbnail = showThumbnail;
+
+                if (instance.data.cachedSummary) {
+                    const summary = { ...instance.data.cachedSummary };
+                    if (!showThumbnail) {
+                        delete summary.thumbnail;
+                    }
+                    renderWikiContent(el, summary, compact, lang);
+                }
+            }
             return;
         }
 
-        // Topic changed, do full re-render
+        // Topic or language changed, do full re-render
         instance.data.topic = topic;
         instance.data.compact = compact;
+        instance.data.lang = lang;
+        instance.data.showThumbnail = showThumbnail;
 
         if (!topic) {
             renderError(el, 'Could not determine topic');
             return;
         }
 
-        renderLoading(el, topic);
+        renderLoadingSkeleton(el);
 
         try {
-            const matchedTitle = await searchWikipedia(topic);
+            const matchedTitle = await searchWikipedia(topic, lang);
 
             if (!matchedTitle) {
-                renderNotFound(el, topic);
+                renderNotFound(el, topic, lang);
                 return;
             }
 
-            const summary = await getWikiSummary(matchedTitle);
+            const summary = await getWikiSummary(matchedTitle, lang);
 
             if (!summary) {
-                renderNotFound(el, topic);
+                renderNotFound(el, topic, lang);
                 return;
+            }
+
+            if (!showThumbnail) {
+                delete summary.thumbnail;
             }
 
             instance.data.lastTitle = matchedTitle;
+            instance.data.cachedSummary = summary;
 
-            renderWikiContent(el, summary, compact);
+            renderWikiContent(el, summary, compact, lang);
         } catch (error) {
             console.error('Wiki component refresh error:', error);
             renderError(el, 'Failed to fetch Wikipedia data');

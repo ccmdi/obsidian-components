@@ -1,7 +1,7 @@
 export const githubStyles = /*css*/`
     /* Container for the entire GitHub widget */
     .github-streak-container {
-        --gh-gap: 12px; /* Define gap as a variable for consistency */
+        --gh-gap: 12px;
 
         background: var(--background-secondary);
         border: 1px solid var(--background-modifier-border);
@@ -11,6 +11,10 @@ export const githubStyles = /*css*/`
         width: 100%;
         max-width: 100%;
         margin: 0 auto;
+    }
+
+    .github-compact {
+        padding: 8px;
     }
 
     /* Flex wrapper for the icon and the streak graph */
@@ -24,11 +28,21 @@ export const githubStyles = /*css*/`
     /* Icon styling */
     .github-icon {
         width: 10%;
+        min-width: 24px;
+        max-width: 40px;
         aspect-ratio: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        filter: brightness(0.8);
+        flex-shrink: 0;
+    }
+
+    .github-icon a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
     }
 
     .github-icon svg {
@@ -39,20 +53,32 @@ export const githubStyles = /*css*/`
         margin: 0 auto;
     }
 
-    /* Container for the 7 day squares */
+    .github-icon-skeleton {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+    }
+
+    /* Container for the day squares */
     .github-streak {
         display: flex;
         justify-content: space-between;
+        gap: 4px;
         flex-grow: 1;
     }
 
     /* Individual contribution day square */
     .day-square {
-        width: 12%; /* Simplified width */
+        flex: 1;
+        max-width: 24px;
         aspect-ratio: 1;
         border-radius: 3px;
         cursor: pointer;
-        transform: scale(0.9);
+        transition: transform 0.15s ease;
+    }
+
+    .day-square:hover {
+        transform: scale(1.1);
     }
 
     .component:has(.github-streak-container) {
@@ -76,16 +102,40 @@ export const githubStyles = /*css*/`
         transition: opacity 0.15s ease-in-out;
     }
 
-    /* Skeleton loader placeholder style */
-    .loading-placeholder {
-        background: var(--background-modifier-border);
-        border-radius: 4px; /* Match the element it's replacing */
-        animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    /* Stats row */
+    .github-stats-row {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--background-modifier-border);
     }
 
-    /* Loading animation */
-    @keyframes pulse {
-        0%, 100% { opacity: 0.4; }
-        50% { opacity: 0.8; }
+    .github-stat {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Error state */
+    .github-error {
+        color: var(--text-error);
+        font-size: 12px;
+        text-align: center;
+        padding: 8px;
+    }
+
+    /* Skeleton loader placeholder style */
+    .loading-placeholder {
+        background: linear-gradient(90deg, var(--background-modifier-border) 25%, var(--background-primary) 50%, var(--background-modifier-border) 75%);
+        background-size: 200% 100%;
+        animation: github-shimmer 1.5s ease-in-out infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes github-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
     }
 `;

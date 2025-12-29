@@ -1,5 +1,5 @@
 import { Component, ComponentAction, ComponentInstance } from 'components';
-import { createColoredIcon } from 'utils';
+import { createColoredIcon, parseBoolean } from 'utils';
 import { githubStyles } from './styles';
 
 interface GithubContributionDay {
@@ -13,6 +13,7 @@ interface GithubWeek {
 
 interface GithubContributionCalendar {
     weeks: GithubWeek[];
+    totalContributions: number;
 }
 
 interface GithubContributionsCollection {
@@ -30,8 +31,15 @@ interface GithubApiResponse {
     };
 }
 
-async function fetchGithubData(token: string): Promise<{ username: string; last7Days: GithubContributionDay[] }> {
-    const query = `{ viewer { login, contributionsCollection { contributionCalendar { weeks { contributionDays { date, contributionCount } } } } } }`;
+interface GithubData {
+    username: string;
+    days: GithubContributionDay[];
+    totalContributions: number;
+    currentStreak: number;
+}
+
+async function fetchGithubData(token: string, numDays: number): Promise<GithubData> {
+    const query = `{ viewer { login, contributionsCollection { contributionCalendar { totalContributions, weeks { contributionDays { date, contributionCount } } } } } }`;
 
     const response = await fetch('https://api.github.com/graphql', {
         method: 'POST',
@@ -41,16 +49,38 @@ async function fetchGithubData(token: string): Promise<{ username: string; last7
 
     const data: GithubApiResponse = await response.json();
     const username = data.data.viewer.login;
-    const allDays = data.data.viewer.contributionsCollection.contributionCalendar.weeks.flatMap(w => w.contributionDays);
-    const last7Days = allDays.slice(-7);
+    const calendar = data.data.viewer.contributionsCollection.contributionCalendar;
+    const allDays = calendar.weeks.flatMap(w => w.contributionDays);
+    const days = allDays.slice(-numDays);
 
-    return { username, last7Days };
+    // Calculate current streak
+    let currentStreak = 0;
+    for (let i = allDays.length - 1; i >= 0; i--) {
+        if (allDays[i].contributionCount > 0) {
+            currentStreak++;
+        } else {
+            // Allow today to have 0 if it's early in the day
+            const isToday = allDays[i].date === new Date().toISOString().split('T')[0];
+            if (!isToday) break;
+        }
+    }
+
+    return {
+        username,
+        days,
+        totalContributions: calendar.totalContributions,
+        currentStreak
+    };
 }
 
-function renderStreakSquares(streakContainer: HTMLElement, last7Days: GithubContributionDay[], tooltip: HTMLElement) {
+function renderStreakSquares(
+    streakContainer: HTMLElement,
+    days: GithubContributionDay[],
+    tooltip: HTMLElement
+): void {
     streakContainer.empty();
 
-    last7Days.forEach(day => {
+    days.forEach(day => {
         const count = day.contributionCount;
 
         const [year, month, dayNum] = day.date.split('-').map(Number);
@@ -62,7 +92,7 @@ function renderStreakSquares(streakContainer: HTMLElement, last7Days: GithubCont
             cls: 'day-square',
             attr: {
                 style: `background-color: var(--text-accent); opacity: ${opacity};`,
-                'data-tooltip': `${count} contributions on ${formattedDate}`
+                'data-tooltip': `${count} contribution${count !== 1 ? 's' : ''} on ${formattedDate}`
             }
         });
 
@@ -81,7 +111,24 @@ function renderStreakSquares(streakContainer: HTMLElement, last7Days: GithubCont
     });
 }
 
-export const githubStats: Component<['GITHUB_TOKEN']> = {
+function renderLoadingSkeleton(widget: HTMLElement, numDays: number): void {
+    widget.empty();
+    const loadingWrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
+
+    const iconPlaceholder = loadingWrapper.createEl('div', { cls: 'github-icon' });
+    iconPlaceholder.createEl('div', {
+        cls: 'loading-placeholder github-icon-skeleton'
+    });
+
+    const streakPlaceholder = loadingWrapper.createEl('div', { cls: 'github-streak' });
+    for (let i = 0; i < numDays; i++) {
+        streakPlaceholder.createEl('div', {
+            cls: 'day-square loading-placeholder'
+        });
+    }
+}
+
+export const githubStats: Component<['GITHUB_TOKEN', 'days', 'showTotal', 'showStreak', 'compact']> = {
     name: 'GitHub Stats',
     description: 'Display your GitHub contribution streak',
     keyName: 'github-stats',
@@ -93,8 +140,24 @@ export const githubStats: Component<['GITHUB_TOKEN']> = {
     },
     args: {
         GITHUB_TOKEN: {
-            description: 'GitHub token to use for API requests. Get one from [here](https://github.com/settings/tokens). It is strongly recommended to use a "no access" token.',
+            description: 'GitHub personal access token. Get one from github.com/settings/tokens (no special permissions needed).',
             required: true
+        },
+        days: {
+            description: 'Number of days to display (1-30)',
+            default: '7'
+        },
+        showTotal: {
+            description: 'Show total contributions this year',
+            default: 'false'
+        },
+        showStreak: {
+            description: 'Show current contribution streak',
+            default: 'false'
+        },
+        compact: {
+            description: 'Compact layout without icon',
+            default: 'false'
         }
     },
     isMountable: true,
@@ -103,53 +166,106 @@ export const githubStats: Component<['GITHUB_TOKEN']> = {
 
     render: async (args, el, ctx, app, instance) => {
         const GITHUB_TOKEN = args.GITHUB_TOKEN;
+        const numDays = Math.max(1, Math.min(30, parseInt(args.days) || 7));
+        const showTotal = parseBoolean(args.showTotal, false);
+        const showStreak = parseBoolean(args.showStreak, false);
+        const compact = parseBoolean(args.compact, false);
+
         el.style.position = 'relative';
 
-        const widget = el.createEl('div', { cls: 'github-streak-container' });
+        const widget = el.createEl('div', {
+            cls: `github-streak-container ${compact ? 'github-compact' : ''}`
+        });
         const tooltip = document.body.createEl('div', { cls: 'github-tooltip' });
         ComponentInstance.addCleanup(instance, () => tooltip.remove());
 
         // Loading state
-        const loadingWrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
-        const iconPlaceholder = loadingWrapper.createEl('div', { cls: 'github-icon' });
-        iconPlaceholder.createEl('div', {
-            cls: 'loading-placeholder',
-            attr: { style: 'width:100%; aspect-ratio:1;' }
-        });
-        const streakPlaceholder = loadingWrapper.createEl('div', { cls: 'github-streak' });
-        for (let i = 0; i < 7; i++) {
-            streakPlaceholder.createEl('div', {
-                cls: 'day-square loading-placeholder',
-                attr: { style: 'aspect-ratio:1;' }
+        renderLoadingSkeleton(widget, numDays);
+
+        try {
+            // Fetch data
+            const data = await fetchGithubData(GITHUB_TOKEN, numDays);
+
+            // Clear loading state and build final DOM
+            widget.empty();
+            const wrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
+
+            // Icon (unless compact mode)
+            if (!compact) {
+                const iconContainer = wrapper.createEl('div', { cls: 'github-icon' });
+                const link = iconContainer.createEl('a', {
+                    href: `https://github.com/${data.username}`,
+                    attr: { target: '_blank', rel: 'noopener noreferrer' }
+                });
+                const icon = createColoredIcon('github');
+                link.appendChild(icon);
+            }
+
+            // Streak squares
+            const streakContainer = wrapper.createEl('div', { cls: 'github-streak' });
+            renderStreakSquares(streakContainer, data.days, tooltip);
+
+            // Stats row
+            if (showTotal || showStreak) {
+                const statsRow = widget.createEl('div', { cls: 'github-stats-row' });
+
+                if (showStreak) {
+                    statsRow.createEl('span', {
+                        cls: 'github-stat',
+                        text: `${data.currentStreak} day streak`
+                    });
+                }
+
+                if (showTotal) {
+                    statsRow.createEl('span', {
+                        cls: 'github-stat',
+                        text: `${data.totalContributions.toLocaleString()} this year`
+                    });
+                }
+            }
+
+            // Store refs for renderRefresh
+            instance.data.token = GITHUB_TOKEN;
+            instance.data.numDays = numDays;
+            instance.data.streakContainer = streakContainer;
+            instance.data.tooltip = tooltip;
+            instance.data.widget = widget;
+            instance.data.showTotal = showTotal;
+            instance.data.showStreak = showStreak;
+
+        } catch (error) {
+            widget.empty();
+            widget.createEl('div', {
+                cls: 'github-error',
+                text: 'Failed to load GitHub data'
             });
+            console.error('GitHub stats error:', error);
         }
-
-        // Fetch data
-        const { username, last7Days } = await fetchGithubData(GITHUB_TOKEN);
-
-        // Clear loading state and build final DOM
-        widget.empty();
-        const wrapper = widget.createEl('div', { cls: 'github-streak-wrapper' });
-
-        // Icon
-        const iconContainer = wrapper.createEl('div', { cls: 'github-icon' });
-        const link = iconContainer.createEl('a', { href: `https://github.com/${username}` });
-        const icon = createColoredIcon('github');
-        link.appendChild(icon);
-
-        // Streak squares
-        const streakContainer = wrapper.createEl('div', { cls: 'github-streak' });
-        renderStreakSquares(streakContainer, last7Days, tooltip);
-
-        // Store refs for renderRefresh
-        instance.data.token = GITHUB_TOKEN;
-        instance.data.streakContainer = streakContainer;
-        instance.data.tooltip = tooltip;
     },
 
     renderRefresh: async (args, el, ctx, app, instance) => {
-        const { username, last7Days } = await fetchGithubData(instance.data.token);
-        renderStreakSquares(instance.data.streakContainer, last7Days, instance.data.tooltip);
+        try {
+            const data = await fetchGithubData(instance.data.token, instance.data.numDays);
+            renderStreakSquares(instance.data.streakContainer, data.days, instance.data.tooltip);
+
+            // Update stats if shown
+            const statsRow = instance.data.widget.querySelector('.github-stats-row');
+            if (statsRow) {
+                const stats = statsRow.querySelectorAll('.github-stat');
+                let statIndex = 0;
+
+                if (instance.data.showStreak && stats[statIndex]) {
+                    stats[statIndex].textContent = `${data.currentStreak} day streak`;
+                    statIndex++;
+                }
+
+                if (instance.data.showTotal && stats[statIndex]) {
+                    stats[statIndex].textContent = `${data.totalContributions.toLocaleString()} this year`;
+                }
+            }
+        } catch (error) {
+            console.error('GitHub stats refresh error:', error);
+        }
     },
 
     settings: {}

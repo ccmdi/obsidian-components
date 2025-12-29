@@ -10,6 +10,13 @@ export const anthropicUsageStyles = /*css*/`
         display: flex;
         align-items: center;
         gap: 12px;
+        min-height: 52px;
+    }
+
+    .anthropic-usage-compact {
+        padding: 8px 12px;
+        min-height: 40px;
+        gap: 8px;
     }
 
     .anthropic-usage-icon {
@@ -54,6 +61,10 @@ export const anthropicUsageStyles = /*css*/`
         font-variant-numeric: tabular-nums;
     }
 
+    .anthropic-usage-compact .anthropic-usage-value {
+        font-size: 16px;
+    }
+
     .anthropic-usage-bar {
         position: relative;
         height: 6px;
@@ -75,37 +86,67 @@ export const anthropicUsageStyles = /*css*/`
         font-variant-numeric: tabular-nums;
     }
 
-    .anthropic-usage-loading {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        width: 100%;
-    }
-
-    .loading-placeholder {
-        background: linear-gradient(90deg, var(--background-modifier-border) 25%, transparent 37%, var(--background-modifier-border) 63%);
-        background-size: 400% 100%;
-        animation: loading 1.4s ease infinite;
-        border-radius: 4px;
-    }
-
-    @keyframes loading {
-        0% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
     .anthropic-usage-error {
         color: var(--text-error);
         font-size: 12px;
+        flex: 1;
     }
 
     .anthropic-usage-retrying .anthropic-usage-error {
         color: var(--text-muted);
-        animation: pulse 2s ease-in-out infinite;
+        animation: anthropic-pulse 2s ease-in-out infinite;
     }
 
-    @keyframes pulse {
+    @keyframes anthropic-pulse {
         0%, 100% { opacity: 0.6; }
         50% { opacity: 1; }
+    }
+
+    /* Loading skeleton styles */
+    .anthropic-usage-loading {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .loading-placeholder {
+        background: linear-gradient(90deg, var(--background-modifier-border) 25%, var(--background-primary) 50%, var(--background-modifier-border) 75%);
+        background-size: 200% 100%;
+        animation: anthropic-shimmer 1.5s ease-in-out infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes anthropic-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .anthropic-icon-skeleton {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .anthropic-value-skeleton {
+        width: 48px;
+        height: 22px;
+    }
+
+    .anthropic-info-skeleton {
+        height: 14px;
+        width: 60%;
+    }
+
+    .anthropic-bar-skeleton {
+        height: 6px;
+        width: 100%;
+    }
+
+    .anthropic-usage-compact-skeleton {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
     }
 `;

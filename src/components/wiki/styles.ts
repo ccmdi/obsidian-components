@@ -21,6 +21,7 @@ export const wikiStyles = /*css*/`
         object-fit: cover;
         border-radius: 6px;
         flex-shrink: 0;
+        transition: opacity 0.3s ease;
     }
 
     .wiki-thumbnail-placeholder {
@@ -93,6 +94,7 @@ export const wikiStyles = /*css*/`
         color: var(--text-muted);
         border-top: 1px solid var(--background-modifier-border);
         padding-top: 8px;
+        min-height: 24px;
     }
 
     .wiki-source {
@@ -122,11 +124,59 @@ export const wikiStyles = /*css*/`
         color: var(--text-muted);
         padding: 12px;
         text-align: center;
+        background: var(--background-secondary);
+        border-radius: 8px;
     }
 
     .wiki-error {
         color: var(--text-error);
         padding: 12px;
         text-align: center;
+        background: var(--background-secondary);
+        border-radius: 8px;
+    }
+
+    /* Skeleton loading styles */
+    .loading-placeholder {
+        background: linear-gradient(90deg, var(--background-modifier-border) 25%, var(--background-primary) 50%, var(--background-modifier-border) 75%);
+        background-size: 200% 100%;
+        animation: wiki-shimmer 1.5s ease-in-out infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes wiki-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .wiki-loading-skeleton .wiki-thumbnail-placeholder {
+        animation: wiki-shimmer 1.5s ease-in-out infinite;
+        background: linear-gradient(90deg, var(--background-modifier-border) 25%, var(--background-primary) 50%, var(--background-modifier-border) 75%);
+        background-size: 200% 100%;
+    }
+
+    .wiki-title-skeleton {
+        height: 20px;
+        width: 70%;
+        margin-bottom: 8px;
+    }
+
+    .wiki-description-skeleton {
+        height: 14px;
+        width: 50%;
+    }
+
+    .wiki-extract-skeleton {
+        height: 16px;
+        width: 100%;
+    }
+
+    .wiki-extract-skeleton-short {
+        width: 60%;
+    }
+
+    .wiki-footer-skeleton {
+        height: 14px;
+        width: 120px;
     }
 `;
