@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext, MarkdownRenderer } from "obsidian";
+import { App, MarkdownPostProcessorContext } from "obsidian";
 
 export const ojsStyles = /*css*/`
 .vault-analytics-grid {
@@ -54,7 +54,7 @@ export interface OjsApi {
 
 export function createApi(): OjsApi {
     return {
-        grid(parent: HTMLElement, className: string = 'vault-analytics-grid'): HTMLElement {
+        grid(parent: HTMLElement, className = 'vault-analytics-grid'): HTMLElement {
             return parent.createEl('div', { cls: className });
         },
 

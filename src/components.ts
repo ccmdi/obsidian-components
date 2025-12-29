@@ -3,7 +3,6 @@ import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSp
 import { applyCssFromArgs } from "utils";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
-import { debug } from "debug";
 import { parseYaml } from "obsidian";
 
 /**
@@ -109,8 +108,8 @@ export namespace ComponentInstance {
     export function createUpdateLoop(
         instance: ComponentInstance,
         updateFn: () => void,
-        intervalMs: number = 1000,
-        syncToInterval: boolean = false
+        intervalMs = 1000,
+        syncToInterval = false
     ): void {
         updateFn();
 

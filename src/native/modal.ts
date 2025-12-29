@@ -1,4 +1,4 @@
-import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent, setIcon } from "obsidian";
+import { App, Modal, Setting, Notice, Editor, TextComponent, setIcon } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import { renderExternalLinkToElement } from "utils";
@@ -30,7 +30,7 @@ export default class ComponentSelectorModal extends Modal {
                 cls: 'clickable-icon'
             });
 
-            const title = option.createEl('div', {
+            option.createEl('div', {
                 text: component.name || component.keyName,
                 cls: 'nav-file-title-content'
             });
@@ -339,7 +339,7 @@ export class PlaceComponentModal extends Modal {
                 cls: 'clickable-icon'
             });
 
-            const title = option.createEl('div', {
+            option.createEl('div', {
                 text: component.name || component.keyName,
                 cls: 'nav-file-title-content'
             });

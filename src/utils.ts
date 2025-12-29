@@ -1,7 +1,6 @@
 // utils.ts
 
-import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, parseYaml } from "obsidian";
-import { debug } from "debug";
+import { App, MarkdownPostProcessorContext, TFile, CachedMetadata } from "obsidian";
 /**
  * Parses .env-style key-value pairs from a code block.
  * e.g., `GITHUB_TOKEN="your_token_here"`
@@ -44,8 +43,8 @@ export function validateArguments(args: Record<string, string>, required: string
 
 export function resolvePath(pathArg: string, path: string): string {
     const isAbsolute = pathArg.startsWith('/');
-    
-    let baseSegments = pathArg.split('/').filter(Boolean);
+
+    const baseSegments = pathArg.split('/').filter(Boolean);
     const relativeSegments = path.split('/');
 
     for (const segment of relativeSegments) {

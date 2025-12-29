@@ -58,29 +58,25 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
         let isDestroyed = false;
 
         const ankiConnectRequest = async (action: string, params: Record<string, unknown> = {}) => {
-            try {
-                const response = await requestUrl({
-                    url: 'http://localhost:8765',
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action,
-                        version: 6,
-                        params
-                    })
-                });
+            const response = await requestUrl({
+                url: 'http://localhost:8765',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action,
+                    version: 6,
+                    params
+                })
+            });
 
-                const data = response.json;
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                return data.result;
-            } catch (error) {
-                throw error;
+            const data = response.json;
+            if (data.error) {
+                throw new Error(data.error);
             }
+
+            return data.result;
         };
 
         const showError = (message: string, help?: string) => {

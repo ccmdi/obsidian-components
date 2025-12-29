@@ -275,7 +275,7 @@ export const gymStats: Component<['query']> = {
             })
             .sort((a, b) => b.recent30Days.sessions - a.recent30Days.sessions);
 
-        const formatChange = (value: number, suffix: string = '') => {
+        const formatChange = (value: number, suffix = '') => {
             if (value === 0) return '—';
             const sign = value > 0 ? '+' : '';
             const color = value > 0 ? '#4CAF50' : value < 0 ? '#F44336' : 'var(--text-muted)';

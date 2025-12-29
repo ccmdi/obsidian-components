@@ -249,7 +249,6 @@ export const places: Component<[
 
         const sortedCountries = [...countries].sort();
         const sortedStates = [...states].sort();
-        const sortedLocalities = [...localities].sort();
 
         // Build UI
         const wrapper = el.createEl('div', { cls: 'places-wrapper' });

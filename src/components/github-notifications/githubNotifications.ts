@@ -262,7 +262,7 @@ async function populateNotifications(instance: ComponentInstance) {
 
                         if (notification.subject.url) {
                             const apiUrl = notification.subject.url;
-                            const match = apiUrl.match(/repos\/([^\/]+\/[^\/]+)\/(pulls|issues)\/(\d+)/);
+                            const match = apiUrl.match(/repos\/([^/]+\/[^/]+)\/(pulls|issues)\/(\d+)/);
                             if (match) {
                                 const [, repo, type, number] = match;
                                 const htmlType = type === 'pulls' ? 'pull' : 'issues';

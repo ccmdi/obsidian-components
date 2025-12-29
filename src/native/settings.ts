@@ -7,7 +7,7 @@ import { renderExternalLinkToElement } from "utils";
 export default class ComponentsSettingTab extends PluginSettingTab {
     plugin: ComponentsPlugin;
     private currentView: 'general' | 'components' | string = 'components';
-    private searchQuery: string = '';
+    private searchQuery = '';
 
     constructor(app: App, plugin: ComponentsPlugin) {
         super(app, plugin);
@@ -152,9 +152,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
     }
 
     updateComponentClickabilityInPlace(component: Component<readonly string[]>, nameEl: HTMLElement, isEnabled: boolean): void {
-        const hasSettings = component.settings && Object.keys(component.settings).length > 0;
-        const hasArgs = Component.hasArgs(component);
-        const hasSubmenu = hasSettings || hasArgs;
+        const hasSubmenu = (component.settings && Object.keys(component.settings).length > 0) || Component.hasArgs(component);
 
         if (hasSubmenu && isEnabled) {
             nameEl.addClass('is-clickable');
@@ -299,7 +297,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         this.updateComponentClickabilityInPlace(component, componentSetting.nameEl, isEnabledBySettings);
     }
 
-    renderGroup(containerEl: HTMLElement, group: ComponentGroup, query: string = ''): void {
+    renderGroup(containerEl: HTMLElement, group: ComponentGroup, query = ''): void {
         const groupKey = group;
         const groupMetadata = GROUPS[groupKey];
         const components = groupMetadata.members!;
@@ -363,7 +361,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         }
 
         const displayName = component.name || component.keyName;
-        const header = containerEl.createEl('h1', { text: displayName });
+        containerEl.createEl('h1', { text: displayName });
         // if (component.name) {
         //     const subheader = containerEl.createEl('p', {
         //         text: `(${component.keyName})`,
