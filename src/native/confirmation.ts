@@ -14,8 +14,8 @@ export default class ConfirmationModal extends Modal {
         const { contentEl } = this;
         contentEl.addClass('confirmation-modal');
 
-        const header = contentEl.createEl('h2', { text: 'Confirm Action' });
-        const message = contentEl.createEl('p', { text: this.message });
+        contentEl.createEl('h2', { text: 'Confirm Action' });
+        contentEl.createEl('p', { text: this.message });
 
         const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
 

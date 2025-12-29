@@ -218,7 +218,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
     };
 }
 
-function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, colors: string = "colorful", showTitle: boolean = true, showInlineList: boolean = true): void {
+function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, colors = "colorful", showTitle = true, showInlineList = true): void {
     const {
         totalPages, islands, wellConnected, substantialNotes, totalInternalLinks,
         totalExternalLinks, recentlyActive, staleNotes, taggedNotes, totalTags,
@@ -355,7 +355,7 @@ function generateMissingLinksDOM(el: HTMLElement, topMissingLinks: [string, numb
             p.appendText(' • ');
         }
         const searchQuery = `/\\[\\[${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]\\]/`;
-        const link = p.createEl('a', {
+        p.createEl('a', {
             attr: { href: `obsidian://search?query=${encodeURIComponent(searchQuery)}` },
             text: name
         });

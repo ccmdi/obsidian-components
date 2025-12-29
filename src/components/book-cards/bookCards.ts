@@ -1,6 +1,6 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { debug } from "debug";
-import { TFile, TFolder } from "obsidian";
+import { App, TFile, TFolder } from "obsidian";
 import { useNavigation } from "utils";
 import { bookCardsStyles } from "./styles";
 
@@ -17,7 +17,7 @@ interface BookData {
 /**
  * Resolve a frontmatter `cover` value to a usable browser URL.
  */
-function resolveCoverUrl(app: any, cover: any, sourcePath: string): string | null {
+function resolveCoverUrl(app: App, cover: any, sourcePath: string): string | null {
     try {
         if (!cover) return null;
 
@@ -25,7 +25,7 @@ function resolveCoverUrl(app: any, cover: any, sourcePath: string): string | nul
             const linkPath = cover?.path || cover?.file?.path;
             if (linkPath) {
                 const tfile = app.vault.getAbstractFileByPath(linkPath);
-                return tfile ? app.vault.getResourcePath(tfile) : null;
+                return tfile instanceof TFile ? app.vault.getResourcePath(tfile) : null;
             }
         }
 
@@ -41,7 +41,7 @@ function resolveCoverUrl(app: any, cover: any, sourcePath: string): string | nul
             if (dest) return app.vault.getResourcePath(dest);
 
             const abs = app.vault.getAbstractFileByPath(linkInner);
-            if (abs) return app.vault.getResourcePath(abs);
+            if (abs instanceof TFile) return app.vault.getResourcePath(abs);
         }
     } catch (e) {
         console.warn('Failed to resolve cover URL', e);

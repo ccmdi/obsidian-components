@@ -155,7 +155,7 @@ const renderCalendar = async (
         // Fill in previous month's days
         for (let i = startingDayOfWeek - 1; i >= 0; i--) {
             const dayNum = prevMonthLastDay - i;
-            const dayEl = daysContainer.createEl('div', {
+            daysContainer.createEl('div', {
                 cls: 'calendar-day calendar-day-other-month',
                 text: String(dayNum)
             });

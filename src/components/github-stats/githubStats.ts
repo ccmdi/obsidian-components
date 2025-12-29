@@ -148,7 +148,7 @@ export const githubStats: Component<['GITHUB_TOKEN']> = {
     },
 
     renderRefresh: async (args, el, ctx, app, instance) => {
-        const { username, last7Days } = await fetchGithubData(instance.data.token);
+        const { last7Days } = await fetchGithubData(instance.data.token);
         renderStreakSquares(instance.data.streakContainer, last7Days, instance.data.tooltip);
     },
 

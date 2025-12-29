@@ -1,4 +1,4 @@
-import { Component, ComponentAction, ComponentInstance } from 'components';
+import { Component, ComponentAction } from 'components';
 import { wikiStyles } from './styles';
 
 interface WikiSummary {
@@ -156,7 +156,7 @@ function renderWikiContent(el: HTMLElement, data: WikiSummary, compact: boolean)
     }
 
     // Extract (main content)
-    const extractEl = container.createEl('p', {
+    container.createEl('p', {
         cls: compact ? 'wiki-extract wiki-extract-short' : 'wiki-extract',
         text: data.extract
     });

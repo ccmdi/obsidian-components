@@ -65,7 +65,6 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const userId = args.userId;
         const showActivity = parseBoolean(args.showActivity, true);
-        const compact = parseBoolean(args.compact, false);
         const hideProfile = parseBoolean(args.hideProfile, false);
 
         el.style.position = 'relative';
@@ -266,8 +265,8 @@ export const discordStatus: Component<['userId', 'showActivity', 'compact', 'hid
             card.classList.add('discord-activity-card');
             card.dataset.key = getActivityKey(activity);
 
-            const artworkDiv = card.createEl('div', { cls: 'activity-artwork' });
-            
+            card.createEl('div', { cls: 'activity-artwork' });
+
             const infoDiv = card.createEl('div', { cls: 'activity-info' });
             infoDiv.createEl('div', { cls: 'activity-title' }); 
             infoDiv.createEl('div', { cls: 'activity-subtitle' }); 

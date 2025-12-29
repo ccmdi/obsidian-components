@@ -277,7 +277,8 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             const content = widget.querySelector('.widget-content');
             if (content) muuri.resizeObserver?.unobserve(content);
 
-            const inst = componentInstances.get((content as HTMLElement)?.dataset.componentId!);
+            const contentEl = content as HTMLElement | null;
+            const inst = contentEl?.dataset.componentId ? componentInstances.get(contentEl.dataset.componentId) : undefined;
             inst?.destroy();
 
             widget.remove();
