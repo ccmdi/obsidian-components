@@ -713,12 +713,26 @@ export namespace Component {
         // debug(`render ${component.keyName} took ${endTime - startTime}ms`);
 
         // Recovery: if file.* args were undefined, wait for cache update then refresh
-        if (needsFileRecovery && isNew) {
+        const recoveryKey = `_recoveryAttempted_${ctx.sourcePath}`;
+        const alreadyAttempted = instance.data[recoveryKey] === true;
+
+        if (needsFileRecovery && !alreadyAttempted) {
+            instance.data[recoveryKey] = true;
+
             const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
             if (file instanceof TFile) {
-                const recoveryHandler = (changedFile: TFile) => {
-                    if (changedFile.path === file.path) {
+                let retryCount = 0;
+                const maxRetries = 5;
+
+                const recoveryHandler = (changedFile: TFile, _data: string, cache: CachedMetadata) => {
+                    if (changedFile.path !== file.path) return;
+
+                    const stillMissing = fileKeys.some(key => cache?.frontmatter?.[key] === undefined);
+                    retryCount++;
+
+                    if (!stillMissing || retryCount >= maxRetries) {
                         app.metadataCache.off('changed', recoveryHandler);
+                        el.empty();
                         instance.data.triggerRefresh?.();
                     }
                 };
