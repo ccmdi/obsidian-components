@@ -1,5 +1,5 @@
 import { Component, ComponentInstance, ComponentAction, ComponentSettingsData } from "components";
-import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, getAllTags } from "obsidian";
 import { parseBoolean, renderMarkdownLinkToElement } from "utils";
 import { createApi, injectOjsStyles } from "ojs";
 
@@ -8,7 +8,7 @@ interface LinkData {
     link: string;
     outlinks: number;
     internalOutlinks: number;
-    externalOutlinks: number;
+    unresolvedOutlinks: number;
     inlinks: number;
     tags: number;
     size: number;
@@ -20,7 +20,7 @@ interface AnalyticsData {
     topMissingLinks: [string, number][];
     totalOutlinks: number;
     totalInternalLinks: number;
-    totalExternalLinks: number;
+    totalUnresolvedLinks: number;
     islands: LinkData[];
     wellConnected: LinkData[];
     hubs: LinkData[];
@@ -81,9 +81,11 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
     for (const sourcePath in app.metadataCache.resolvedLinks) {
         if (searchFolder && !pagePaths.has(sourcePath)) continue;
 
-        for (const targetPath in app.metadataCache.resolvedLinks[sourcePath]) {
+        const sourceLinks = app.metadataCache.resolvedLinks[sourcePath];
+        for (const targetPath in sourceLinks) {
             if (!pagePaths.has(targetPath)) continue;
-            inlinksMap.set(targetPath, (inlinksMap.get(targetPath) || 0) + 1);
+            // sourceLinks[targetPath] is the count of links from source to target
+            inlinksMap.set(targetPath, (inlinksMap.get(targetPath) || 0) + sourceLinks[targetPath]);
         }
     }
 
@@ -94,37 +96,36 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
         const cache = app.metadataCache.getFileCache(page);
         const allOutlinks = cache?.links?.length || 0;
 
-        const internalOutlinks = (cache?.links?.filter(link => {
-            const linkName = link.displayText || link.link?.replace(/\.md$/, '') || '';
-            return noteNames.has(linkName);
-        }) || []).length;
+        // Count resolved vs unresolved links using proper path resolution
+        let resolvedCount = 0;
+        let unresolvedCount = 0;
 
-        const externalOutlinks = allOutlinks - internalOutlinks;
+        const links = cache?.links || [];
+        for (const link of links) {
+            const resolved = app.metadataCache.getFirstLinkpathDest(link.link, page.path);
+            if (resolved) {
+                resolvedCount++;
+            } else {
+                unresolvedCount++;
+                // Track for "Missing Notes" section
+                const linkName = link.displayText || link.link?.replace(/\.md$/, '') || '';
+                if (linkName) {
+                    nonExistingLinks.set(linkName, (nonExistingLinks.get(linkName) || 0) + 1);
+                }
+            }
+        }
+
         const inlinks = inlinksMap.get(page.path) || 0;
-
 
         linkCounts.push({
             file: page.basename,
             link: page.basename,
             outlinks: allOutlinks,
-            internalOutlinks,
-            externalOutlinks,
+            internalOutlinks: resolvedCount,
+            unresolvedOutlinks: unresolvedCount,
             inlinks,
-            tags: cache?.frontmatter?.tags?.length || 0,
+            tags: cache ? getAllTags(cache)?.length || 0 : 0,
             size: page.stat.size
-        });
-
-        // Track non-existing links
-        const unresolvedLinks = cache?.links?.filter(link => {
-            const linkPath = app.metadataCache.getFirstLinkpathDest(link.link, page.path);
-            return !linkPath;
-        }) || [];
-
-        unresolvedLinks.forEach(link => {
-            const linkName = link.displayText || link.link?.replace(/\.md$/, '') || '';
-            if (linkName && !link.original?.startsWith('!')) {
-                nonExistingLinks.set(linkName, (nonExistingLinks.get(linkName) || 0) + 1);
-            }
         });
     }
 
@@ -135,7 +136,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
     // Calculate analytics in a single pass
     let totalOutlinks = 0;
     let totalInternalLinks = 0;
-    let totalExternalLinks = 0;
+    let totalUnresolvedLinks = 0;
     let totalSize = 0;
     let totalTags = 0;
     let substantialNotes = 0;
@@ -154,7 +155,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
         // Accumulate totals
         totalOutlinks += p.outlinks;
         totalInternalLinks += p.internalOutlinks;
-        totalExternalLinks += p.externalOutlinks;
+        totalUnresolvedLinks += p.unresolvedOutlinks;
         totalSize += p.size;
         totalTags += p.tags;
 
@@ -173,9 +174,11 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
         if (p.tags > 0) taggedNotes++;
     }
 
-    // Sort hubs and authorities after categorization
+    // Sort after categorization
     hubs.sort((a, b) => b.internalOutlinks - a.internalOutlinks);
     authorities.sort((a, b) => b.inlinks - a.inlinks);
+    deadEnds.sort((a, b) => b.inlinks - a.inlinks);
+    orphans.sort((a, b) => b.outlinks - a.outlinks);
 
     const avgSize = totalPages > 0 ? totalSize / totalPages : 0;
     const developedNotes = notesWithContent.length - shortNotes;
@@ -198,7 +201,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
         topMissingLinks,
         totalOutlinks,
         totalInternalLinks,
-        totalExternalLinks,
+        totalUnresolvedLinks,
         islands,
         wellConnected,
         hubs,
@@ -221,7 +224,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
 function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, colors: string = "colorful", showTitle: boolean = true, showInlineList: boolean = true): void {
     const {
         totalPages, islands, wellConnected, substantialNotes, totalInternalLinks,
-        totalExternalLinks, recentlyActive, staleNotes, taggedNotes, totalTags,
+        totalUnresolvedLinks, recentlyActive, staleNotes, taggedNotes, totalTags,
         notesWithContent, developedNotes, shortNotes, totalSize, avgSize,
         authorities, hubs, deadEnds, orphans, topMissingLinks
     } = data;
@@ -270,11 +273,11 @@ function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder
     });
 
     api.card(grid, {
-        title: 'EXTERNAL LINKS',
+        title: 'UNRESOLVED LINKS',
         color: getColor('var(--color-blue)'),
-        value: `${(totalExternalLinks / totalPages).toFixed(1)}`,
-        suffix: 'per note',
-        subtitle: `${totalExternalLinks} outside links`
+        value: `${totalUnresolvedLinks}`,
+        suffix: 'unresolved',
+        subtitle: `${(totalUnresolvedLinks / totalPages).toFixed(1)} per note`
     });
 
     api.card(grid, {
