@@ -665,11 +665,8 @@ export namespace Component {
         if (!isEnabled) {
             el.empty();
             el.addClass('component-disabled');
-            // Only hide on re-render, not initial (Muuri needs to see item on init)
-            if (!isNew) {
-                const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
-                if (container) container.style.display = 'none';
-            }
+            const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
+            if (container) container.style.display = 'none';
             return;
         }
 
