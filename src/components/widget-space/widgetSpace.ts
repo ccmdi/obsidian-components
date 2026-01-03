@@ -110,7 +110,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
     icon: 'layout-grid',
     isMountable: false,
     args: {
-        layout: { description: 'JSON layout configuration (optional)', default: '' },
+        layout: { description: 'Layout configuration (b64)', default: '', hidden: true },
         columns: { description: 'Number of columns (default: 1)', default: '1' }
     },
     does: [ComponentAction.READ],

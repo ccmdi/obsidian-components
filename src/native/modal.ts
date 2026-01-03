@@ -219,7 +219,7 @@ export class ComponentArgsModal extends Modal {
         container.empty();
 
         if (Component.hasArgs(this.component)) {
-            Object.entries(this.component.args).forEach(([argKey, argConfig]) => {
+            Object.entries(this.component.args).filter(([_, argConfig]) => !argConfig?.hidden).forEach(([argKey, argConfig]) => {
                 const setting = new Setting(container)
                     .setName(camelToSentence(argKey))
                     .addText(text => {

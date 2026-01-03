@@ -376,7 +376,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         // Args section
         if (hasArgs) {
             containerEl.createEl('h3', { text: 'Arguments' });
-            Object.entries(component.args!).forEach(([argKey, argConfig]) => {
+            Object.entries(component.args!).filter(([_, argConfig]) => !argConfig?.hidden).forEach(([argKey, argConfig]) => {
                 const argDesc = argConfig?.description || '';
                 const argSetting = new Setting(containerEl)
                     .setName(argKey);

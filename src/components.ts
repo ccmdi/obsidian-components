@@ -234,6 +234,7 @@ export interface ComponentArg {
     description?: string;
     default?: string;
     required?: boolean;
+    hidden?: boolean;
 }
 
 export interface ComponentSetting {
@@ -317,7 +318,7 @@ export namespace Component {
     }
 
     export function hasArgs(component: Component<readonly string[]>): boolean {
-        return Object.keys(component.args || {}).length > 0;
+        return Object.values(component.args || {}).some(arg => arg && !arg.hidden);
     }
 
     export function mergeWithDefaults(component: Component<readonly string[]>, args: Record<string, string>): Record<string, string> {
