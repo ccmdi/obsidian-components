@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext, ViewStateResult,
 import { COMPONENTS, Component, componentInstances } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import { ComponentArgsModal } from "./modal";
+import { argsToSource } from "utils";
 
 export interface ComponentSidebarState extends Record<string, unknown> {
     componentKey?: string;
@@ -104,10 +105,7 @@ export default class ComponentSidebarView extends ItemView {
         container.addClass('in-sidebar');
 
         try {
-            // Convert args to source format for renderComponent
-            const argsSource = Object.entries(this.componentArgs)
-                .map(([key, value]) => `${key}="${value}"`)
-                .join('\n');
+            const argsSource = argsToSource(this.componentArgs);
 
             // Use active note context for components that need it
             const activeFile = this.app.workspace.getActiveFile();

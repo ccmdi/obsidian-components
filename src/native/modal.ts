@@ -1,7 +1,7 @@
 import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent, setIcon } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
-import { camelToSentence, renderExternalLinkToElement } from "utils";
+import { argsToSource, camelToSentence, renderExternalLinkToElement } from "utils";
 import { FolderSuggest, QuerySuggest, FileSuggest } from "./suggest";
 
 export default class ComponentSelectorModal extends Modal {
@@ -113,13 +113,6 @@ export class ComponentArgsModal extends Modal {
         return ComponentsPlugin.instance?.settings?.modalArgSuggest ?? true;
     }
 
-    private argsToRaw(): string {
-        return Object.entries(this.args)
-            .filter(([, value]) => value && value.trim() !== '')
-            .map(([key, value]) => `${key}="${value}"`)
-            .join('\n');
-    }
-
     private rawToArgs(raw: string): void {
         this.args = {};
         const lines = raw.split('\n');
@@ -165,7 +158,9 @@ export class ComponentArgsModal extends Modal {
             cls: 'component-args-raw-textarea',
             attr: { placeholder: 'key="value"\nkey2="value2"', rows: '10' }
         });
-        rawTextarea.value = this.argsToRaw();
+        rawTextarea.value = argsToSource(this.args, (entries) => 
+            entries.filter(([, value]) => value && value.trim() !== '')
+        );
 
         // Tab switching
         formTab.onclick = () => {
@@ -182,7 +177,9 @@ export class ComponentArgsModal extends Modal {
 
         rawTab.onclick = () => {
             if (this.currentTab === 'form') {
-                rawTextarea.value = this.argsToRaw();
+                rawTextarea.value = argsToSource(this.args, (entries) => 
+                    entries.filter(([, value]) => value && value.trim() !== '')
+                );
             }
             this.currentTab = 'raw';
             rawTab.addClass('is-active');
@@ -362,10 +359,9 @@ export class PlaceComponentModal extends Modal {
                     new ComponentArgsModal(this.app, component, {
                         mode: 'insert',
                         onSubmit: (args) => {
-                            const argsLines = Object.entries(args)
-                                .filter(([, value]) => value && value.trim() !== '')
-                                .map(([key, value]) => `${key}="${value}"`)
-                                .join('\n');
+                            const argsLines = argsToSource(args, (entries) => 
+                                entries.filter(([, value]) => value && value.trim() !== '')
+                            );
                             const codeBlock = `\`\`\`${component.keyName}\n${argsLines}\n\`\`\``;
                             this.editor.replaceSelection(codeBlock);
                         }

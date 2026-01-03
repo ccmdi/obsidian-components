@@ -2,6 +2,7 @@ import { Editor, EditorPosition, EditorSuggest, EditorSuggestContext, EditorSugg
 import { COMPONENTS, Component } from "components";
 import ComponentsPlugin from "main";
 import { ComponentArgsModal } from "native/modal";
+import { argsToSource } from "utils";
 
 interface ComponentSuggestion {
     component: Component<readonly string[]>;
@@ -190,11 +191,7 @@ export class ComponentAutoComplete extends EditorSuggest<ComponentSuggestion> {
     }
 
     insertCodeBlock(editor: Editor, start: EditorPosition, keyName: string, args: Record<string, string>): void {
-        // Build the code block content
-        const argsLines = Object.entries(args)
-            .filter(([, value]) => value && value.trim() !== '')
-            .map(([key, value]) => `${key}="${value}"`)
-            .join('\n');
+        const argsLines = argsToSource(args);
 
         const codeBlock = `\`\`\`${keyName}\n${argsLines}\n\`\`\``;
 

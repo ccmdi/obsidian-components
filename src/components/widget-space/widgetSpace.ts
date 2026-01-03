@@ -7,6 +7,7 @@ import { COMPONENTS, componentInstances } from "components";
 import ComponentSidebarView from "native/sidebar";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import Muuri from "muuri";
+import { argsToSource } from "utils";
 
 const MARGIN = 4;
 
@@ -55,10 +56,6 @@ function createSkeleton(parent: HTMLElement, count: number, columns: number): HT
         skeleton.createEl('div', { cls: 'widget-skeleton' });
     }
     return skeleton;
-}
-
-function argsToSource(args: Record<string, string>): string {
-    return Object.entries(args).map(([k, v]) => `${k}="${v}"`).join('\n');
 }
 
 class ComponentSelectorModal extends Modal {

@@ -9,6 +9,7 @@ import ComponentSidebarView from 'native/sidebar';
 import ComponentSelectorModal, { PlaceComponentModal, ComponentArgsModal } from 'native/modal';
 import { ComponentAutoComplete } from 'native/autocomplete';
 import { executeOjs, injectOjsStyles } from 'ojs';
+import { argsToSource } from 'utils';
 
 export const COMPONENT_SIDEBAR_VIEW_TYPE = 'component-sidebar';
 
@@ -242,10 +243,9 @@ export default class ComponentsPlugin extends Plugin {
         if (blockStart === -1 || blockEnd === -1) return;
 
         // Build new code block content
-        const argsLines = Object.entries(newArgs)
-            .filter(([, value]) => value && value.trim() !== '')
-            .map(([key, value]) => `${key}="${value}"`)
-            .join('\n');
+        const argsLines = argsToSource(newArgs, (entries) => 
+            entries.filter(([, value]) => value && value.trim() !== '')
+        );
 
         const newCodeBlock = `\`\`\`${componentKey}\n${argsLines}\n\`\`\``;
 
