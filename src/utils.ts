@@ -138,6 +138,9 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
 type FrontmatterValue = string | number | boolean | null | FrontmatterValue[] | { [key: string]: FrontmatterValue };
 type Frontmatter = Record<string, FrontmatterValue>;
 
+/**
+ * @deprecated handled in main component flow
+ */
 export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
     let fm: Frontmatter | null = null;
 
@@ -168,6 +171,7 @@ export function camelToSentence(str: string): string {
 /**
  * Parse frontmatter from metadata cache (sync).
  * Like fm.* but returns whether any values were undefined (for recovery).
+ * @deprecated handled in main component flow
  */
 export function parseFileContent(
     args: Record<string, string>,
