@@ -5,7 +5,7 @@ import ConfirmationModal from "native/confirmation";
 import { ComponentArgsModal } from "native/modal";
 import { COMPONENTS, componentInstances } from "components";
 import ComponentSidebarView from "native/sidebar";
-import { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
+import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import Muuri from "muuri";
 
 const MARGIN = 4;
@@ -352,7 +352,8 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             });
         };
 
-        const availableComponents = COMPONENTS.filter(c => c.isMountable);
+        const isComponentEnabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
+        const availableComponents = COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
 
         container.addEventListener('dblclick', (e) => {
             if (e.target === container || e.target === grid) {
@@ -386,7 +387,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
 
         for (const cfg of [...layout.widgets].sort((a, b) => (a.order || 0) - (b.order || 0))) {
             const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-            if (comp) {
+            if (comp && isComponentEnabled(cfg.componentKey)) {
                 // Pass saved position so widgets appear in correct place immediately
                 const initialPos = (cfg.x !== undefined && cfg.y !== undefined) ? { x: cfg.x, y: cfg.y } : undefined;
                 await addWidget(cfg.componentKey, comp.name || comp.keyName, cfg.args, initialPos);
