@@ -1,6 +1,7 @@
 import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView } from "obsidian";
-import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
+import { parseArguments, validateArguments, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
 import { applyCssFromArgs } from "utils";
+import { evaluateArgs, isTruthy } from "expression";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
 import { debug } from "debug";
@@ -566,28 +567,33 @@ export namespace Component {
         let args = { ...originalArgs };
 
         const argValues = Object.values(originalArgs);
-        const usesFm = argValues.some(v => v?.startsWith('fm.'));
-        const usesFile = argValues.some(v => v?.startsWith('file.'));
         const usesSelf = argValues.some(v => v?.includes('__SELF__'));
 
-        // Extract specific fm/file keys being watched for smart refresh
-        const fmKeys = argValues
-            .filter(v => v?.startsWith('fm.'))
-            .map(v => v.slice(3));
-        const fileKeys = argValues
-            .filter(v => v?.startsWith('file.'))
-            .map(v => v.slice(5));
-
         const componentArgKeys = new Set(Component.getArgKeys(component));
-        // debug(args)
 
-        args = parseFM(args, app, ctx);
-        const fileContentResult = parseFileContent(args, app, ctx);
-        args = fileContentResult.args;
-        const needsFileRecovery = fileContentResult.needsRecovery;
-
-        // Handle special VALUES
+        // Resolve special variables first (__TODAY__, __SELF__, etc.)
         args = resolveSpecialVariables(args, ctx);
+
+        // Get frontmatter for expression evaluation
+        const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
+        const frontmatter = file instanceof TFile
+            ? app.metadataCache.getFileCache(file)?.frontmatter || {}
+            : {};
+
+        // Evaluate expressions (handles fm.*, file.*, if(), operators)
+        const exprResult = evaluateArgs(args, { frontmatter });
+        args = exprResult.args;
+        const fmKeys = exprResult.fmKeys;
+        const fileKeys = exprResult.fileKeys;
+        const usesFm = fmKeys.length > 0;
+        const usesFile = fileKeys.length > 0;
+
+        // Check if any file.* keys were undefined (for recovery)
+        const needsFileRecovery = fileKeys.some(key => {
+            const value = frontmatter[key];
+            return value === undefined;
+        });
+
         args = parseArgsAliases(args, componentArgKeys);
 
         // Handle special KEYS
@@ -603,9 +609,7 @@ export namespace Component {
                 componentArgKeys.delete(cleanKey);
             // enabled => RESERVED KEYWORD for enabling/disabling components
             } else if (key === 'enabled') {
-                if (value === 'false') {
-                    isEnabled = false;
-                }
+                isEnabled = isTruthy(value);
                 componentArgKeys.delete(key);
             // all other keys => component args / CSS carryovers
             } else {
