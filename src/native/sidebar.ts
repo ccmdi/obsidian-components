@@ -1,6 +1,7 @@
-import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext, ViewStateResult } from "obsidian";
+import { ItemView, WorkspaceLeaf, MarkdownPostProcessorContext, ViewStateResult, Menu } from "obsidian";
 import { COMPONENTS, Component, componentInstances } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
+import { ComponentArgsModal } from "./modal";
 
 export interface ComponentSidebarState extends Record<string, unknown> {
     componentKey?: string;
@@ -28,6 +29,33 @@ export default class ComponentSidebarView extends ItemView {
 
     getIcon(): string {
         return this.currentComponent?.icon || 'puzzle';
+    }
+
+    onPaneMenu(menu: Menu, source: string): void {
+        if (this.currentComponent && Component.hasArgs(this.currentComponent)) {
+            menu.addItem((item) => {
+                item
+                    .setTitle('Edit component arguments')
+                    .setIcon('settings')
+                    .onClick(() => {
+                        new ComponentArgsModal(this.app, this.currentComponent!, {
+                            mode: 'sidebar',
+                            initialArgs: this.componentArgs,
+                            submitText: 'Update',
+                            onSubmit: async (newArgs) => {
+                                this.componentArgs = newArgs;
+                                await this.renderComponent();
+                                // Update the view state so it persists
+                                this.leaf.setViewState({
+                                    type: COMPONENT_SIDEBAR_VIEW_TYPE,
+                                    state: { componentKey: this.componentKey, args: newArgs }
+                                });
+                            }
+                        }).open();
+                    });
+            });
+        }
+        super.onPaneMenu(menu, source);
     }
 
     async onOpen() {
