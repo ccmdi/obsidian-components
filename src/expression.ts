@@ -371,8 +371,8 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
 
             switch (expr.operator) {
                 // Logical
-                case '&&': return isTruthy(left) && isTruthy(right);
-                case '||': return isTruthy(left) || isTruthy(right);
+                case '&&': return isTruthy(left) ? right : left;
+                case '||': return isTruthy(left) ? left : right;
 
                 // Equality
                 case '==': return looseEquals(left, right);

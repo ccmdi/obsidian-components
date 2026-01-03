@@ -628,7 +628,6 @@ export namespace Component {
             fileKeys,
             query: args.query
         });
-        // debug('INSTANCE',component.keyName, instance);
 
         instance.data._watchedFmValues = Object.fromEntries(
             Object.entries(originalArgs)
