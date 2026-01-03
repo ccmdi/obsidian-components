@@ -160,6 +160,11 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
     return args;
 }
 
+export function camelToSentence(str: string): string {
+    const result = str.replace(/([A-Z])/g, " $1");
+    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase().trim();
+}
+
 /**
  * Parse frontmatter from metadata cache (sync).
  * Like fm.* but returns whether any values were undefined (for recovery).

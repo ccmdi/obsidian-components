@@ -1,7 +1,7 @@
 import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent, setIcon } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
-import { renderExternalLinkToElement } from "utils";
+import { camelToSentence, renderExternalLinkToElement } from "utils";
 import { FolderSuggest, QuerySuggest, FileSuggest } from "./suggest";
 
 export default class ComponentSelectorModal extends Modal {
@@ -221,7 +221,7 @@ export class ComponentArgsModal extends Modal {
         if (Component.hasArgs(this.component)) {
             Object.entries(this.component.args).forEach(([argKey, argConfig]) => {
                 const setting = new Setting(container)
-                    .setName(argKey)
+                    .setName(camelToSentence(argKey))
                     .addText(text => {
                         text.setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
                             .setValue(this.args[argKey] || '')
