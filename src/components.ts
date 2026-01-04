@@ -282,6 +282,7 @@ export interface Component<TArgs extends readonly string[]> {
     aliases?: string[];
     render: RenderFunction<TArgs>;
     renderRefresh?: RenderFunction<TArgs>;
+    renderRefreshDuration?: number; // ms to wait before full refresh after renderRefresh (default 500)
     refresh?: RefreshStrategy;
     isMountable: boolean;
     settings?: {
@@ -331,6 +332,39 @@ export namespace Component {
         });
 
         return result;
+    }
+
+    /**
+     * Static analysis of renderRefresh to detect which args it accesses.
+     * Extracts args.X patterns and destructuring like { x, y } = args.
+     */
+    export function getRenderRefreshArgs(component: Component<readonly string[]>): Set<string> {
+        if (!component.renderRefresh) return new Set();
+
+        const source = component.renderRefresh.toString();
+        const args = new Set<string>();
+
+        // Match args.propertyName
+        const dotAccess = /args\.(\w+)/g;
+        let match;
+        while ((match = dotAccess.exec(source)) !== null) {
+            args.add(match[1]);
+        }
+
+        // Match args['propertyName'] or args["propertyName"]
+        const bracketAccess = /args\[['"](\w+)['"]\]/g;
+        while ((match = bracketAccess.exec(source)) !== null) {
+            args.add(match[1]);
+        }
+
+        // Match destructuring: const { x, y } = args or { x, y } = args
+        const destructure = /\{\s*([^}]+)\}\s*=\s*args/g;
+        while ((match = destructure.exec(source)) !== null) {
+            const props = match[1].split(',').map(p => p.trim().split(/[:\s]/)[0].trim());
+            props.forEach(p => { if (p) args.add(p); });
+        }
+
+        return args;
     }
 
     /**
@@ -597,7 +631,6 @@ export namespace Component {
         const cssOverrides: Record<string, string> = {};
         const cleanArgs: Record<string, string> = {};
         let isEnabled = true;
-        let isRef = false;
 
         Object.entries(args).forEach(([key, value]) => {
             // ! => force to CSS
@@ -610,10 +643,6 @@ export namespace Component {
                 isEnabled = isTruthy(value);
                 componentArgKeys.delete(key);
             // all other keys => component args / CSS carryovers
-            } else if (key === 'ref') {
-                isRef = isTruthy(value);
-                componentArgKeys.delete(key);
-                return
             } else {
                 cleanArgs[key] = value;
             }
@@ -661,29 +690,6 @@ export namespace Component {
             }
         };
 
-        // if(isRef) {
-        //     const refId = args['ref'];
-        //     const refSource = componentSettings?.componentReferences?.[refId];
-
-        //     if (refSource) {
-        //         const refArgs = parseArguments(refSource);
-        //         const targetComponentKey = refArgs['component'];
-        //         const targetComponent = COMPONENTS.find(c => c.keyName === targetComponentKey);
-                
-        //         if (targetComponent) {
-        //             // Merge: Local args override Reference args, Reference args override Defaults
-        //             const mergedArgs = { ...refArgs, ...args };
-        //             delete mergedArgs['ref'];
-        //             delete mergedArgs['component'];
-
-        //             return this.render(targetComponent, el, mergedArgs, ctx, app, componentSettings);
-        //         } else {
-        //             new Notice(`Reference "${refId}" points to missing component: ${targetComponentKey}`);
-        //         }
-        //     } else {
-        //         new Notice(`Component reference "${refId}" not found in settings.`);
-        //     }
-        // }
         if (!isEnabled) {
             el.empty();
             el.addClass('component-disabled');
@@ -722,15 +728,43 @@ export namespace Component {
         let renderFn: RenderFunction<readonly string[]>;
         // Use renderRefresh only if instance exists AND element has content
         // (element may have been cleared by disable, requiring full render)
+        const prevArgs = instance.data._prevEvaluatedArgs as Record<string, string> | undefined;
+        let needsDelayedFullRefresh = false;
+
         if (!isNew && component.renderRefresh && el.hasChildNodes()) {
             renderFn = component.renderRefresh;
+
+            // Check if any args changed that renderRefresh doesn't handle
+            // Uses static analysis to detect which args renderRefresh accesses
+            if (prevArgs) {
+                const handledArgs = Component.getRenderRefreshArgs(component);
+                for (const key of Object.keys(argsWithDefaults)) {
+                    if (argsWithDefaults[key] !== prevArgs[key] && !handledArgs.has(key)) {
+                        needsDelayedFullRefresh = true;
+                        break;
+                    }
+                }
+            }
         } else {
             renderFn = component.render;
         }
 
+        // Store current args for next comparison
+        instance.data._prevEvaluatedArgs = { ...argsWithDefaults };
+
         instance.data._isRendering = true;
         try {
             await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
+
+            // If renderRefresh ran but couldn't handle all arg changes, do a full refresh after animation
+            if (needsDelayedFullRefresh) {
+                const animationDuration = component.renderRefreshDuration ?? 500;
+                setTimeout(() => {
+                    if (!instance.element.isConnected) return; // Element was removed
+                    el.empty();
+                    component.render(argsWithOriginal, el, ctx, app, instance, componentSettings);
+                }, animationDuration);
+            }
         } finally {
             instance.data._isRendering = false;
             // Process queued refresh if one was requested during render
