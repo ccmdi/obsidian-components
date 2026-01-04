@@ -3,86 +3,33 @@
 import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, parseYaml } from "obsidian";
 import { debug } from "debug";
 /**
- * Parses .env-style key-value pairs from a code block.
- * e.g., `GITHUB_TOKEN="your_token_here"`
+ * Parses key=value pairs from a code block.
+ * Supports: KEY=value, KEY="value", KEY='value'
+ * Quoted values can contain the opposite quote type freely.
  */
 export function parseArguments(source: string): Record<string, string> {
     const args: Record<string, string> = {};
-    const lines = source.split('\n');
-    // These regexes find lines like: KEY="value" or KEY='value' or KEY=value or KEY!=value
-    // Double-quoted: match everything until unescaped closing "
-    const doubleQuotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*"((?:[^"\\]|\\.)*)"/;
-    // Single-quoted: match everything until unescaped closing '
-    const singleQuotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*'((?:[^'\\]|\\.)*)'/;
-    const unquotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*([^\s]+.*?)$/;
 
-    let multiLineKey: string | null = null;
-    let multiLineValue = '';
-    let braceDepth = 0;
-    let bracketDepth = 0;
+    for (const line of source.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
 
-    const countBraces = (s: string) => {
-        // Don't count braces inside strings
-        const noStrings = s.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '');
-        return {
-            open: (noStrings.match(/{/g) || []).length,
-            close: (noStrings.match(/}/g) || []).length,
-            openBracket: (noStrings.match(/\[/g) || []).length,
-            closeBracket: (noStrings.match(/]/g) || []).length
-        };
-    };
+        // Match KEY= (key can contain alphanumeric, _, !, -)
+        const eqIndex = trimmed.search(/[=]/);
+        if (eqIndex === -1) continue;
 
-    for (const line of lines) {
-        // If we're accumulating a multi-line value
-        if (multiLineKey !== null) {
-            multiLineValue += '\n' + line;
-            const counts = countBraces(line);
-            braceDepth += counts.open - counts.close;
-            bracketDepth += counts.openBracket - counts.closeBracket;
+        const key = trimmed.slice(0, eqIndex).trim();
+        if (!/^[a-zA-Z0-9_!-]+$/.test(key)) continue;
 
-            if (braceDepth <= 0 && bracketDepth <= 0) {
-                args[multiLineKey] = multiLineValue.trim();
-                multiLineKey = null;
-                multiLineValue = '';
-                braceDepth = 0;
-                bracketDepth = 0;
-            }
-            continue;
+        let value = trimmed.slice(eqIndex + 1).trim();
+
+        // Strip matching outer quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
         }
 
-        // Try quoted values first (double quotes, then single quotes)
-        let match = line.match(doubleQuotedRegex) || line.match(singleQuotedRegex);
-        if (match) {
-            const [, key, value] = match;
-            args[key] = value;
-        } else {
-            // Try unquoted values
-            match = line.match(unquotedRegex);
-            if (match) {
-                const [, key, value] = match;
-                const trimmedValue = value.trim();
-
-                // Check if this starts a multi-line object/array
-                if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
-                    const counts = countBraces(trimmedValue);
-                    braceDepth = counts.open - counts.close;
-                    bracketDepth = counts.openBracket - counts.closeBracket;
-
-                    if (braceDepth > 0 || bracketDepth > 0) {
-                        multiLineKey = key;
-                        multiLineValue = trimmedValue;
-                        continue;
-                    }
-                }
-
-                args[key] = trimmedValue;
-            }
-        }
-    }
-
-    // Handle unclosed multi-line (use what we have)
-    if (multiLineKey !== null) {
-        args[multiLineKey] = multiLineValue.trim();
+        args[key] = value;
     }
 
     return args;
