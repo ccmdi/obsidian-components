@@ -13,7 +13,40 @@ export function parseArguments(source: string): Record<string, string> {
     const quotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*["'](.*?)["']/;
     const unquotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*([^\s]+.*?)$/;
 
+    let multiLineKey: string | null = null;
+    let multiLineValue = '';
+    let braceDepth = 0;
+    let bracketDepth = 0;
+
+    const countBraces = (s: string) => {
+        // Don't count braces inside strings
+        const noStrings = s.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '');
+        return {
+            open: (noStrings.match(/{/g) || []).length,
+            close: (noStrings.match(/}/g) || []).length,
+            openBracket: (noStrings.match(/\[/g) || []).length,
+            closeBracket: (noStrings.match(/]/g) || []).length
+        };
+    };
+
     for (const line of lines) {
+        // If we're accumulating a multi-line value
+        if (multiLineKey !== null) {
+            multiLineValue += '\n' + line;
+            const counts = countBraces(line);
+            braceDepth += counts.open - counts.close;
+            bracketDepth += counts.openBracket - counts.closeBracket;
+
+            if (braceDepth <= 0 && bracketDepth <= 0) {
+                args[multiLineKey] = multiLineValue.trim();
+                multiLineKey = null;
+                multiLineValue = '';
+                braceDepth = 0;
+                bracketDepth = 0;
+            }
+            continue;
+        }
+
         // Try quoted values first
         let match = line.match(quotedRegex);
         if (match) {
@@ -24,11 +57,31 @@ export function parseArguments(source: string): Record<string, string> {
             match = line.match(unquotedRegex);
             if (match) {
                 const [, key, value] = match;
-                args[key] = value.trim();
+                const trimmedValue = value.trim();
+
+                // Check if this starts a multi-line object/array
+                if (trimmedValue.startsWith('{') || trimmedValue.startsWith('[')) {
+                    const counts = countBraces(trimmedValue);
+                    braceDepth = counts.open - counts.close;
+                    bracketDepth = counts.openBracket - counts.closeBracket;
+
+                    if (braceDepth > 0 || bracketDepth > 0) {
+                        multiLineKey = key;
+                        multiLineValue = trimmedValue;
+                        continue;
+                    }
+                }
+
+                args[key] = trimmedValue;
             }
         }
     }
-    
+
+    // Handle unclosed multi-line (use what we have)
+    if (multiLineKey !== null) {
+        args[multiLineKey] = multiLineValue.trim();
+    }
+
     return args;
 }
 

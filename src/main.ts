@@ -6,10 +6,10 @@ import { COMPONENTS, Component, componentInstances } from 'components';
 
 import ComponentsSettingTab from 'native/settings';
 import ComponentSidebarView from 'native/sidebar';
-import ComponentSelectorModal, { PlaceComponentModal, ComponentArgsModal } from 'native/modal';
+import { ComponentSelectorModal, PlaceComponentModal, ComponentArgsModal } from 'native/modal';
 import { ComponentAutoComplete } from 'native/autocomplete';
 import { executeOjs, injectOjsStyles } from 'ojs';
-import { argsToSource } from 'utils';
+import { argsToSource, parseArguments } from 'utils';
 
 export const COMPONENT_SIDEBAR_VIEW_TYPE = 'component-sidebar';
 
@@ -339,6 +339,28 @@ export default class ComponentsPlugin extends Plugin {
                 });
             }
         });
+
+        if(!this.registeredProcessors.has('component')) {
+            this.registerMarkdownCodeBlockProcessor('component', (source, el, ctx) => {
+                const args = parseArguments(source);
+                const componentKey = args['component'];
+                const component = COMPONENTS.find(c => c.keyName === componentKey);
+        
+                if (component) {
+                    // Remove metadata before rendering
+                    const cleanArgs = { ...args };
+                    delete cleanArgs['component'];
+                    
+                    Component.render(component, argsToSource(cleanArgs), el, ctx, this.app, this.settings.componentSettings[component.keyName] || {});
+                } else {
+                    el.createEl('div', { 
+                        text: `Component "${componentKey}" not found.`, 
+                        cls: 'mod-warning' 
+                    });
+                }
+            });
+            this.registeredProcessors.add('component');
+        }
 
         // Register ojs (JavaScript execution) processor if enabled
         if (this.settings.enableJsExecution && !this.registeredProcessors.has('ojs')) {

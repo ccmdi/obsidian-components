@@ -1,10 +1,9 @@
-import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView, Notice } from "obsidian";
 import { parseArguments, validateArguments, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
 import { applyCssFromArgs } from "utils";
 import { evaluateArgs, isTruthy } from "expression";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
-import { debug } from "debug";
 import { parseYaml } from "obsidian";
 
 /**
@@ -547,9 +546,6 @@ export namespace Component {
         app: App,
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
-        // debug('render', component.keyName, el.dataset.componentSource);
-        // debug('COMPONENT', component);
-        // debug(ctx)
         const startTime = Date.now();
         
         // Dynamic context: use active file's path instead of source file's path
@@ -601,6 +597,7 @@ export namespace Component {
         const cssOverrides: Record<string, string> = {};
         const cleanArgs: Record<string, string> = {};
         let isEnabled = true;
+        let isRef = false;
 
         Object.entries(args).forEach(([key, value]) => {
             // ! => force to CSS
@@ -613,6 +610,10 @@ export namespace Component {
                 isEnabled = isTruthy(value);
                 componentArgKeys.delete(key);
             // all other keys => component args / CSS carryovers
+            } else if (key === 'ref') {
+                isRef = isTruthy(value);
+                componentArgKeys.delete(key);
+                return
             } else {
                 cleanArgs[key] = value;
             }
@@ -663,6 +664,29 @@ export namespace Component {
             }
         };
 
+        if(isRef) {
+            const refId = args['ref'];
+            const refSource = componentSettings?.componentReferences?.[refId];
+
+            if (refSource) {
+                const refArgs = parseArguments(refSource);
+                const targetComponentKey = refArgs['component'];
+                const targetComponent = COMPONENTS.find(c => c.keyName === targetComponentKey);
+                
+                if (targetComponent) {
+                    // Merge: Local args override Reference args, Reference args override Defaults
+                    const mergedArgs = { ...refArgs, ...args };
+                    delete mergedArgs['ref'];
+                    delete mergedArgs['component'];
+
+                    return this.render(targetComponent, el, mergedArgs, ctx, app, componentSettings);
+                } else {
+                    new Notice(`Reference "${refId}" points to missing component: ${targetComponentKey}`);
+                }
+            } else {
+                new Notice(`Component reference "${refId}" not found in settings.`);
+            }
+        }
         if (!isEnabled) {
             el.empty();
             el.addClass('component-disabled');

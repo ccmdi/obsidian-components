@@ -3,6 +3,7 @@ import { COMPONENTS, ComponentSetting } from 'components';
 export interface ComponentsSettings {
 	componentStates: Record<string, boolean>;
 	componentSettings: Record<string, Record<string, string | number | boolean>>;
+	componentReferences: Record<string, string>;
 	groupStates: Record<string, boolean>;
 	defaultContainerMargin: number;
 	enableAutoComplete: boolean;
@@ -31,6 +32,7 @@ function generateDefaultSettings(): ComponentsSettings {
 	return {
 		componentStates,
 		componentSettings,
+		componentReferences: {},
 		groupStates: {},
 		defaultContainerMargin: 6,
 		enableAutoComplete: false,

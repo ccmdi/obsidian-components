@@ -4,8 +4,10 @@ import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import { argsToSource, camelToSentence, renderExternalLinkToElement } from "utils";
 import { FolderSuggest, QuerySuggest, FileSuggest } from "./suggest";
 
-export default class ComponentSelectorModal extends Modal {
+export class ComponentSelectorModal extends Modal {
     plugin: ComponentsPlugin;
+    mode: 'sidebar' | 'reference';
+    onSelect?: (component: Component<readonly string[]>, args: Record<string, string>) => void;
 
     constructor(app: App, plugin: ComponentsPlugin) {
         super(app);
@@ -17,7 +19,7 @@ export default class ComponentSelectorModal extends Modal {
         contentEl.empty();
 
         // Set the title in the modal header
-        titleEl.setText('Open Component in Sidebar');
+        titleEl.setText(this.mode === 'sidebar' ? 'Open Component in Sidebar' : 'Add Component Reference');
 
         // Get enabled components
         const enabledComponents = COMPONENTS.filter(component =>
@@ -49,6 +51,17 @@ export default class ComponentSelectorModal extends Modal {
 
             option.addEventListener('click', () => {
                 this.close();
+                if (this.mode === 'reference') {
+                    new ComponentArgsModal(this.app, component, {
+                        mode: 'insert', // Reuses 'insert' logic for submission
+                        submitText: 'Save Reference',
+                        onSubmit: (args) => {
+                            if (this.onSelect) this.onSelect(component, args);
+                        }
+                    }).open();
+                    return;
+                }
+
                 if (Component.hasArgs(component)) {
                     new ComponentArgsModal(this.app, component).open();
                 } else {
