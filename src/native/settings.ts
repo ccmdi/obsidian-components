@@ -166,7 +166,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
 
     displayReferenceSettings(): void {
         const { containerEl } = this;
-        
+
         new Setting(containerEl)
             .setName('Add new reference')
             .setDesc('Creates a reusable component with a reference ID.')
@@ -182,11 +182,40 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                     };
                     selector.open();
                 }));
-    
+
         Object.entries(this.plugin.settings.componentReferences).forEach(([id, source]) => {
+            const originalId = id;
+
             const setting = new Setting(containerEl)
-                .setName(id)
                 .setDesc(source.split('\n')[0].replace('component=', ''))
+                // Name text input
+                .addText(text => text
+                    .setValue(id)
+                    .onChange(() => {
+                        // Don't save on every keystroke - just let user type
+                    })
+                    .then(textComponent => {
+                        textComponent.inputEl.addEventListener('blur', async () => {
+                            const newId = textComponent.getValue().trim();
+                            if (newId && newId !== originalId) {
+                                // Check if new ID already exists
+                                if (this.plugin.settings.componentReferences[newId]) {
+                                    new Notice(`Reference "${newId}" already exists.`);
+                                    textComponent.setValue(originalId);
+                                    return;
+                                }
+                                // Rename: copy to new key, delete old key
+                                this.plugin.settings.componentReferences[newId] = this.plugin.settings.componentReferences[originalId];
+                                delete this.plugin.settings.componentReferences[originalId];
+                                await this.plugin.saveSettings();
+                                this.plugin.refreshByRef(newId);
+                                this.display();
+                            } else if (!newId) {
+                                // Reset if empty
+                                textComponent.setValue(originalId);
+                            }
+                        });
+                    }))
                 // Edit Button
                 .addExtraButton(cb => cb
                     .setIcon('pencil')
@@ -195,11 +224,11 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                         const parsed = parseArguments(source);
                         const componentKey = parsed['component'];
                         const component = COMPONENTS.find(c => c.keyName === componentKey);
-                        
+
                         if (component) {
                             const initialArgs = { ...parsed };
                             delete initialArgs['component'];
-    
+
                             new ComponentArgsModal(this.app, component, {
                                 mode: 'insert',
                                 submitText: 'Update Reference',
@@ -224,6 +253,8 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                         void this.display();
                     }));
+
+            setting.settingEl.addClass('reference-setting');
         });
     }
 
