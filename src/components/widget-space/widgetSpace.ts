@@ -249,6 +249,10 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             const content = widget.createEl('div', { cls: 'widget-content' });
             content.dataset.widgetId = widgetId;
 
+            // Add to Muuri FIRST (before render) so visibility events can find the item
+            grid.classList.remove('transitions-enabled');
+            muuri.add(widget);
+
             const comp = COMPONENTS.find(c => c.keyName === componentKey);
             if (comp) {
                 try {
@@ -258,12 +262,16 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 }
             }
 
-            // Disable transitions while adding so it doesn't animate from 0,0
-            grid.classList.remove('transitions-enabled');
-            muuri.add(widget);
+            // After render, check if component disabled itself and sync with Muuri
+            const item = muuri.getItems().find(i => i.getElement() === widget);
+            if (widget.style.display === 'none' && item) {
+                muuri.hide([item], { instant: true });
+            }
+
             muuri.refreshItems();
             muuri.layout(false);
             muuri.resizeObserver?.observe(content);
+
             requestAnimationFrame(() => {
                 grid.classList.add('transitions-enabled');
             });
@@ -362,6 +370,27 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                         onSubmit: (args) => addWidget(comp.keyName, comp.name || comp.keyName, args)
                     }).open();
                 }).open();
+            }
+        });
+
+        // Listen for widget visibility changes (from enabled expression changes)
+        container.addEventListener('widget-visibility-change', (e) => {
+            const widgetItem = (e.target as HTMLElement).closest('.widget-item');
+            if (!widgetItem) return;
+
+            const item = muuri.getItems().find(i => i.getElement() === widgetItem);
+            if (!item) return;
+
+            const isHidden = (widgetItem as HTMLElement).style.display === 'none';
+            if (isHidden) {
+                muuri.hide([item], { instant: true });
+            } else {
+                muuri.show([item], { instant: true });
+                // Delay layout to ensure content has rendered
+                requestAnimationFrame(() => {
+                    muuri.refreshItems();
+                    muuri.layout(true);
+                });
             }
         });
 

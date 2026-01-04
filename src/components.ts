@@ -691,14 +691,23 @@ export namespace Component {
             el.empty();
             el.addClass('component-disabled');
             const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
-            if (container) container.style.display = 'none';
+            if (container) {
+                container.style.display = 'none';
+                container.dispatchEvent(new CustomEvent('widget-visibility-change', { bubbles: true }));
+            }
             return;
         }
 
         el.removeClass('component-disabled');
         // Show the container if it was hidden
         const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
-        if (container) container.style.display = '';
+        if (container) {
+            const wasHidden = container.style.display === 'none';
+            container.style.display = '';
+            if (wasHidden) {
+                container.dispatchEvent(new CustomEvent('widget-visibility-change', { bubbles: true }));
+            }
+        }
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {
