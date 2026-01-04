@@ -1,6 +1,6 @@
 // main.ts
 
-import { Plugin, Editor, Menu, TFile, MarkdownView } from 'obsidian';
+import { Plugin, Editor, Menu, TFile, MarkdownView, Notice } from 'obsidian';
 import { ComponentsSettings, DEFAULT_SETTINGS } from 'settings';
 import { COMPONENTS, Component, componentInstances } from 'components';
 
@@ -79,6 +79,17 @@ export default class ComponentsPlugin extends Plugin {
     }
 
     /**
+     * Refresh all components that use a specific reference ID.
+     */
+    refreshByRef(refId: string): void {
+        componentInstances.forEach((instance) => {
+            if (instance.element.dataset.componentRef === refId && instance.data.triggerRefresh) {
+                instance.data.triggerRefresh();
+            }
+        });
+    }
+
+    /**
      * Register context menu handler for editing components
      */
     registerComponentContextMenu() {
@@ -137,6 +148,7 @@ export default class ComponentsPlugin extends Plugin {
                 const sourcePath = componentEl.dataset.componentSource;
                 
                 if (!componentKey || !sourcePath) return;
+                if (componentEl.dataset.componentRef) return;
 
                 const component = COMPONENTS.find(c => c.keyName === componentKey);
                 if (!component) return;
@@ -341,23 +353,53 @@ export default class ComponentsPlugin extends Plugin {
         });
 
         if(!this.registeredProcessors.has('component')) {
-            this.registerMarkdownCodeBlockProcessor('component', (source, el, ctx) => {
+            this.registerMarkdownCodeBlockProcessor('component', async (source, el, ctx) => {
                 const args = parseArguments(source);
                 const componentKey = args['component'];
                 const component = COMPONENTS.find(c => c.keyName === componentKey);
-        
-                if (component) {
-                    // Remove metadata before rendering
-                    const cleanArgs = { ...args };
-                    delete cleanArgs['component'];
-                    
-                    Component.render(component, argsToSource(cleanArgs), el, ctx, this.app, this.settings.componentSettings[component.keyName] || {});
-                } else {
-                    el.createEl('div', { 
-                        text: `Component "${componentKey}" not found.`, 
-                        cls: 'mod-warning' 
-                    });
+                const refId = args['ref'];
+                const refSource = this.settings.componentReferences?.[refId];
+
+                if (refSource) {
+                    const refArgs = parseArguments(refSource);
+                    const targetComponentKey = refArgs['component'];
+                    const targetComponent = COMPONENTS.find(c => c.keyName === targetComponentKey);
+
+                    if (targetComponent) {
+                        // Merge: Local args override Reference args, Reference args override Defaults
+                        const mergedArgs = { ...refArgs, ...args };
+                        delete mergedArgs['ref'];
+                        delete mergedArgs['component'];
+
+                        el.dataset.componentRef = refId;
+                        await Component.render(targetComponent, argsToSource(mergedArgs), el, ctx, this.app, this.settings.componentSettings[targetComponent.keyName] || {});
+
+                        // Override triggerRefresh to re-fetch ref definition
+                        const instanceId = el.dataset.componentId;
+                        const instance = instanceId ? componentInstances.get(instanceId) : null;
+                        if (instance) {
+                            instance.data.triggerRefresh = async () => {
+                                const freshRefSource = this.settings.componentReferences?.[refId];
+                                if (!freshRefSource) return;
+                                const freshRefArgs = parseArguments(freshRefSource);
+                                const freshMerged = { ...freshRefArgs, ...args };
+                                delete freshMerged['ref'];
+                                delete freshMerged['component'];
+                                el.empty();
+                                await Component.render(targetComponent, argsToSource(freshMerged), el, ctx, this.app, this.settings.componentSettings[targetComponent.keyName] || {});
+                            };
+                        }
+                        return;
+                    } else {
+                        new Notice(`Reference "${refId}" points to missing component: ${targetComponentKey}`);
+                    }
                 }
+
+                if(!component) return;
+                const cleanArgs = { ...args };
+                delete cleanArgs['component'];
+
+                Component.render(component, argsToSource(cleanArgs), el, ctx, this.app, this.settings.componentSettings[component.keyName] || {});
             });
             this.registeredProcessors.add('component');
         }

@@ -198,15 +198,17 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                         
                         if (component) {
                             const initialArgs = { ...parsed };
-                            delete initialArgs['component']; // Don't show the ID in the form
+                            delete initialArgs['component'];
     
                             new ComponentArgsModal(this.app, component, {
                                 mode: 'insert',
                                 submitText: 'Update Reference',
                                 initialArgs: initialArgs,
-                                onSubmit: (newArgs) => {
+                                onSubmit: async (newArgs) => {
                                     this.plugin.settings.componentReferences[id] = `component=${componentKey}\n${argsToSource(newArgs)}`;
-                                    this.plugin.saveSettings().then(() => this.display());
+                                    await this.plugin.saveSettings();
+                                    this.plugin.refreshByRef(id);
+                                    void this.display();
                                 }
                             }).open();
                         } else {

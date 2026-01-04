@@ -664,29 +664,29 @@ export namespace Component {
             }
         };
 
-        if(isRef) {
-            const refId = args['ref'];
-            const refSource = componentSettings?.componentReferences?.[refId];
+        // if(isRef) {
+        //     const refId = args['ref'];
+        //     const refSource = componentSettings?.componentReferences?.[refId];
 
-            if (refSource) {
-                const refArgs = parseArguments(refSource);
-                const targetComponentKey = refArgs['component'];
-                const targetComponent = COMPONENTS.find(c => c.keyName === targetComponentKey);
+        //     if (refSource) {
+        //         const refArgs = parseArguments(refSource);
+        //         const targetComponentKey = refArgs['component'];
+        //         const targetComponent = COMPONENTS.find(c => c.keyName === targetComponentKey);
                 
-                if (targetComponent) {
-                    // Merge: Local args override Reference args, Reference args override Defaults
-                    const mergedArgs = { ...refArgs, ...args };
-                    delete mergedArgs['ref'];
-                    delete mergedArgs['component'];
+        //         if (targetComponent) {
+        //             // Merge: Local args override Reference args, Reference args override Defaults
+        //             const mergedArgs = { ...refArgs, ...args };
+        //             delete mergedArgs['ref'];
+        //             delete mergedArgs['component'];
 
-                    return this.render(targetComponent, el, mergedArgs, ctx, app, componentSettings);
-                } else {
-                    new Notice(`Reference "${refId}" points to missing component: ${targetComponentKey}`);
-                }
-            } else {
-                new Notice(`Component reference "${refId}" not found in settings.`);
-            }
-        }
+        //             return this.render(targetComponent, el, mergedArgs, ctx, app, componentSettings);
+        //         } else {
+        //             new Notice(`Reference "${refId}" points to missing component: ${targetComponentKey}`);
+        //         }
+        //     } else {
+        //         new Notice(`Component reference "${refId}" not found in settings.`);
+        //     }
+        // }
         if (!isEnabled) {
             el.empty();
             el.addClass('component-disabled');
