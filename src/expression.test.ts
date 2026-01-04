@@ -228,6 +228,16 @@ test('fm number 0 is falsy', () => expect(evaluate('fm.val || "no"', { val: 0 })
 test('fm empty array is truthy', () => expect(evaluate('fm.val || "no"', { val: [] })).toEqual([]));
 test('fm empty object is truthy', () => expect(evaluate('fm.val || "no"', { val: {} })).toEqual({}));
 
+// --- Contains ---
+console.log('\nContains:');
+test('string contains substring', () => expect(evaluate('contains("hello world", "world")')).toBe(true));
+test('string contains case insensitive', () => expect(evaluate('contains("Hello World", "hello")')).toBe(true));
+test('string not contains', () => expect(evaluate('contains("hello", "xyz")')).toBe(false));
+test('array contains element', () => expect(evaluate('fm.tags', { tags: ['a', 'b', 'c'] })).toEqual(['a', 'b', 'c']));
+test('array contains check', () => expect(evaluate('contains(fm.tags, "b")', { tags: ['a', 'b', 'c'] })).toBe(true));
+test('array not contains', () => expect(evaluate('contains(fm.tags, "x")', { tags: ['a', 'b', 'c'] })).toBe(false));
+test('contains in if', () => expect(evaluate('if(contains("2025-01-01", "2025"), "yes", "no")')).toBe('yes'));
+
 // --- Summary ---
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed > 0 ? 1 : 0);

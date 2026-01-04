@@ -10,7 +10,7 @@ type TokenType =
     | 'EQ' | 'NEQ' | 'GT' | 'LT' | 'GTE' | 'LTE'
     | 'AND' | 'OR' | 'NOT'
     | 'LPAREN' | 'RPAREN' | 'COMMA'
-    | 'IF' | 'EOF';
+    | 'IF' | 'CONTAINS' | 'EOF';
 
 interface Token {
     type: TokenType;
@@ -134,6 +134,8 @@ function tokenize(input: string): Token[] {
                 tokens.push({ type: 'BOOLEAN', value: false, raw: 'false' });
             } else if (ident === 'if') {
                 tokens.push({ type: 'IF', value: 'if', raw: 'if' });
+            } else if (ident === 'contains') {
+                tokens.push({ type: 'CONTAINS', value: 'contains', raw: 'contains' });
             } else {
                 tokens.push({ type: 'IDENTIFIER', value: ident, raw: ident });
             }
@@ -157,7 +159,8 @@ type Expr =
     | { type: 'fileRef'; key: string }
     | { type: 'unary'; operator: '!' | '-'; operand: Expr }
     | { type: 'binary'; operator: string; left: Expr; right: Expr }
-    | { type: 'if'; condition: Expr; thenBranch: Expr; elseBranch: Expr | null };
+    | { type: 'if'; condition: Expr; thenBranch: Expr; elseBranch: Expr | null }
+    | { type: 'contains'; haystack: Expr; needle: Expr };
 
 class Parser {
     private tokens: Token[];
@@ -266,6 +269,16 @@ class Parser {
 
             this.consume('RPAREN', "Expected ')' after if arguments");
             return { type: 'if', condition, thenBranch, elseBranch };
+        }
+
+        // Handle contains(haystack, needle) function
+        if (this.match('CONTAINS')) {
+            this.consume('LPAREN', "Expected '(' after 'contains'");
+            const haystack = this.expression();
+            this.consume('COMMA', "Expected ',' after first argument");
+            const needle = this.expression();
+            this.consume('RPAREN', "Expected ')' after contains arguments");
+            return { type: 'contains', haystack, needle };
         }
 
         return this.primary();
@@ -408,6 +421,22 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
             }
             return false;
         }
+
+        case 'contains': {
+            const haystack = evaluate(expr.haystack, context);
+            const needle = evaluate(expr.needle, context);
+            console.log(haystack, needle);
+
+            // Array contains
+            if (Array.isArray(haystack)) {
+                return haystack.some(item => looseEquals(item, needle));
+            }
+            // String contains (case-insensitive)
+            if (typeof haystack === 'string' && needle != null) {
+                return haystack.toLowerCase().includes(String(needle).toLowerCase());
+            }
+            return false;
+        }
     }
 }
 
@@ -483,8 +512,8 @@ export function evaluateExpression(
     const fileKeys: string[] = [];
 
     // Quick path: if input is just a plain value with no special syntax
-    // Check for fm./file. references, if(, operators, or quoted strings
-    const hasExpression = /^(fm\.|file\.|if\(|["'])|[<>=!&|+\-*/]/.test(input);
+    // Check for fm./file. references, if(, contains(, operators, or quoted strings
+    const hasExpression = /^(fm\.|file\.|if\(|contains\(|["'])|[<>=!&|+\-*/]/.test(input);
     if (!hasExpression && !input.includes('fm.') && !input.includes('file.')) {
         // Plain value - return as-is
         return { value: input, referencedKeys: { fmKeys, fileKeys } };

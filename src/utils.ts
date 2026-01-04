@@ -9,8 +9,11 @@ import { debug } from "debug";
 export function parseArguments(source: string): Record<string, string> {
     const args: Record<string, string> = {};
     const lines = source.split('\n');
-    // This regex finds lines like: KEY="value" or KEY='value' or KEY=value or KEY!=value
-    const quotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*["'](.*?)["']/;
+    // These regexes find lines like: KEY="value" or KEY='value' or KEY=value or KEY!=value
+    // Double-quoted: match everything until unescaped closing "
+    const doubleQuotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*"((?:[^"\\]|\\.)*)"/;
+    // Single-quoted: match everything until unescaped closing '
+    const singleQuotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*'((?:[^'\\]|\\.)*)'/;
     const unquotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*([^\s]+.*?)$/;
 
     let multiLineKey: string | null = null;
@@ -47,8 +50,8 @@ export function parseArguments(source: string): Record<string, string> {
             continue;
         }
 
-        // Try quoted values first
-        let match = line.match(quotedRegex);
+        // Try quoted values first (double quotes, then single quotes)
+        let match = line.match(doubleQuotedRegex) || line.match(singleQuotedRegex);
         if (match) {
             const [, key, value] = match;
             args[key] = value;
@@ -127,25 +130,28 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
     Object.keys(resolved).forEach(key => {
         let value = resolved[key];
 
+        // Helper: replace var, quoting if embedded in expression
+        const replaceVar = (val: string, varName: string, replacement: string): string => {
+            if (val === varName) {
+                return replacement; // Standalone - return as-is
+            } else if (val.includes(varName)) {
+                // Embedded in expression - wrap in quotes, escape existing quotes
+                const quoted = `'${replacement.replace(/"/g, '\\"')}'`;
+                return val.replace(new RegExp(varName, 'g'), quoted);
+            }
+            return val;
+        };
+
         // Context-dependent variables
         if (ctx) {
             const dir = ctx.sourcePath.substring(0, ctx.sourcePath.lastIndexOf('/')) || '';
+            const filename = ctx.sourcePath.substring(ctx.sourcePath.lastIndexOf('/') + 1);
+            const title = filename.replace(/\.[^.]+$/, ''); // Remove extension
 
-            if (value === '__SELF__') {
-                value = ctx.sourcePath;
-            } else if (value.includes('__SELF__')) {
-                value = value.replace(/__SELF__/g, ctx.sourcePath);
-            }
-
-            if (value === '__DIR__') {
-                value = dir;
-            } else if (value.includes('__DIR__')) {
-                value = value.replace(/__DIR__/g, dir);
-            }
-
-            if (value === '__ROOT__') {
-                value = '';
-            }
+            value = replaceVar(value, '__SELF__', ctx.sourcePath);
+            value = replaceVar(value, '__DIR__', dir);
+            value = replaceVar(value, '__TITLE__', title);
+            value = replaceVar(value, '__ROOT__', '');
         }
 
         // Date variables
@@ -169,12 +175,12 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
             return `${hours}:${minutes}:${seconds}`;
         };
 
-        value = value.replace(/__TODAY__/g, formatDate(today));
-        value = value.replace(/__YESTERDAY__/g, formatDate(yesterday));
-        value = value.replace(/__TOMORROW__/g, formatDate(tomorrow));
-        value = value.replace(/__NOW__/g, `${formatDate(today)} ${formatTime(today)}`);
-        value = value.replace(/__TIME__/g, formatTime(today));
-        value = value.replace(/__TIMESTAMP__/g, String(Date.now()));
+        value = replaceVar(value, '__TODAY__', formatDate(today));
+        value = replaceVar(value, '__YESTERDAY__', formatDate(yesterday));
+        value = replaceVar(value, '__TOMORROW__', formatDate(tomorrow));
+        value = replaceVar(value, '__NOW__', `${formatDate(today)} ${formatTime(today)}`);
+        value = replaceVar(value, '__TIME__', formatTime(today));
+        value = replaceVar(value, '__TIMESTAMP__', String(Date.now()));
 
         // Normalize paths containing relative segments (.. or .)
         if (value.includes('/..') || value.includes('/./') || value.startsWith('./') || value.startsWith('../')) {
