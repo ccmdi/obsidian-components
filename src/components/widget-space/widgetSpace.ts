@@ -220,15 +220,15 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             activeWidgets.set(widgetId, { element: widget, componentKey, args: componentArgs });
 
             widget.addEventListener('contextmenu', (e) => {
+                if (e.defaultPrevented) return;
                 e.preventDefault();
-                e.stopPropagation();
                 new ConfirmationModal(app, `Remove ${componentName} widget?`, () => removeWidget(widget)).open();
             });
 
             widget.addEventListener('mousedown', (e) => {
                 if (e.button !== 1) return;
+                if (e.defaultPrevented) return;
                 e.preventDefault();
-                e.stopPropagation();
                 new ComponentArgsModal(app, COMPONENTS.find(c => c.keyName === componentKey)!, {
                     mode: 'widget-space',
                     initialArgs: activeWidgets.get(widgetId)!.args,

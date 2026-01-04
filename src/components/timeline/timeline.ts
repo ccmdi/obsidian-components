@@ -260,6 +260,7 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
                 renderTimelineDOM(container, files);
 
                 container.addEventListener('mousedown', async (event) => {
+                    event.preventDefault();
                     const target = event.target as HTMLElement;
 
                     if (target.classList.contains('dropdown-button') && event.button === 0) {
