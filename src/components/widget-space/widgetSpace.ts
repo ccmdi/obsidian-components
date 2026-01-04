@@ -51,6 +51,7 @@ function createSkeleton(parent: HTMLElement, count: number, columns: number): HT
         position: absolute; top: 0; left: 0; right: 0; bottom: 0;
         background-color: var(--background-primary); z-index: 10;
         display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: 8px; padding: 12px;
+        align-content: start;
     `;
     for (let i = 0; i < Math.max(3, count); i++) {
         skeleton.createEl('div', { cls: 'widget-skeleton' });
