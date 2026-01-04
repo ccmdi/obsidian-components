@@ -631,15 +631,12 @@ export namespace Component {
             query: args.query
         });
 
+        // Track ALL fm/file keys (including those inside expressions) for change detection
         instance.data._watchedFmValues = Object.fromEntries(
-            Object.entries(originalArgs)
-                .filter(([_, v]) => typeof v === 'string' && v.startsWith('fm.'))
-                .map(([k, v]) => [v.slice(3), args[k] === 'undefined' ? undefined : args[k]])
+            fmKeys.map(key => [key, frontmatter[key]])
         );
         instance.data._watchedFileValues = Object.fromEntries(
-            Object.entries(originalArgs)
-                .filter(([_, v]) => typeof v === 'string' && v.startsWith('file.'))
-                .map(([k, v]) => [v.slice(5), args[k] === 'undefined' ? undefined : args[k]])
+            fileKeys.map(key => [key, frontmatter[key]])
         );
         instance.data._watchedFilePath = ctx.sourcePath;
 
