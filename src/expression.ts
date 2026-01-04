@@ -171,7 +171,12 @@ class Parser {
     }
 
     parse(): Expr {
-        return this.expression();
+        const expr = this.expression();
+        // Ensure we consumed all tokens - if not, this wasn't a valid expression
+        if (!this.isAtEnd()) {
+            throw new Error(`Unexpected token after expression: ${this.peek().raw}`);
+        }
+        return expr;
     }
 
     private expression(): Expr {
@@ -425,7 +430,6 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
         case 'contains': {
             const haystack = evaluate(expr.haystack, context);
             const needle = evaluate(expr.needle, context);
-            console.log(haystack, needle);
 
             // Array contains
             if (Array.isArray(haystack)) {
@@ -502,7 +506,10 @@ export function isTruthy(value: unknown): boolean {
 
 /**
  * Evaluate an expression string and return the result.
- * Handles plain values, fm.* and file.* references, if(), and operators.
+ * Handles plain values, fm.* and file.* references, functions, and operators.
+ *
+ * Strategy: Try to parse as expression. If parsing fails, return as plain string.
+ * This avoids needing to maintain a list of "expression-like" patterns.
  */
 export function evaluateExpression(
     input: string,
@@ -510,14 +517,6 @@ export function evaluateExpression(
 ): { value: unknown; referencedKeys: { fmKeys: string[]; fileKeys: string[] } } {
     const fmKeys: string[] = [];
     const fileKeys: string[] = [];
-
-    // Quick path: if input is just a plain value with no special syntax
-    // Check for fm./file. references, if(, contains(, operators, or quoted strings
-    const hasExpression = /^(fm\.|file\.|if\(|contains\(|["'])|[<>=!&|+\-*/]/.test(input);
-    if (!hasExpression && !input.includes('fm.') && !input.includes('file.')) {
-        // Plain value - return as-is
-        return { value: input, referencedKeys: { fmKeys, fileKeys } };
-    }
 
     try {
         const tokens = tokenize(input);
@@ -536,8 +535,8 @@ export function evaluateExpression(
         const value = evaluate(ast, context);
 
         return { value, referencedKeys: { fmKeys, fileKeys } };
-    } catch (e) {
-        // If parsing fails, return as plain string
+    } catch {
+        // If tokenizing or parsing fails, return as plain string
         return { value: input, referencedKeys: { fmKeys, fileKeys } };
     }
 }

@@ -238,6 +238,35 @@ test('array contains check', () => expect(evaluate('contains(fm.tags, "b")', { t
 test('array not contains', () => expect(evaluate('contains(fm.tags, "x")', { tags: ['a', 'b', 'c'] })).toBe(false));
 test('contains in if', () => expect(evaluate('if(contains("2025-01-01", "2025"), "yes", "no")')).toBe('yes'));
 
+// --- Complex/Nested Expressions ---
+console.log('\nComplex/Nested Expressions:');
+// Simulating __TITLE__ resolved to a date string (as special vars resolve before expression eval)
+test('if(contains(title, year))', () => expect(evaluate("if(contains('2025-01-15', '2025'), true, false)")).toBe(true));
+test('if(contains(title, year)) false case', () => expect(evaluate("if(contains('2024-01-15', '2025'), true, false)")).toBe(false));
+test('nested contains in complex if', () => expect(evaluate("if(contains('Daily Note 2025', '2025') && true, 'match', 'no')")).toBe('match'));
+test('contains with fm value as haystack', () => expect(evaluate("if(contains(fm.title, '2025'), 'yes', 'no')", { title: '2025-01-01' })).toBe('yes'));
+test('contains with fm value as needle', () => expect(evaluate("contains('hello world', fm.search)", { search: 'world' })).toBe(true));
+test('contains result in &&', () => expect(evaluate("contains('abc', 'b') && contains('xyz', 'y')")).toBe(true));
+test('contains result in ||', () => expect(evaluate("contains('abc', 'z') || contains('xyz', 'y')")).toBe(true));
+test('negated contains', () => expect(evaluate("!contains('hello', 'xyz')")).toBe(true));
+test('if with negated contains', () => expect(evaluate("if(!contains('2024', '2025'), 'old', 'new')")).toBe('old'));
+test('deeply nested if', () => expect(evaluate("if(if(true, true, false), 'a', 'b')")).toBe('a'));
+test('if inside contains (edge)', () => expect(evaluate("contains(if(true, 'hello', 'bye'), 'ell')")).toBe(true));
+test('arithmetic in if condition', () => expect(evaluate("if(fm.a + fm.b > 10, 'big', 'small')", { a: 7, b: 5 })).toBe('big'));
+test('string concat in if result', () => expect(evaluate("if(true, 'hello' + ' ' + 'world', 'x')")).toBe('hello world'));
+test('fm fallback in contains', () => expect(evaluate("contains(fm.title || 'default', 'def')", {})).toBe(true));
+test('multiple && with contains', () => expect(evaluate("fm.active && contains(fm.name, 'test') && fm.count > 0", { active: true, name: 'testing', count: 5 })).toBe(true));
+test('multiple || with contains', () => expect(evaluate("contains(fm.a, 'x') || contains(fm.b, 'y') || contains(fm.c, 'z')", { a: 'ax', b: 'no', c: 'no' })).toBe(true));
+test('comparison after contains', () => expect(evaluate("contains('abc', 'b') == true")).toBe(true));
+test('contains empty string', () => expect(evaluate("contains('hello', '')")).toBe(true));
+test('contains in empty string', () => expect(evaluate("contains('', 'a')")).toBe(false));
+
+// --- Mixed Quote Styles (simulating parsed arg values) ---
+console.log('\nMixed Quote Styles:');
+test('single quotes outer, double inner', () => expect(evaluate('if(contains("test", "es"), "yes", "no")')).toBe('yes'));
+test('expression with single quoted strings', () => expect(evaluate("if(contains('hello', 'ell'), 'found', 'nope')")).toBe('found'));
+test('mixed quotes in nested calls', () => expect(evaluate("if(contains('2025-01-01', \"2025\"), 'match', 'no')")).toBe('match'));
+
 // --- Summary ---
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
 process.exit(failed > 0 ? 1 : 0);
