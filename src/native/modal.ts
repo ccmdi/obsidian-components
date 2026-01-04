@@ -169,7 +169,7 @@ export class ComponentArgsModal extends Modal {
         // Raw textarea
         const rawTextarea = rawContent.createEl('textarea', {
             cls: 'component-args-raw-textarea',
-            attr: { placeholder: 'key="value"\nkey2="value2"', rows: '10' }
+            attr: { placeholder: 'key=value\nkey2=value2', rows: '10' }
         });
         rawTextarea.value = argsToSource(this.args, (entries) => 
             entries.filter(([, value]) => value && value.trim() !== '')

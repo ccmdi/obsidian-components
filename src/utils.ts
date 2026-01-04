@@ -735,7 +735,7 @@ export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: s
 
 export function argsToSource(args: Record<string, string>, apply: (entries: [string, string][]) => [string, string][] = (e) => e): string {
     const entries = Object.entries(args);
-    return apply(entries).map(([k, v]) => `${k}="${v}"`).join('\n');
+    return apply(entries).map(([k, v]) => `${k}=${v}`).join('\n');
 }
 
 const aliases = {
