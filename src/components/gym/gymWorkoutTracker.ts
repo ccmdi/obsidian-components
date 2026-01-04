@@ -23,8 +23,7 @@ export const gymWorkoutTracker: Component<[]> = {
         const cache = app.metadataCache.getFileCache(file);
         const frontmatter = cache?.frontmatter;
 
-        let workoutData: WorkoutExercise[] = frontmatter?.exercises || [];
-        const routineData = frontmatter?.routines || [];
+        const workoutData: WorkoutExercise[] = frontmatter?.exercises || [];
 
         if (workoutData.length === 0) {
             el.createEl("p", { text: "No exercises found for today" });

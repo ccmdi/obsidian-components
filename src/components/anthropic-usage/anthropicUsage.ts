@@ -39,14 +39,14 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         let currentRotation = 0;
         let iconContainer: HTMLElement | null = null;
         let decayTimeout: NodeJS.Timeout | null = null;
-        let spinTimeouts: NodeJS.Timeout[] = [];
+        const spinTimeouts: NodeJS.Timeout[] = [];
 
         ComponentInstance.addCleanup(instance, () => {
             if (decayTimeout) clearTimeout(decayTimeout);
             spinTimeouts.forEach(t => clearTimeout(t));
         });
 
-        const spinIcon = (degrees: number, duration: number = 300) => {
+        const spinIcon = (degrees: number, duration = 300) => {
             if (!iconContainer) return;
             iconContainer.style.transition = `transform ${duration}ms ease-out`;
             iconContainer.style.transform = `rotate(${degrees}deg)`;

@@ -82,7 +82,7 @@ const renderPropertyAdder = async (
                         }
                         break;
 
-                    case 'increment':
+                    case 'increment': {
                         // Increment number
                         if (!frontmatter[propertyName]) {
                             frontmatter[propertyName] = 0;
@@ -90,6 +90,7 @@ const renderPropertyAdder = async (
                         const currentValue = parseFloat(frontmatter[propertyName]) || 0;
                         frontmatter[propertyName] = currentValue + incrementAmount;
                         break;
+                    }
 
                     case 'set':
                         // Set value directly

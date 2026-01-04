@@ -70,8 +70,6 @@ export class QuerySuggest extends AbstractInputSuggest<QuerySuggestion> {
         const parts = query.split(/\s+(AND|OR)\s+/);
         const currentPart = parts[parts.length - 1].trim();
 
-        // Determine what we're currently typing
-        const lowerPart = currentPart.toLowerCase();
         const suggestions: QuerySuggestion[] = [];
 
         // If starting with #, suggest tags

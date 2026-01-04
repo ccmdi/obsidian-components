@@ -163,12 +163,12 @@ async function renderRemindersContent(
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
                 // Match incomplete task with this text
-                const taskMatch = line.match(/^(\s*- \[)[ \/R](\] .*)$/);
+                const taskMatch = line.match(/^(\s*- \[)[ /R](\] .*)$/);
                 if (taskMatch) {
                     const extractedText = line.replace(/^\s*- \[.\] /, '');
                     if (extractedText === taskText) {
                         // Replace with completed task
-                        lines[i] = line.replace(/^(\s*- \[)[ \/R](\].*)$/, '$1x$2');
+                        lines[i] = line.replace(/^(\s*- \[)[ /R](\].*)$/, '$1x$2');
                         await app.vault.modify(file, lines.join('\n'));
                         return true;
                     }
@@ -362,4 +362,4 @@ async function renderRemindersContent(
         container.empty();
         container.textContent = 'Error loading reminders. Check console for details.';
     }
-};
+}
