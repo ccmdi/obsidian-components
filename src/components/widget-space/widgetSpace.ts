@@ -339,7 +339,10 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 }
             });
 
+            let isDragging = false;
+
             muuri.on('dragStart', (item) => {
+                isDragging = true;
                 const el = item.getElement();
                 if (el) { el.style.zIndex = '1000'; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; }
             });
@@ -348,6 +351,17 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 const el = item.getElement();
                 if (el) { el.style.zIndex = ''; el.style.boxShadow = ''; }
                 saveLayout();
+
+                //TODO hacky
+                const suppressClick = (e: Event) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                };
+                container.addEventListener('click', suppressClick, { capture: true, once: true });
+                setTimeout(() => {
+                    container.removeEventListener('click', suppressClick, { capture: true });
+                    isDragging = false;
+                }, 50);
             });
 
             muuri.resizeObserver = new ResizeObserver((entries) => {
