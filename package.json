@@ -8,6 +8,7 @@
 		"dev": "node esbuild.config.mjs",
 		"prebuild": "node scripts/register.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"test": "npx tsx src/expression.test.ts",
 		"vbump": "node version-bump.mjs"
 	},
 	"keywords": [],

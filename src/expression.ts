@@ -483,8 +483,8 @@ export function evaluateExpression(
     const fileKeys: string[] = [];
 
     // Quick path: if input is just a plain value with no special syntax
-    // Check for fm./file. references or if( or operators
-    const hasExpression = /^(fm\.|file\.|if\()|[<>=!&|+\-*/]/.test(input);
+    // Check for fm./file. references, if(, operators, or quoted strings
+    const hasExpression = /^(fm\.|file\.|if\(|["'])|[<>=!&|+\-*/]/.test(input);
     if (!hasExpression && !input.includes('fm.') && !input.includes('file.')) {
         // Plain value - return as-is
         return { value: input, referencedKeys: { fmKeys, fileKeys } };
