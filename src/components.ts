@@ -740,17 +740,36 @@ export namespace Component {
         let needsDelayedFullRefresh = false;
 
         if (!isNew && component.renderRefresh && el.hasChildNodes()) {
-            renderFn = component.renderRefresh;
+            // Check what changed: handled args vs unhandled args
+            let handledArgsChanged = false;
+            let unhandledArgsChanged = false;
 
-            // Check if any args changed that renderRefresh doesn't handle
-            // Uses static analysis to detect which args renderRefresh accesses
             if (prevArgs) {
                 const handledArgs = Component.getRenderRefreshArgs(component);
                 for (const key of Object.keys(argsWithDefaults)) {
-                    if (argsWithDefaults[key] !== prevArgs[key] && !handledArgs.has(key)) {
-                        needsDelayedFullRefresh = true;
-                        break;
+                    if (argsWithDefaults[key] !== prevArgs[key]) {
+                        if (handledArgs.has(key)) {
+                            handledArgsChanged = true;
+                        } else {
+                            unhandledArgsChanged = true;
+                        }
                     }
+                }
+            }
+
+            // Decide render strategy:
+            // - Handled changed, unhandled didn't → renderRefresh only
+            // - Handled changed, unhandled too → renderRefresh + delayed full refresh
+            // - Handled didn't change, unhandled did → skip to full render immediately
+            // - Nothing changed → renderRefresh (for periodic/time-based updates)
+            if (unhandledArgsChanged && !handledArgsChanged) {
+                // Skip renderRefresh, go straight to full render
+                el.empty();
+                renderFn = component.render;
+            } else {
+                renderFn = component.renderRefresh;
+                if (unhandledArgsChanged) {
+                    needsDelayedFullRefresh = true;
                 }
             }
         } else {
