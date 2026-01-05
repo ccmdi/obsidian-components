@@ -1,7 +1,7 @@
 import { App, FuzzySuggestModal, Modal, Setting, Notice, Editor, TextComponent, setIcon } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
-import { argsToSource, camelToSentence, renderExternalLinkToElement } from "utils";
+import { argsToSource, camelToSentence, parseArguments, renderExternalLinkToElement } from "utils";
 import { FolderSuggest, QuerySuggest, FileSuggest } from "./suggest";
 
 export class ComponentSelectorModal extends Modal {
@@ -126,18 +126,6 @@ export class ComponentArgsModal extends Modal {
         return ComponentsPlugin.instance?.settings?.modalArgSuggest ?? true;
     }
 
-    private rawToArgs(raw: string): void {
-        this.args = {};
-        const lines = raw.split('\n');
-        for (const line of lines) {
-            const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s*=\s*["']?(.*?)["']?\s*$/);
-            if (match) {
-                const [, key, value] = match;
-                this.args[key] = value;
-            }
-        }
-    }
-
     onOpen() {
         const { contentEl, titleEl } = this;
         contentEl.empty();
@@ -178,7 +166,7 @@ export class ComponentArgsModal extends Modal {
         // Tab switching
         formTab.onclick = () => {
             if (this.currentTab === 'raw') {
-                this.rawToArgs(rawTextarea.value);
+                this.args = parseArguments(rawTextarea.value);
                 this.renderFormContent(formContent);
             }
             this.currentTab = 'form';
@@ -202,7 +190,7 @@ export class ComponentArgsModal extends Modal {
         };
 
         rawTextarea.oninput = () => {
-            this.rawToArgs(rawTextarea.value);
+            this.args = parseArguments(rawTextarea.value);
         };
 
         // Render form content

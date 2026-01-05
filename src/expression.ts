@@ -521,8 +521,9 @@ export function evaluateExpression(
     const fileKeys: string[] = [];
 
     try {
+        console.log(input);
         const tokens = tokenize(input);
-
+        console.log(tokens);
         // Collect referenced keys from tokens
         for (const token of tokens) {
             if (token.type === 'FM_REF') {

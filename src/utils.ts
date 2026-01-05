@@ -1,7 +1,6 @@
-// utils.ts
+import { App, MarkdownPostProcessorContext, TFile, CachedMetadata } from "obsidian";
+import { Variable } from "variable";
 
-import { App, MarkdownPostProcessorContext, TFile, CachedMetadata, parseYaml } from "obsidian";
-import { debug } from "debug";
 /**
  * Parses key=value pairs from a code block.
  * Supports: KEY=value, KEY="value", KEY='value'
@@ -22,12 +21,6 @@ export function parseArguments(source: string): Record<string, string> {
         if (!/^[a-zA-Z0-9_!-]+$/.test(key)) continue;
 
         let value = trimmed.slice(eqIndex + 1).trim();
-
-        // Strip matching outer quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-        }
 
         args[key] = value;
     }
@@ -75,61 +68,8 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
     const resolved = { ...args };
 
     Object.keys(resolved).forEach(key => {
-        let value = resolved[key];
+        let value = Variable.replaceAll(resolved[key], ctx);
 
-        // Helper: replace var, quoting if embedded in expression
-        const replaceVar = (val: string, varName: string, replacement: string): string => {
-            if (val === varName) {
-                return replacement; // Standalone - return as-is
-            } else if (val.includes(varName)) {
-                // Embedded in expression - wrap in quotes, escape existing quotes
-                const quoted = `'${replacement.replace(/"/g, '\\"')}'`;
-                return val.replace(new RegExp(varName, 'g'), quoted);
-            }
-            return val;
-        };
-
-        // Context-dependent variables
-        if (ctx) {
-            const dir = ctx.sourcePath.substring(0, ctx.sourcePath.lastIndexOf('/')) || '';
-            const filename = ctx.sourcePath.substring(ctx.sourcePath.lastIndexOf('/') + 1);
-            const title = filename.replace(/\.[^.]+$/, ''); // Remove extension
-
-            value = replaceVar(value, '__SELF__', ctx.sourcePath);
-            value = replaceVar(value, '__DIR__', dir);
-            value = replaceVar(value, '__TITLE__', title);
-            value = replaceVar(value, '__ROOT__', '');
-        }
-
-        // Date variables
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const formatDate = (date: Date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-
-        const formatTime = (date: Date) => {
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${hours}:${minutes}:${seconds}`;
-        };
-
-        value = replaceVar(value, '__TODAY__', formatDate(today));
-        value = replaceVar(value, '__YESTERDAY__', formatDate(yesterday));
-        value = replaceVar(value, '__TOMORROW__', formatDate(tomorrow));
-        value = replaceVar(value, '__NOW__', `${formatDate(today)} ${formatTime(today)}`);
-        value = replaceVar(value, '__TIME__', formatTime(today));
-        value = replaceVar(value, '__TIMESTAMP__', String(Date.now()));
-
-        // Normalize paths containing relative segments (.. or .)
         if (value.includes('/..') || value.includes('/./') || value.startsWith('./') || value.startsWith('../')) {
             value = resolvePath('', value);
         }

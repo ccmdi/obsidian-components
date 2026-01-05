@@ -5,6 +5,7 @@ import { evaluateArgs, isTruthy } from "expression";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
 import { parseYaml } from "obsidian";
+import { NOTE_CONTEXT_VARIABLES } from "variable";
 
 /**
  * Global instance registry for cleanup
@@ -89,7 +90,6 @@ export namespace ComponentInstance {
         // Store instance reference on element
         el.dataset.componentId = id;
         componentInstances.set(id, instance);
-        // debug(`Component ${id} created. Total instances: ${componentInstances.size}`);
 
         return instance;
     }
@@ -344,7 +344,6 @@ export namespace Component {
     export function getRenderRefreshArgs(component: Component<readonly string[]>): Set<string> {
         if (!component.renderRefresh) return new Set();
 
-        // Check cache first
         const cached = renderRefreshArgsCache.get(component);
         if (cached) return cached;
 
@@ -527,7 +526,7 @@ export namespace Component {
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
         app: App,
-        options: { usesFm: boolean; usesFile: boolean; usesSelf: boolean; isInSidebarContext: boolean; fmKeys: string[]; fileKeys: string[]; query?: string }
+        options: { usesFm: boolean; usesFile: boolean; usesContextDependentSpecialVariable: boolean; isInSidebarContext: boolean; fmKeys: string[]; fileKeys: string[]; query?: string }
     ): { instance: ComponentInstance; isNew: boolean } {
         const existingId = el.dataset.componentId;
 
@@ -558,6 +557,7 @@ export namespace Component {
             }
         };
 
+        // handle component-specified refresh strategies
         if (component.refresh) {
             if (Array.isArray(component.refresh)) {
                 component.refresh.forEach(registerStrategy);
@@ -570,7 +570,7 @@ export namespace Component {
         if (options.usesFm || options.usesFile) {
             registerStrategy('metadataChanged');
         }
-        if ((options.usesFm || options.usesFile || options.usesSelf) && options.isInSidebarContext) {
+        if ((options.usesFm || options.usesFile || options.usesContextDependentSpecialVariable) && options.isInSidebarContext) {
             registerStrategy('leafChanged');
         }
         if (options.query) {
@@ -606,7 +606,9 @@ export namespace Component {
         let args = { ...originalArgs };
 
         const argValues = Object.values(originalArgs);
-        const usesSelf = argValues.some(v => v?.includes('__SELF__'));
+        const usesContextDependentSpecialVariable = argValues.some(v =>
+            NOTE_CONTEXT_VARIABLES.some(variable => v?.includes(variable.name))
+        );
 
         const componentArgKeys = new Set(Component.getArgKeys(component));
 
@@ -661,7 +663,7 @@ export namespace Component {
         const { instance, isNew } = getOrCreateInstance(component, el, ctx, app, {
             usesFm,
             usesFile,
-            usesSelf,
+            usesContextDependentSpecialVariable,
             isInSidebarContext,
             fmKeys,
             fileKeys,
@@ -763,7 +765,6 @@ export namespace Component {
             // - Handled didn't change, unhandled did → skip to full render immediately
             // - Nothing changed → renderRefresh (for periodic/time-based updates)
             if (unhandledArgsChanged && !handledArgsChanged) {
-                // Skip renderRefresh, go straight to full render
                 el.empty();
                 renderFn = component.render;
             } else {
