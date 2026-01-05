@@ -1,9 +1,11 @@
-import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView } from "obsidian";
-import { parseArguments, validateArguments, parseFM, parseFileContent, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
+import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView, Notice } from "obsidian";
+import { parseArguments, validateArguments, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
 import { applyCssFromArgs } from "utils";
+import { evaluateArgs, isTruthy } from "expression";
 import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
 import { parseYaml } from "obsidian";
+import { NOTE_CONTEXT_VARIABLES } from "variable";
 
 /**
  * Global instance registry for cleanup
@@ -89,7 +91,6 @@ export namespace ComponentInstance {
         // Store instance reference on element
         el.dataset.componentId = id;
         componentInstances.set(id, instance);
-        // debug(`Component ${id} created. Total instances: ${componentInstances.size}`);
 
         return instance;
     }
@@ -233,6 +234,7 @@ export interface ComponentArg {
     description?: string;
     default?: string;
     required?: boolean;
+    hidden?: boolean;
 }
 
 export interface ComponentSetting {
@@ -281,6 +283,7 @@ export interface Component<TArgs extends readonly string[]> {
     aliases?: string[];
     render: RenderFunction<TArgs>;
     renderRefresh?: RenderFunction<TArgs>;
+    renderRefreshDuration?: number; // ms to wait before full refresh after renderRefresh (default 500)
     refresh?: RefreshStrategy;
     isMountable: boolean;
     settings?: {
@@ -317,7 +320,7 @@ export namespace Component {
     }
 
     export function hasArgs(component: Component<readonly string[]>): boolean {
-        return Object.keys(component.args || {}).length > 0;
+        return Object.values(component.args || {}).some(arg => arg && !arg.hidden);
     }
 
     export function mergeWithDefaults(component: Component<readonly string[]>, args: Record<string, string>): Record<string, string> {
@@ -331,6 +334,46 @@ export namespace Component {
         });
 
         return result;
+    }
+
+    /**
+     * Static analysis of renderRefresh to detect which args it accesses.
+     * Extracts args.X patterns and destructuring like { x, y } = args.
+     * Results are cached per component.
+     */
+    const renderRefreshArgsCache = new WeakMap<Component<readonly string[]>, Set<string>>();
+
+    export function getRenderRefreshArgs(component: Component<readonly string[]>): Set<string> {
+        if (!component.renderRefresh) return new Set();
+
+        const cached = renderRefreshArgsCache.get(component);
+        if (cached) return cached;
+
+        const source = component.renderRefresh.toString();
+        const args = new Set<string>();
+
+        // Match args.propertyName
+        const dotAccess = /args\.(\w+)/g;
+        let match;
+        while ((match = dotAccess.exec(source)) !== null) {
+            args.add(match[1]);
+        }
+
+        // Match args['propertyName'] or args["propertyName"]
+        const bracketAccess = /args\[['"](\w+)['"]\]/g;
+        while ((match = bracketAccess.exec(source)) !== null) {
+            args.add(match[1]);
+        }
+
+        // Match destructuring: const { x, y } = args or { x, y } = args
+        const destructure = /\{\s*([^}]+)\}\s*=\s*args/g;
+        while ((match = destructure.exec(source)) !== null) {
+            const props = match[1].split(',').map(p => p.trim().split(/[:\s]/)[0].trim());
+            props.forEach(p => { if (p) args.add(p); });
+        }
+
+        renderRefreshArgsCache.set(component, args);
+        return args;
     }
 
     /**
@@ -485,7 +528,7 @@ export namespace Component {
         el: HTMLElement,
         ctx: MarkdownPostProcessorContext,
         app: App,
-        options: { usesFm: boolean; usesFile: boolean; usesSelf: boolean; isInSidebarContext: boolean; fmKeys: string[]; fileKeys: string[]; query?: string }
+        options: { usesFm: boolean; usesFile: boolean; usesContextDependentSpecialVariable: boolean; isInSidebarContext: boolean; fmKeys: string[]; fileKeys: string[]; query?: string }
     ): { instance: ComponentInstance; isNew: boolean } {
         const existingId = el.dataset.componentId;
 
@@ -516,6 +559,7 @@ export namespace Component {
             }
         };
 
+        // handle component-specified refresh strategies
         if (component.refresh) {
             if (Array.isArray(component.refresh)) {
                 component.refresh.forEach(registerStrategy);
@@ -528,7 +572,7 @@ export namespace Component {
         if (options.usesFm || options.usesFile) {
             registerStrategy('metadataChanged');
         }
-        if ((options.usesFm || options.usesFile || options.usesSelf) && options.isInSidebarContext) {
+        if ((options.usesFm || options.usesFile || options.usesContextDependentSpecialVariable) && options.isInSidebarContext) {
             registerStrategy('leafChanged');
         }
         if (options.query) {
@@ -566,28 +610,35 @@ export namespace Component {
         let args = { ...originalArgs };
 
         const argValues = Object.values(originalArgs);
-        const usesFm = argValues.some(v => v?.startsWith('fm.'));
-        const usesFile = argValues.some(v => v?.startsWith('file.'));
-        const usesSelf = argValues.some(v => v?.includes('__SELF__'));
-
-        // Extract specific fm/file keys being watched for smart refresh
-        const fmKeys = argValues
-            .filter(v => v?.startsWith('fm.'))
-            .map(v => v.slice(3));
-        const fileKeys = argValues
-            .filter(v => v?.startsWith('file.'))
-            .map(v => v.slice(5));
+        const usesContextDependentSpecialVariable = argValues.some(v =>
+            NOTE_CONTEXT_VARIABLES.some(variable => v?.includes(variable.name))
+        );
 
         const componentArgKeys = new Set(Component.getArgKeys(component));
-        // debug(args)
 
-        args = parseFM(args, app, ctx);
-        const fileContentResult = parseFileContent(args, app, ctx);
-        args = fileContentResult.args;
-        const needsFileRecovery = fileContentResult.needsRecovery;
-
-        // Handle special VALUES
+        // Resolve special variables first (__TODAY__, __SELF__, etc.)
         args = resolveSpecialVariables(args, ctx);
+
+        // Get frontmatter for expression evaluation
+        const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
+        const frontmatter = file instanceof TFile
+            ? app.metadataCache.getFileCache(file)?.frontmatter || {}
+            : {};
+
+        // Evaluate expressions (handles fm.*, file.*, if(), operators)
+        const exprResult = evaluateArgs(args, { frontmatter });
+        args = exprResult.args;
+        const fmKeys = exprResult.fmKeys;
+        const fileKeys = exprResult.fileKeys;
+        const usesFm = fmKeys.length > 0;
+        const usesFile = fileKeys.length > 0;
+
+        // Check if any file.* keys were undefined (for recovery)
+        const needsFileRecovery = fileKeys.some(key => {
+            const value = frontmatter[key];
+            return value === undefined;
+        });
+
         args = parseArgsAliases(args, componentArgKeys);
 
         // Handle special KEYS
@@ -603,9 +654,7 @@ export namespace Component {
                 componentArgKeys.delete(cleanKey);
             // enabled => RESERVED KEYWORD for enabling/disabling components
             } else if (key === 'enabled') {
-                if (value === 'false') {
-                    isEnabled = false;
-                }
+                isEnabled = isTruthy(value);
                 componentArgKeys.delete(key);
             // all other keys => component args / CSS carryovers
             } else {
@@ -618,23 +667,19 @@ export namespace Component {
         const { instance, isNew } = getOrCreateInstance(component, el, ctx, app, {
             usesFm,
             usesFile,
-            usesSelf,
+            usesContextDependentSpecialVariable,
             isInSidebarContext,
             fmKeys,
             fileKeys,
             query: args.query
         });
-        // debug('INSTANCE',component.keyName, instance);
 
+        // Track ALL fm/file keys (including those inside expressions) for change detection
         instance.data._watchedFmValues = Object.fromEntries(
-            Object.entries(originalArgs)
-                .filter(([_, v]) => typeof v === 'string' && v.startsWith('fm.'))
-                .map(([k, v]) => [v.slice(3), args[k] === 'undefined' ? undefined : args[k]])
+            fmKeys.map(key => [key, frontmatter[key]])
         );
         instance.data._watchedFileValues = Object.fromEntries(
-            Object.entries(originalArgs)
-                .filter(([_, v]) => typeof v === 'string' && v.startsWith('file.'))
-                .map(([k, v]) => [v.slice(5), args[k] === 'undefined' ? undefined : args[k]])
+            fileKeys.map(key => [key, frontmatter[key]])
         );
         instance.data._watchedFilePath = ctx.sourcePath;
 
@@ -662,10 +707,10 @@ export namespace Component {
         if (!isEnabled) {
             el.empty();
             el.addClass('component-disabled');
-            // Only hide on re-render, not initial (Muuri needs to see item on init)
-            if (!isNew) {
-                const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
-                if (container) container.style.display = 'none';
+            const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
+            if (container) {
+                container.style.display = 'none';
+                container.dispatchEvent(new CustomEvent('widget-visibility-change', { bubbles: true }));
             }
             return;
         }
@@ -673,7 +718,13 @@ export namespace Component {
         el.removeClass('component-disabled');
         // Show the container if it was hidden
         const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
-        if (container) container.style.display = '';
+        if (container) {
+            const wasHidden = container.style.display === 'none';
+            container.style.display = '';
+            if (wasHidden) {
+                container.dispatchEvent(new CustomEvent('widget-visibility-change', { bubbles: true }));
+            }
+        }
 
         const requiredArgs = Component.getRequiredArgs(component);
         if (requiredArgs.length > 0) {
@@ -691,15 +742,61 @@ export namespace Component {
         let renderFn: RenderFunction<readonly string[]>;
         // Use renderRefresh only if instance exists AND element has content
         // (element may have been cleared by disable, requiring full render)
+        const prevArgs = instance.data._prevEvaluatedArgs as Record<string, string> | undefined;
+        let needsDelayedFullRefresh = false;
+
         if (!isNew && component.renderRefresh && el.hasChildNodes()) {
-            renderFn = component.renderRefresh;
+            // Check what changed: handled args vs unhandled args
+            let handledArgsChanged = false;
+            let unhandledArgsChanged = false;
+
+            if (prevArgs) {
+                const handledArgs = Component.getRenderRefreshArgs(component);
+                for (const key of Object.keys(argsWithDefaults)) {
+                    if (argsWithDefaults[key] !== prevArgs[key]) {
+                        if (handledArgs.has(key)) {
+                            handledArgsChanged = true;
+                        } else {
+                            unhandledArgsChanged = true;
+                        }
+                    }
+                }
+            }
+
+            // Decide render strategy:
+            // - Handled changed, unhandled didn't → renderRefresh only
+            // - Handled changed, unhandled too → renderRefresh + delayed full refresh
+            // - Handled didn't change, unhandled did → skip to full render immediately
+            // - Nothing changed → renderRefresh (for periodic/time-based updates)
+            if (unhandledArgsChanged && !handledArgsChanged) {
+                el.empty();
+                renderFn = component.render;
+            } else {
+                renderFn = component.renderRefresh;
+                if (unhandledArgsChanged) {
+                    needsDelayedFullRefresh = true;
+                }
+            }
         } else {
             renderFn = component.render;
         }
 
+        // Store current args for next comparison
+        instance.data._prevEvaluatedArgs = { ...argsWithDefaults };
+
         instance.data._isRendering = true;
         try {
             await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
+
+            // If renderRefresh ran but couldn't handle all arg changes, do a full refresh after animation
+            if (needsDelayedFullRefresh) {
+                const animationDuration = component.renderRefreshDuration ?? 500;
+                setTimeout(() => {
+                    if (!instance.element.isConnected) return; // Element was removed
+                    el.empty();
+                    component.render(argsWithOriginal, el, ctx, app, instance, componentSettings);
+                }, animationDuration);
+            }
         } finally {
             instance.data._isRendering = false;
             // Process queued refresh if one was requested during render

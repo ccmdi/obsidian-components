@@ -1,33 +1,30 @@
-// utils.ts
-
 import { App, MarkdownPostProcessorContext, TFile, CachedMetadata } from "obsidian";
+import { Variable } from "variable";
+
 /**
- * Parses .env-style key-value pairs from a code block.
- * e.g., `GITHUB_TOKEN="your_token_here"`
+ * Parses key=value pairs from a code block.
+ * Supports: KEY=value, KEY="value", KEY='value'
+ * Quoted values can contain the opposite quote type freely.
  */
 export function parseArguments(source: string): Record<string, string> {
     const args: Record<string, string> = {};
-    const lines = source.split('\n');
-    // This regex finds lines like: KEY="value" or KEY='value' or KEY=value or KEY!=value
-    const quotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*["'](.*?)["']/;
-    const unquotedRegex = /^\s*([a-zA-Z0-9_!-]+)\s*=\s*([^\s]+.*?)$/;
 
-    for (const line of lines) {
-        // Try quoted values first
-        let match = line.match(quotedRegex);
-        if (match) {
-            const [, key, value] = match;
-            args[key] = value;
-        } else {
-            // Try unquoted values
-            match = line.match(unquotedRegex);
-            if (match) {
-                const [, key, value] = match;
-                args[key] = value.trim();
-            }
-        }
+    for (const line of source.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        // Match KEY= (key can contain alphanumeric, _, !, -)
+        const eqIndex = trimmed.search(/[=]/);
+        if (eqIndex === -1) continue;
+
+        const key = trimmed.slice(0, eqIndex).trim();
+        if (!/^[a-zA-Z0-9_!-]+$/.test(key)) continue;
+
+        let value = trimmed.slice(eqIndex + 1).trim();
+
+        args[key] = value;
     }
-    
+
     return args;
 }
 
@@ -39,6 +36,14 @@ export function validateArguments(args: Record<string, string>, required: string
     if (missingArgs.length > 0) {
         throw new Error(`Missing required arguments: ${missingArgs.join(', ')}`);
     }
+}
+
+/**
+ * Escapes a string for use in a single-quoted context (expression strings, CSS urls).
+ * Escapes backslashes first, then single quotes.
+ */
+export function escapeForSingleQuotes(str: string): string {
+    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 export function resolvePath(pathArg: string, path: string): string {
@@ -71,58 +76,8 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
     const resolved = { ...args };
 
     Object.keys(resolved).forEach(key => {
-        let value = resolved[key];
+        let value = Variable.replaceAll(resolved[key], ctx);
 
-        // Context-dependent variables
-        if (ctx) {
-            const dir = ctx.sourcePath.substring(0, ctx.sourcePath.lastIndexOf('/')) || '';
-
-            if (value === '__SELF__') {
-                value = ctx.sourcePath;
-            } else if (value.includes('__SELF__')) {
-                value = value.replace(/__SELF__/g, ctx.sourcePath);
-            }
-
-            if (value === '__DIR__') {
-                value = dir;
-            } else if (value.includes('__DIR__')) {
-                value = value.replace(/__DIR__/g, dir);
-            }
-
-            if (value === '__ROOT__') {
-                value = '';
-            }
-        }
-
-        // Date variables
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const formatDate = (date: Date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-
-        const formatTime = (date: Date) => {
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${hours}:${minutes}:${seconds}`;
-        };
-
-        value = value.replace(/__TODAY__/g, formatDate(today));
-        value = value.replace(/__YESTERDAY__/g, formatDate(yesterday));
-        value = value.replace(/__TOMORROW__/g, formatDate(tomorrow));
-        value = value.replace(/__NOW__/g, `${formatDate(today)} ${formatTime(today)}`);
-        value = value.replace(/__TIME__/g, formatTime(today));
-        value = value.replace(/__TIMESTAMP__/g, String(Date.now()));
-
-        // Normalize paths containing relative segments (.. or .)
         if (value.includes('/..') || value.includes('/./') || value.startsWith('./') || value.startsWith('../')) {
             value = resolvePath('', value);
         }
@@ -137,6 +92,9 @@ export function resolveSpecialVariables(args: Record<string, string>, ctx?: Mark
 type FrontmatterValue = string | number | boolean | null | FrontmatterValue[] | { [key: string]: FrontmatterValue };
 type Frontmatter = Record<string, FrontmatterValue>;
 
+/**
+ * @deprecated handled in main component flow
+ */
 export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPostProcessorContext): Record<string, string> {
     let fm: Frontmatter | null = null;
 
@@ -159,9 +117,15 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
     return args;
 }
 
+export function camelToSentence(str: string): string {
+    const result = str.replace(/([A-Z])/g, " $1");
+    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase().trim();
+}
+
 /**
  * Parse frontmatter from metadata cache (sync).
  * Like fm.* but returns whether any values were undefined (for recovery).
+ * @deprecated handled in main component flow
  */
 export function parseFileContent(
     args: Record<string, string>,
@@ -662,6 +626,11 @@ export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: s
         const andParts = orGroup.split(' AND ').map(part => part.trim());
         return andParts.every(matchesPart);
     });
+}
+
+export function argsToSource(args: Record<string, string>, apply: (entries: [string, string][]) => [string, string][] = (e) => e): string {
+    const entries = Object.entries(args);
+    return apply(entries).map(([k, v]) => `${k}=${v}`).join('\n');
 }
 
 const aliases = {

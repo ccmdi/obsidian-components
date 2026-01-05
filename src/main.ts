@@ -1,14 +1,15 @@
 // main.ts
 
-import { Plugin, Editor, Menu, TFile, MarkdownView } from 'obsidian';
+import { Plugin, Editor, Menu, TFile, MarkdownView, Notice } from 'obsidian';
 import { ComponentsSettings, DEFAULT_SETTINGS } from 'settings';
 import { COMPONENTS, Component, componentInstances } from 'components';
 
 import ComponentsSettingTab from 'native/settings';
 import ComponentSidebarView from 'native/sidebar';
-import ComponentSelectorModal, { PlaceComponentModal, ComponentArgsModal } from 'native/modal';
+import { ComponentSelectorModal, PlaceComponentModal, ComponentArgsModal } from 'native/modal';
 import { ComponentAutoComplete } from 'native/autocomplete';
 import { executeOjs, injectOjsStyles } from 'ojs';
+import { argsToSource, parseArguments } from 'utils';
 
 export const COMPONENT_SIDEBAR_VIEW_TYPE = 'component-sidebar';
 
@@ -78,6 +79,17 @@ export default class ComponentsPlugin extends Plugin {
     }
 
     /**
+     * Refresh all components that use a specific reference ID.
+     */
+    refreshByRef(refId: string): void {
+        componentInstances.forEach((instance) => {
+            if (instance.element.dataset.componentRef === refId && instance.data.triggerRefresh) {
+                instance.data.triggerRefresh();
+            }
+        });
+    }
+
+    /**
      * Register context menu handler for editing components
      */
     registerComponentContextMenu() {
@@ -136,6 +148,7 @@ export default class ComponentsPlugin extends Plugin {
                 const sourcePath = componentEl.dataset.componentSource;
                 
                 if (!componentKey || !sourcePath) return;
+                if (componentEl.dataset.componentRef) return;
 
                 const component = COMPONENTS.find(c => c.keyName === componentKey);
                 if (!component) return;
@@ -242,10 +255,9 @@ export default class ComponentsPlugin extends Plugin {
         if (blockStart === -1 || blockEnd === -1) return;
 
         // Build new code block content
-        const argsLines = Object.entries(newArgs)
-            .filter(([, value]) => value && value.trim() !== '')
-            .map(([key, value]) => `${key}="${value}"`)
-            .join('\n');
+        const argsLines = argsToSource(newArgs, (entries) => 
+            entries.filter(([, value]) => value && value.trim() !== '')
+        );
 
         const newCodeBlock = `\`\`\`${componentKey}\n${argsLines}\n\`\`\``;
 
@@ -339,6 +351,58 @@ export default class ComponentsPlugin extends Plugin {
                 });
             }
         });
+
+        if(!this.registeredProcessors.has('component')) {
+            this.registerMarkdownCodeBlockProcessor('component', async (source, el, ctx) => {
+                const args = parseArguments(source);
+                const componentKey = args['component'];
+                const component = COMPONENTS.find(c => c.keyName === componentKey);
+                const refId = args['ref'];
+                const refSource = this.settings.componentReferences?.[refId];
+
+                if (refSource) {
+                    const refArgs = parseArguments(refSource);
+                    const targetComponentKey = refArgs['component'];
+                    const targetComponent = COMPONENTS.find(c => c.keyName === targetComponentKey);
+
+                    if (targetComponent) {
+                        // Merge: Local args override Reference args, Reference args override Defaults
+                        const mergedArgs = { ...refArgs, ...args };
+                        delete mergedArgs['ref'];
+                        delete mergedArgs['component'];
+
+                        el.dataset.componentRef = refId;
+                        await Component.render(targetComponent, argsToSource(mergedArgs), el, ctx, this.app, this.settings.componentSettings[targetComponent.keyName] || {});
+
+                        // Override triggerRefresh to re-fetch ref definition
+                        const instanceId = el.dataset.componentId;
+                        const instance = instanceId ? componentInstances.get(instanceId) : null;
+                        if (instance) {
+                            instance.data.triggerRefresh = async () => {
+                                const freshRefSource = this.settings.componentReferences?.[refId];
+                                if (!freshRefSource) return;
+                                const freshRefArgs = parseArguments(freshRefSource);
+                                const freshMerged = { ...freshRefArgs, ...args };
+                                delete freshMerged['ref'];
+                                delete freshMerged['component'];
+                                el.empty();
+                                await Component.render(targetComponent, argsToSource(freshMerged), el, ctx, this.app, this.settings.componentSettings[targetComponent.keyName] || {});
+                            };
+                        }
+                        return;
+                    } else {
+                        new Notice(`Reference "${refId}" points to missing component: ${targetComponentKey}`);
+                    }
+                }
+
+                if(!component) return;
+                const cleanArgs = { ...args };
+                delete cleanArgs['component'];
+
+                await Component.render(component, argsToSource(cleanArgs), el, ctx, this.app, this.settings.componentSettings[component.keyName] || {});
+            });
+            this.registeredProcessors.add('component');
+        }
 
         // Register ojs (JavaScript execution) processor if enabled
         if (this.settings.enableJsExecution && !this.registeredProcessors.has('ojs')) {

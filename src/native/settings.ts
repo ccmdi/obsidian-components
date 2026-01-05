@@ -1,8 +1,9 @@
-import { App, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, ToggleComponent } from "obsidian";
 import { COMPONENTS, Component, ComponentAction, ComponentSetting, GROUPS } from "components";
 import ComponentsPlugin from "main";
 import { ComponentGroup, initializeGroups } from "groups";
-import { renderExternalLinkToElement } from "utils";
+import { argsToSource, parseArguments, renderExternalLinkToElement } from "utils";
+import { ComponentArgsModal, ComponentSelectorModal } from "./modal";
 
 export default class ComponentsSettingTab extends PluginSettingTab {
     plugin: ComponentsPlugin;
@@ -28,6 +29,8 @@ export default class ComponentsSettingTab extends PluginSettingTab {
             this.displayGeneralSettings();
         } else if (this.currentView === 'components') {
             this.displayMainMenu();
+        } else if (this.currentView === 'references') {
+            this.displayReferenceSettings();
         } else {
             this.displayComponentSettings(this.currentView);
         }
@@ -56,6 +59,16 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         });
         generalTab.onclick = () => {
             this.currentView = 'general';
+            this.display();
+        };
+
+        // References tab
+        const referencesTab = tabContainer.createEl('div', {
+            text: 'References',
+            cls: `setting-tab ${this.currentView === 'references' ? 'is-active' : ''}`
+        });
+        referencesTab.onclick = () => {
+            this.currentView = 'references';
             this.display();
         };
     }
@@ -149,6 +162,106 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 })
             );
+    }
+
+    displayReferenceSettings(): void {
+        const { containerEl } = this;
+
+        new Setting(containerEl)
+            .setName('Add new reference')
+            .setDesc('Creates a reusable component with a reference ID.')
+            .addButton(btn => btn
+                .setButtonText('+')
+                .onClick(() => {
+                    const selector = new ComponentSelectorModal(this.app, this.plugin);
+                    selector.mode = 'reference';
+                    selector.onSelect = (component, args) => {
+                        const generateShortId = (length = 8) => {
+                            return Array.from(crypto.getRandomValues(new Uint8Array(length)))
+                              .map((b) => (b % 36).toString(36))
+                              .join('');
+                        };
+                        const id = `ref-${generateShortId()}`;
+                        this.plugin.settings.componentReferences[id] = `component=${component.keyName}\n${argsToSource(args)}`;
+                        this.plugin.saveSettings().then(() => this.display());
+                    };
+                    selector.open();
+                }));
+
+        Object.entries(this.plugin.settings.componentReferences).forEach(([id, source]) => {
+            const originalId = id;
+
+            const setting = new Setting(containerEl)
+                .setDesc(source.split('\n')[0].replace('component=', ''))
+                // Name text input
+                .addText(text => text
+                    .setValue(id)
+                    .onChange(() => {
+                        // Don't save on every keystroke - just let user type
+                    })
+                    .then(textComponent => {
+                        textComponent.inputEl.addEventListener('blur', async () => {
+                            const newId = textComponent.getValue().trim();
+                            if (newId && newId !== originalId) {
+                                // Check if new ID already exists
+                                if (this.plugin.settings.componentReferences[newId]) {
+                                    new Notice(`Reference "${newId}" already exists.`);
+                                    textComponent.setValue(originalId);
+                                    return;
+                                }
+                                // Rename: copy to new key, delete old key
+                                this.plugin.settings.componentReferences[newId] = this.plugin.settings.componentReferences[originalId];
+                                delete this.plugin.settings.componentReferences[originalId];
+                                await this.plugin.saveSettings();
+                                this.plugin.refreshByRef(newId);
+                                this.display();
+                            } else if (!newId) {
+                                // Reset if empty
+                                textComponent.setValue(originalId);
+                            }
+                        });
+                    }))
+                // Edit Button
+                .addExtraButton(cb => cb
+                    .setIcon('pencil')
+                    .setTooltip('Edit Reference')
+                    .onClick(() => {
+                        const parsed = parseArguments(source);
+                        const componentKey = parsed['component'];
+                        const component = COMPONENTS.find(c => c.keyName === componentKey);
+
+                        if (component) {
+                            const initialArgs = { ...parsed };
+                            delete initialArgs['component'];
+
+                            new ComponentArgsModal(this.app, component, {
+                                mode: 'insert',
+                                submitText: 'Update Reference',
+                                initialArgs: initialArgs,
+                                onSubmit: async (newArgs) => {
+                                    this.plugin.settings.componentReferences[id] = `component=${componentKey}\n${argsToSource(newArgs)}`;
+                                    await this.plugin.saveSettings();
+                                    this.plugin.refreshByRef(id);
+                                    void this.display();
+                                }
+                            }).open();
+                        } else {
+                            new Notice(`Component "${componentKey}" not found.`);
+                        }
+                    }))
+                // Delete Button
+                .addExtraButton(cb => cb
+                    .setIcon('trash')
+                    .setTooltip('Delete Reference')
+                    .onClick(async () => {
+                        delete this.plugin.settings.componentReferences[id];
+                        await this.plugin.saveSettings();
+                        this.plugin.refreshByRef(id);
+                        void this.display();
+                    }));
+
+            setting.settingEl.addClass('reference-setting');
+        });
     }
 
     updateComponentClickabilityInPlace(component: Component<readonly string[]>, nameEl: HTMLElement, isEnabled: boolean): void {
@@ -372,7 +485,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
         // Args section
         if (hasArgs) {
             containerEl.createEl('h3', { text: 'Arguments' });
-            Object.entries(component.args!).forEach(([argKey, argConfig]) => {
+            Object.entries(component.args!).filter(([_, argConfig]) => !argConfig?.hidden).forEach(([argKey, argConfig]) => {
                 const argDesc = argConfig?.description || '';
                 const argSetting = new Setting(containerEl)
                     .setName(argKey);

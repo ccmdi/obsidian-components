@@ -5,8 +5,9 @@ import ConfirmationModal from "native/confirmation";
 import { ComponentArgsModal } from "native/modal";
 import { COMPONENTS, componentInstances } from "components";
 import ComponentSidebarView from "native/sidebar";
-import { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
+import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import Muuri from "muuri";
+import { argsToSource } from "utils";
 
 const MARGIN = 4;
 
@@ -50,15 +51,12 @@ function createSkeleton(parent: HTMLElement, count: number, columns: number): HT
         position: absolute; top: 0; left: 0; right: 0; bottom: 0;
         background-color: var(--background-primary); z-index: 10;
         display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: 8px; padding: 12px;
+        align-content: start;
     `;
     for (let i = 0; i < Math.max(3, count); i++) {
         skeleton.createEl('div', { cls: 'widget-skeleton' });
     }
     return skeleton;
-}
-
-function argsToSource(args: Record<string, string>): string {
-    return Object.entries(args).map(([k, v]) => `${k}="${v}"`).join('\n');
 }
 
 class ComponentSelectorModal extends Modal {
@@ -110,7 +108,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
     icon: 'layout-grid',
     isMountable: false,
     args: {
-        layout: { description: 'JSON layout configuration (optional)', default: '' },
+        layout: { description: 'Layout configuration (b64)', default: '', hidden: true },
         columns: { description: 'Number of columns (default: 1)', default: '1' }
     },
     does: [ComponentAction.READ],
@@ -223,15 +221,15 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             activeWidgets.set(widgetId, { element: widget, componentKey, args: componentArgs });
 
             widget.addEventListener('contextmenu', (e) => {
+                if (e.defaultPrevented) return;
                 e.preventDefault();
-                e.stopPropagation();
                 new ConfirmationModal(app, `Remove ${componentName} widget?`, () => removeWidget(widget)).open();
             });
 
             widget.addEventListener('mousedown', (e) => {
                 if (e.button !== 1) return;
+                if (e.defaultPrevented) return;
                 e.preventDefault();
-                e.stopPropagation();
                 new ComponentArgsModal(app, COMPONENTS.find(c => c.keyName === componentKey)!, {
                     mode: 'widget-space',
                     initialArgs: activeWidgets.get(widgetId)!.args,
@@ -251,6 +249,10 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             const content = widget.createEl('div', { cls: 'widget-content' });
             content.dataset.widgetId = widgetId;
 
+            // Add to Muuri FIRST (before render) so visibility events can find the item
+            grid.classList.remove('transitions-enabled');
+            muuri.add(widget);
+
             const comp = COMPONENTS.find(c => c.keyName === componentKey);
             if (comp) {
                 try {
@@ -260,12 +262,16 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 }
             }
 
-            // Disable transitions while adding so it doesn't animate from 0,0
-            grid.classList.remove('transitions-enabled');
-            muuri.add(widget);
+            // After render, check if component disabled itself and sync with Muuri
+            const item = muuri.getItems().find(i => i.getElement() === widget);
+            if (widget.style.display === 'none' && item) {
+                muuri.hide([item], { instant: true });
+            }
+
             muuri.refreshItems();
             muuri.layout(false);
             muuri.resizeObserver?.observe(content);
+
             requestAnimationFrame(() => {
                 grid.classList.add('transitions-enabled');
             });
@@ -334,7 +340,10 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 }
             });
 
+            let isDragging = false;
+
             muuri.on('dragStart', (item) => {
+                isDragging = true;
                 const el = item.getElement();
                 if (el) { el.style.zIndex = '1000'; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; }
             });
@@ -343,6 +352,17 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 const el = item.getElement();
                 if (el) { el.style.zIndex = ''; el.style.boxShadow = ''; }
                 saveLayout();
+
+                //TODO hacky
+                const suppressClick = (e: Event) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                };
+                container.addEventListener('click', suppressClick, { capture: true, once: true });
+                setTimeout(() => {
+                    container.removeEventListener('click', suppressClick, { capture: true });
+                    isDragging = false;
+                }, 50);
             });
 
             muuri.resizeObserver = new ResizeObserver((entries) => {
@@ -353,7 +373,8 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             });
         };
 
-        const availableComponents = COMPONENTS.filter(c => c.isMountable);
+        const isComponentEnabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
+        const availableComponents = COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
 
         container.addEventListener('dblclick', (e) => {
             if (e.target === container || e.target === grid) {
@@ -364,6 +385,27 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                         onSubmit: (args) => addWidget(comp.keyName, comp.name || comp.keyName, args)
                     }).open();
                 }).open();
+            }
+        });
+
+        // Listen for widget visibility changes (from enabled expression changes)
+        container.addEventListener('widget-visibility-change', (e) => {
+            const widgetItem = (e.target as HTMLElement).closest('.widget-item');
+            if (!widgetItem) return;
+
+            const item = muuri.getItems().find(i => i.getElement() === widgetItem);
+            if (!item) return;
+
+            const isHidden = (widgetItem as HTMLElement).style.display === 'none';
+            if (isHidden) {
+                muuri.hide([item], { instant: true });
+            } else {
+                muuri.show([item], { instant: true });
+                // Delay layout to ensure content has rendered
+                requestAnimationFrame(() => {
+                    muuri.refreshItems();
+                    muuri.layout(true);
+                });
             }
         });
 
@@ -387,7 +429,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
 
         for (const cfg of [...layout.widgets].sort((a, b) => (a.order || 0) - (b.order || 0))) {
             const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-            if (comp) {
+            if (comp && isComponentEnabled(cfg.componentKey)) {
                 // Pass saved position so widgets appear in correct place immediately
                 const initialPos = (cfg.x !== undefined && cfg.y !== undefined) ? { x: cfg.x, y: cfg.y } : undefined;
                 await addWidget(cfg.componentKey, comp.name || comp.keyName, cfg.args, initialPos);

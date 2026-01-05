@@ -33,10 +33,84 @@ limit=5
 - **Standard args**: `KEY=value` - passed to component logic
 - **CSS override**: `KEY!=value` - forces CSS styling instead of component behavior
 - **Class names**: `class=my-class` or `class="foo bar"` - adds CSS classes to element
-- **Special keyword**: `enabled=false` - disables component rendering
-- **Special variables**: `__TODAY__`, `__NOW__`, etc. - resolved at runtime
-- **Frontmatter support**: `path=fm.property` - reads from note's frontmatter
-- **File content**: `value=file.property` - reads from file's parsed content
+- **Reserved keyword**: `enabled=<expr>` - controls component visibility (see Expressions)
+
+### Special Variables
+Resolved before expression evaluation. Can be used standalone or within strings.
+
+| Variable | Description | Example Output |
+|----------|-------------|----------------|
+| `__TODAY__` | Current date | `2024-01-15` |
+| `__YESTERDAY__` | Yesterday's date | `2024-01-14` |
+| `__TOMORROW__` | Tomorrow's date | `2024-01-16` |
+| `__NOW__` | Current date and time | `2024-01-15 14:30:00` |
+| `__TIME__` | Current time | `14:30:00` |
+| `__TIMESTAMP__` | Unix timestamp (ms) | `1705312200000` |
+| `__SELF__` | Current file path | `folder/note.md` |
+| `__DIR__` | Current directory | `folder` |
+| `__ROOT__` | Vault root | `` (empty string) |
+
+### Expressions
+Component arguments support a simple expression language for dynamic values.
+
+#### Frontmatter References
+Access frontmatter properties from the current note:
+```
+value=fm.property           # Simple property
+value=fm.nested.property    # Nested property
+value=file.property         # Same as fm.* (with recovery support)
+```
+
+#### Conditional Expressions
+```
+# Boolean condition (returns true/false)
+enabled=if(fm.value > 1)
+enabled=if(fm.active && fm.visible)
+enabled=if(!fm.archived)
+
+# Ternary condition (returns one of two values)
+format=if(fm.use24h, 24, 12)
+title=if(fm.type == "book", "Books", "Media")
+```
+
+#### Operators
+
+| Category | Operators | Example |
+|----------|-----------|---------|
+| Comparison | `==` `!=` `>` `<` `>=` `<=` | `fm.count > 5` |
+| Logical | `&&` `\|\|` `!` | `fm.a && !fm.b` |
+| Arithmetic | `+` `-` `*` `/` | `fm.count + 1` |
+
+#### Truthiness
+Boolean evaluation (in `if()`, `&&`, `||`, `!`, and `enabled`) uses these rules:
+
+**Falsy values:**
+- `undefined` / `"undefined"` (missing frontmatter property)
+- `null` / `"null"`
+- `false` / `"false"`
+- `0` / `"0"`
+- `""` (empty string)
+
+**Everything else is truthy.**
+
+#### Expression Examples
+```
+# Show only if property exists and is truthy
+enabled=fm.showWidget
+
+# Show based on condition
+enabled=if(fm.priority >= 1 && fm.status != "archived")
+
+# Dynamic values
+limit=if(fm.compact, 5, 10)
+title=if(fm.type == "book", "Books", "Media")
+
+# Arithmetic in conditions
+enabled=if(fm.count + fm.extra > 10)
+
+# String values require quotes
+message=if(fm.error, "Error occurred", "All good")
+```
 
 ## Architecture
 
@@ -47,6 +121,7 @@ obsidian-components/
 │   ├── main.ts                 # Plugin entry point
 │   ├── components.ts           # Component interfaces & lifecycle
 │   ├── components.register.ts  # Auto-generated component registry
+│   ├── expression.ts           # Expression DSL parser & evaluator
 │   ├── settings.ts             # Plugin settings types
 │   ├── utils.ts                # Argument parsing & utilities
 │   ├── groups.ts               # Component grouping logic
@@ -105,12 +180,19 @@ obsidian-components/
 - Exports refresh strategy types
 - Provides `Component.render()` method that:
   1. Parses arguments from code block
-  2. Resolves special variables (fm.*, file.*, __TODAY__, etc.)
-  3. Applies CSS overrides and class names
-  4. Validates required arguments
-  5. Creates component instance
-  6. Sets up refresh handlers
-  7. Renders component
+  2. Resolves special variables (__TODAY__, __SELF__, etc.)
+  3. Evaluates expressions (fm.*, file.*, if(), operators)
+  4. Applies CSS overrides and class names
+  5. Validates required arguments
+  6. Creates component instance
+  7. Sets up refresh handlers
+  8. Renders component
+
+#### `src/expression.ts`
+- Tokenizer for expression DSL
+- Recursive descent parser with proper operator precedence
+- Expression evaluator with frontmatter context
+- Exports: `evaluateExpression()`, `evaluateArgs()`, `isTruthy()`
 
 #### `src/components.register.ts`
 - **Auto-generated** by `scripts/auto-register-plugin.mjs`

@@ -1,11 +1,13 @@
 import { App, Modal, Setting, Notice, Editor, TextComponent, setIcon } from "obsidian";
 import { Component, COMPONENTS } from "components";
 import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
-import { renderExternalLinkToElement } from "utils";
+import { argsToSource, camelToSentence, parseArguments, renderExternalLinkToElement } from "utils";
 import { FolderSuggest, QuerySuggest, FileSuggest } from "./suggest";
 
-export default class ComponentSelectorModal extends Modal {
+export class ComponentSelectorModal extends Modal {
     plugin: ComponentsPlugin;
+    mode: 'sidebar' | 'reference';
+    onSelect?: (component: Component<readonly string[]>, args: Record<string, string>) => void;
 
     constructor(app: App, plugin: ComponentsPlugin) {
         super(app);
@@ -17,7 +19,7 @@ export default class ComponentSelectorModal extends Modal {
         contentEl.empty();
 
         // Set the title in the modal header
-        titleEl.setText('Open Component in Sidebar');
+        titleEl.setText(this.mode === 'sidebar' ? 'Open Component in Sidebar' : 'Add Component Reference');
 
         // Get enabled components
         const enabledComponents = COMPONENTS.filter(component =>
@@ -49,6 +51,17 @@ export default class ComponentSelectorModal extends Modal {
 
             option.addEventListener('click', () => {
                 this.close();
+                if (this.mode === 'reference') {
+                    new ComponentArgsModal(this.app, component, {
+                        mode: 'insert', // Reuses 'insert' logic for submission
+                        submitText: 'Save Reference',
+                        onSubmit: (args) => {
+                            if (this.onSelect) this.onSelect(component, args);
+                        }
+                    }).open();
+                    return;
+                }
+
                 if (Component.hasArgs(component)) {
                     new ComponentArgsModal(this.app, component).open();
                 } else {
@@ -113,25 +126,6 @@ export class ComponentArgsModal extends Modal {
         return ComponentsPlugin.instance?.settings?.modalArgSuggest ?? true;
     }
 
-    private argsToRaw(): string {
-        return Object.entries(this.args)
-            .filter(([, value]) => value && value.trim() !== '')
-            .map(([key, value]) => `${key}="${value}"`)
-            .join('\n');
-    }
-
-    private rawToArgs(raw: string): void {
-        this.args = {};
-        const lines = raw.split('\n');
-        for (const line of lines) {
-            const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s*=\s*["']?(.*?)["']?\s*$/);
-            if (match) {
-                const [, key, value] = match;
-                this.args[key] = value;
-            }
-        }
-    }
-
     onOpen() {
         const { contentEl, titleEl } = this;
         contentEl.empty();
@@ -163,14 +157,16 @@ export class ComponentArgsModal extends Modal {
         // Raw textarea
         const rawTextarea = rawContent.createEl('textarea', {
             cls: 'component-args-raw-textarea',
-            attr: { placeholder: 'key="value"\nkey2="value2"', rows: '10' }
+            attr: { placeholder: 'key=value\nkey2=value2', rows: '10' }
         });
-        rawTextarea.value = this.argsToRaw();
+        rawTextarea.value = argsToSource(this.args, (entries) => 
+            entries.filter(([, value]) => value && value.trim() !== '')
+        );
 
         // Tab switching
         formTab.onclick = () => {
             if (this.currentTab === 'raw') {
-                this.rawToArgs(rawTextarea.value);
+                this.args = parseArguments(rawTextarea.value);
                 this.renderFormContent(formContent);
             }
             this.currentTab = 'form';
@@ -182,7 +178,9 @@ export class ComponentArgsModal extends Modal {
 
         rawTab.onclick = () => {
             if (this.currentTab === 'form') {
-                rawTextarea.value = this.argsToRaw();
+                rawTextarea.value = argsToSource(this.args, (entries) => 
+                    entries.filter(([, value]) => value && value.trim() !== '')
+                );
             }
             this.currentTab = 'raw';
             rawTab.addClass('is-active');
@@ -192,7 +190,7 @@ export class ComponentArgsModal extends Modal {
         };
 
         rawTextarea.oninput = () => {
-            this.rawToArgs(rawTextarea.value);
+            this.args = parseArguments(rawTextarea.value);
         };
 
         // Render form content
@@ -219,9 +217,9 @@ export class ComponentArgsModal extends Modal {
         container.empty();
 
         if (Component.hasArgs(this.component)) {
-            Object.entries(this.component.args).forEach(([argKey, argConfig]) => {
+            Object.entries(this.component.args).filter(([_, argConfig]) => !argConfig?.hidden).forEach(([argKey, argConfig]) => {
                 const setting = new Setting(container)
-                    .setName(argKey)
+                    .setName(camelToSentence(argKey))
                     .addText(text => {
                         text.setPlaceholder(argConfig?.default || `Enter ${argKey}...`)
                             .setValue(this.args[argKey] || '')
@@ -362,10 +360,9 @@ export class PlaceComponentModal extends Modal {
                     new ComponentArgsModal(this.app, component, {
                         mode: 'insert',
                         onSubmit: (args) => {
-                            const argsLines = Object.entries(args)
-                                .filter(([, value]) => value && value.trim() !== '')
-                                .map(([key, value]) => `${key}="${value}"`)
-                                .join('\n');
+                            const argsLines = argsToSource(args, (entries) => 
+                                entries.filter(([, value]) => value && value.trim() !== '')
+                            );
                             const codeBlock = `\`\`\`${component.keyName}\n${argsLines}\n\`\`\``;
                             this.editor.replaceSelection(codeBlock);
                         }

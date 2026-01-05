@@ -346,6 +346,7 @@ async function renderRemindersContent(
             }
 
             listItem.addEventListener('mousedown', async (event) => {
+                event.preventDefault();
                 const target = event.target as HTMLElement;
                 if (target.classList.contains('reminder-checkbox') ||
                     target.classList.contains('internal-link')) {

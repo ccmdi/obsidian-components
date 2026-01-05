@@ -111,7 +111,10 @@ const renderPropertyAdder = async (
         }
     };
 
-    btn.addEventListener('click', handleClick);
+    btn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        handleClick(e);
+    });
 
     ComponentInstance.addCleanup(instance, () => {
         btn.removeEventListener('click', handleClick);

@@ -113,6 +113,8 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		instance.data.currentProgress = progress;
 	},
 
+	renderRefreshDuration: 500, // Animation duration - delayed full refresh waits for this
+
 	renderRefresh: async (args, el, ctx, app, instance) => {
 		let newProgress = parseFloat(args.progress) || 0;
 		newProgress = Math.max(0, Math.min(100, newProgress));
