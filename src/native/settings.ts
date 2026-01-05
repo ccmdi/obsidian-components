@@ -251,6 +251,7 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                     .onClick(async () => {
                         delete this.plugin.settings.componentReferences[id];
                         await this.plugin.saveSettings();
+                        this.plugin.refreshByRef(id);
                         void this.display();
                     }));
 
