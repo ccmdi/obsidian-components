@@ -109,7 +109,9 @@ function tokenize(input: string): Token[] {
         // Numbers
         if (isDigit(c) || (c === '.' && isDigit(peek(1)))) {
             let num = '';
-            while (!isAtEnd() && (isDigit(peek()) || peek() === '.')) {
+            let seenDot = false;
+            while (!isAtEnd() && (isDigit(peek()) || (peek() === '.' && !seenDot))) {
+                if (peek() === '.') seenDot = true;
                 num += advance();
             }
             tokens.push({ type: 'NUMBER', value: parseFloat(num), raw: num });

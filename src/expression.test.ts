@@ -156,6 +156,13 @@ test('whitespace handling', () => expect(evaluate('  5   +   3  ')).toBe(8));
 test('string with spaces in if()', () => expect(evaluate('if(true, "hello world", "x")')).toBe('hello world'));
 test('escaped quotes in if()', () => expect(evaluate('if(true, "say \\"hi\\"", "x")')).toBe('say "hi"'));
 
+// --- Number Parsing ---
+console.log('\nNumber Parsing:');
+test('decimal number', () => expect(evaluate('3.14')).toBe(3.14));
+test('leading decimal', () => expect(evaluate('.5 + .5')).toBe(1));
+test('multiple dots stops at first', () => expect(evaluate('1.2 + 0.3')).toBe(1.5)); // 1.2.3 would be invalid
+test('decimal in expression', () => expect(evaluate('1.5 * 2')).toBe(3));
+
 // --- Arithmetic Edge Cases ---
 console.log('\nArithmetic Edge Cases:');
 test('division by zero', () => expect(evaluate('5 / 0')).toBe(Infinity));
