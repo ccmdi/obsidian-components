@@ -1,7 +1,7 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { debug } from "debug";
 import { App, TFile, TFolder } from "obsidian";
-import { parseBoolean, matchesQuery, useNavigation } from "utils";
+import { parseBoolean, matchesQuery, useNavigation, escapeForSingleQuotes } from "utils";
 import { projectCardsStyles } from "./styles";
 import { projectCardsSettingsStyles } from "./settingsStyles";
 import ComponentsPlugin from "main";
@@ -386,7 +386,7 @@ export const projectCards: Component<[
             const card = container.createEl('div', { cls: 'project-card' });
             if (coverUrl) {
                 card.addClass('has-cover');
-                card.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), url('${coverUrl.replace(/'/g, "\\'")}')`;
+                card.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), url('${escapeForSingleQuotes(coverUrl)}')`;
                 card.style.backgroundSize = 'cover';
                 card.style.backgroundPosition = 'center';
                 card.style.backgroundRepeat = 'no-repeat';
@@ -770,7 +770,7 @@ export const projectCards: Component<[
             const card = container.createEl('div', { cls: 'project-card' });
             if (coverUrl) {
                 card.addClass('has-cover');
-                card.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), url('${coverUrl.replace(/'/g, "\\'")}')`;
+                card.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.08), rgba(0,0,0,0.08)), url('${escapeForSingleQuotes(coverUrl)}')`;
                 card.style.backgroundSize = 'cover';
                 card.style.backgroundPosition = 'center';
             }

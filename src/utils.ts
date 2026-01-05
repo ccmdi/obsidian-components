@@ -38,6 +38,14 @@ export function validateArguments(args: Record<string, string>, required: string
     }
 }
 
+/**
+ * Escapes a string for use in a single-quoted context (expression strings, CSS urls).
+ * Escapes backslashes first, then single quotes.
+ */
+export function escapeForSingleQuotes(str: string): string {
+    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 export function resolvePath(pathArg: string, path: string): string {
     const isAbsolute = pathArg.startsWith('/');
     

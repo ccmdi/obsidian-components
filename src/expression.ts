@@ -8,9 +8,9 @@ type TokenType =
     | 'NUMBER' | 'STRING' | 'BOOLEAN' | 'IDENTIFIER' | 'FM_REF' | 'FILE_REF'
     | 'PLUS' | 'MINUS' | 'STAR' | 'SLASH'
     | 'EQ' | 'NEQ' | 'GT' | 'LT' | 'GTE' | 'LTE'
-    | 'AND' | 'OR' | 'NOT'
+    | 'AND' | 'OR' | 'NOT' | 'NULLISH'
     | 'LPAREN' | 'RPAREN' | 'COMMA'
-    | 'IF' | 'CONTAINS' | 'EOF';
+    | 'IF' | 'CONTAINS' | 'LENGTH' | 'EOF';
 
 interface Token {
     type: TokenType;
@@ -68,6 +68,11 @@ function tokenize(input: string): Token[] {
         }
         if (c === '|' && peek(1) === '|') {
             tokens.push({ type: 'OR', value: '||', raw: '||' });
+            i += 2;
+            continue;
+        }
+        if (c === '?' && peek(1) === '?') {
+            tokens.push({ type: 'NULLISH', value: '??', raw: '??' });
             i += 2;
             continue;
         }
@@ -138,6 +143,8 @@ function tokenize(input: string): Token[] {
                 tokens.push({ type: 'IF', value: 'if', raw: 'if' });
             } else if (ident === 'contains') {
                 tokens.push({ type: 'CONTAINS', value: 'contains', raw: 'contains' });
+            } else if (ident === 'length') {
+                tokens.push({ type: 'LENGTH', value: 'length', raw: 'length' });
             } else {
                 tokens.push({ type: 'IDENTIFIER', value: ident, raw: ident });
             }
@@ -162,7 +169,8 @@ type Expr =
     | { type: 'unary'; operator: '!' | '-'; operand: Expr }
     | { type: 'binary'; operator: string; left: Expr; right: Expr }
     | { type: 'if'; condition: Expr; thenBranch: Expr; elseBranch: Expr | null }
-    | { type: 'contains'; haystack: Expr; needle: Expr };
+    | { type: 'contains'; haystack: Expr; needle: Expr }
+    | { type: 'length'; operand: Expr };
 
 class Parser {
     private tokens: Token[];
@@ -187,9 +195,10 @@ class Parser {
 
     private or(): Expr {
         let expr = this.and();
-        while (this.match('OR')) {
+        while (this.match('OR', 'NULLISH')) {
+            const operator = this.previous().raw;
             const right = this.and();
-            expr = { type: 'binary', operator: '||', left: expr, right };
+            expr = { type: 'binary', operator, left: expr, right };
         }
         return expr;
     }
@@ -286,6 +295,14 @@ class Parser {
             const needle = this.expression();
             this.consume('RPAREN', "Expected ')' after contains arguments");
             return { type: 'contains', haystack, needle };
+        }
+
+        // Handle length(value) function
+        if (this.match('LENGTH')) {
+            this.consume('LPAREN', "Expected '(' after 'length'");
+            const operand = this.expression();
+            this.consume('RPAREN', "Expected ')' after length argument");
+            return { type: 'length', operand };
         }
 
         return this.primary();
@@ -393,6 +410,7 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
                 // Logical
                 case '&&': return isTruthy(left) ? right : left;
                 case '||': return isTruthy(left) ? left : right;
+                case '??': return (left !== null && left !== undefined) ? left : right;
 
                 // Equality
                 case '==': return looseEquals(left, right);
@@ -442,6 +460,17 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
                 return haystack.toLowerCase().includes(String(needle).toLowerCase());
             }
             return false;
+        }
+
+        case 'length': {
+            const value = evaluate(expr.operand, context);
+            if (Array.isArray(value)) {
+                return value.length;
+            }
+            if (typeof value === 'string') {
+                return value.length;
+            }
+            return 0;
         }
     }
 }
