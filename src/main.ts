@@ -399,7 +399,7 @@ export default class ComponentsPlugin extends Plugin {
                 const cleanArgs = { ...args };
                 delete cleanArgs['component'];
 
-                Component.render(component, argsToSource(cleanArgs), el, ctx, this.app, this.settings.componentSettings[component.keyName] || {});
+                await Component.render(component, argsToSource(cleanArgs), el, ctx, this.app, this.settings.componentSettings[component.keyName] || {});
             });
             this.registeredProcessors.add('component');
         }

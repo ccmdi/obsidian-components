@@ -176,7 +176,12 @@ export default class ComponentsSettingTab extends PluginSettingTab {
                     const selector = new ComponentSelectorModal(this.app, this.plugin);
                     selector.mode = 'reference';
                     selector.onSelect = (component, args) => {
-                        const id = `ref-${Object.keys(this.plugin.settings.componentReferences).length + 1}`;
+                        const generateShortId = (length = 8) => {
+                            return Array.from(crypto.getRandomValues(new Uint8Array(length)))
+                              .map((b) => (b % 36).toString(36))
+                              .join('');
+                        };
+                        const id = `ref-${generateShortId()}`;
                         this.plugin.settings.componentReferences[id] = `component=${component.keyName}\n${argsToSource(args)}`;
                         this.plugin.saveSettings().then(() => this.display());
                     };
