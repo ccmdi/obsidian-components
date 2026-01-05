@@ -337,9 +337,16 @@ export namespace Component {
     /**
      * Static analysis of renderRefresh to detect which args it accesses.
      * Extracts args.X patterns and destructuring like { x, y } = args.
+     * Results are cached per component.
      */
+    const renderRefreshArgsCache = new WeakMap<Component<readonly string[]>, Set<string>>();
+
     export function getRenderRefreshArgs(component: Component<readonly string[]>): Set<string> {
         if (!component.renderRefresh) return new Set();
+
+        // Check cache first
+        const cached = renderRefreshArgsCache.get(component);
+        if (cached) return cached;
 
         const source = component.renderRefresh.toString();
         const args = new Set<string>();
@@ -364,6 +371,7 @@ export namespace Component {
             props.forEach(p => { if (p) args.add(p); });
         }
 
+        renderRefreshArgsCache.set(component, args);
         return args;
     }
 
