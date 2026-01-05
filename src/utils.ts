@@ -48,8 +48,8 @@ export function escapeForSingleQuotes(str: string): string {
 
 export function resolvePath(pathArg: string, path: string): string {
     const isAbsolute = pathArg.startsWith('/');
-    
-    let baseSegments = pathArg.split('/').filter(Boolean);
+
+    const baseSegments = pathArg.split('/').filter(Boolean);
     const relativeSegments = path.split('/');
 
     for (const segment of relativeSegments) {
@@ -185,7 +185,7 @@ export function applyCssFromArgs(element: HTMLElement, args: Record<string, stri
  * - 'false', '0', 'no', 'off', '' -> false
  * - undefined/null -> defaultValue
  */
-export function parseBoolean(value: string | undefined, defaultValue: boolean = false): boolean {
+export function parseBoolean(value: string | undefined, defaultValue = false): boolean {
     if (value === undefined || value === null || value === '') {
         return defaultValue;
     }
@@ -303,7 +303,7 @@ export async function useTemplate(
 export async function useNavigation(
     app: App,
     filePath: string,
-    isNewTab: boolean = false
+    isNewTab = false
 ): Promise<void> {
     const file = app.vault.getAbstractFileByPath(filePath);
     if (file instanceof TFile) {
@@ -405,7 +405,7 @@ export function renderMarkdownLinkToElement(text: string, container: HTMLElement
         const displayText = display || target;
 
         // Create the link element
-        const link = container.createEl('a', {
+        container.createEl('a', {
             cls: 'internal-link',
             text: displayText.trim(),
             attr: {

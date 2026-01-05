@@ -341,7 +341,7 @@ export const projectCards: Component<[
         instance.data.currentFilter = '';
         instance.data.currentStatus = 'ongoing' as ProjectStatus | 'all';
 
-        const renderProjects = (projectList: ProjectData[], filterStr: string = '', status: ProjectStatus | 'all' = 'ongoing') => {
+        const renderProjects = (projectList: ProjectData[], filterStr = '', status: ProjectStatus | 'all' = 'ongoing') => {
             let filtered = [...projectList];
 
             // Apply status filter
@@ -845,7 +845,7 @@ export const projectCards: Component<[
         };
 
         // Render filtered projects
-        const renderProjects = (projectList: ProjectData[], filterStr: string = '', status: ProjectStatus | 'all' = 'ongoing') => {
+        const renderProjects = (projectList: ProjectData[], filterStr = '', status: ProjectStatus | 'all' = 'ongoing') => {
             let filtered = [...projectList];
 
             // Apply status filter

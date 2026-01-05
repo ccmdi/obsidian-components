@@ -215,7 +215,7 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
                 row.appendText(`${label}: `);
                 const binary = value.toString(2).padStart(8, '0');
                 for (const bit of binary) {
-                    const span = row.createEl('span', {
+                    row.createEl('span', {
                         attr: {
                             style: `color: ${bit === '1' ? 'var(--text-accent)' : 'var(--text-muted)'}; font-weight: bold;`
                         },
@@ -225,8 +225,6 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
                 return row;
             };
 
-            let hoursRow: HTMLElement, minutesRow: HTMLElement, secondsRow: HTMLElement | null = null;
-
             const updateBinary = () => {
                 const now = new Date();
                 const hours = format === '24' ? now.getHours() : now.getHours() % 12 || 12;
@@ -235,10 +233,10 @@ export const clock: Component<['type', 'format', 'timezone', 'size', 'showSecond
 
                 // Clear and recreate rows
                 el.empty();
-                hoursRow = createBinaryRow('H', hours);
-                minutesRow = createBinaryRow('M', minutes);
+                createBinaryRow('H', hours);
+                createBinaryRow('M', minutes);
                 if (showSeconds) {
-                    secondsRow = createBinaryRow('S', seconds);
+                    createBinaryRow('S', seconds);
                 }
             };
 

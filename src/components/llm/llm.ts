@@ -420,11 +420,8 @@ ${context}`;
 
                 // Process response
                 const contentBlocks: ContentBlock[] = data.content || [];
-                let hasText = false;
-
                 for (const block of contentBlocks) {
                     if (block.type === 'text' && block.text) {
-                        hasText = true;
                         const textEl = contentEl.createEl('div', { cls: 'llm-text-block' });
                         // Animate text in
                         const chars = block.text.split('');

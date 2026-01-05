@@ -88,7 +88,6 @@ export class ComponentAutoComplete extends EditorSuggest<ComponentSuggestion> {
         const currentLine = editor.getLine(start.line);
 
         let removeEnd = editor.getCursor();
-        let foundClosing = false;
 
         // Check if there's a closing ``` on subsequent lines
         if (currentLine.trim().startsWith('```')) {
@@ -110,7 +109,6 @@ export class ComponentAutoComplete extends EditorSuggest<ComponentSuggestion> {
                     if (isEmpty) {
                         // Safe to remove the whole code block
                         removeEnd = { line: i, ch: line.length };
-                        foundClosing = true;
                     }
                     break;
                 }
