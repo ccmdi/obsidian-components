@@ -47,11 +47,8 @@ export const kanbanStyles = /*css*/`
     gap: 8px;
     padding: 14px 16px;
     border-bottom: 1px solid var(--background-modifier-border);
-    position: sticky;
-    top: 0;
     background: inherit;
     border-radius: 10px 10px 0 0;
-    z-index: 1;
 }
 
 /* Sync header with column on drag-over (no transition lag) */
