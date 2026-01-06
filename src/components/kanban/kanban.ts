@@ -345,14 +345,25 @@ export const kanban: Component<[
             if (showTags && item.tags && item.tags.length > 0) {
                 const tagsContainer = footer.createEl('div', { cls: 'kanban-card-tags' });
                 for (const tag of item.tags.slice(0, 3)) {
-                    tagsContainer.createEl('span', {
-                        cls: 'kanban-card-tag',
-                        text: tag.split('/').pop() || tag
+                    const fullTag = tag.startsWith('#') ? tag : `#${tag}`;
+                    const tagEl = tagsContainer.createEl('a', {
+                        cls: 'tag',
+                        text: fullTag,
+                        attr: { href: fullTag }
+                    });
+                    tagEl.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // @ts-ignore - globalSearch is available in Obsidian
+                        const searchPlugin = app.internalPlugins?.getPluginById('global-search');
+                        if (searchPlugin?.instance) {
+                            searchPlugin.instance.openGlobalSearch(`tag:${fullTag}`);
+                        }
                     });
                 }
                 if (item.tags.length > 3) {
                     tagsContainer.createEl('span', {
-                        cls: 'kanban-card-tag kanban-card-tag-more',
+                        cls: 'tag',
                         text: `+${item.tags.length - 3}`
                     });
                 }

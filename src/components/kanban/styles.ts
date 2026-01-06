@@ -188,19 +188,8 @@ export const kanbanStyles = /*css*/`
     gap: 4px;
 }
 
-.kanban-card-tag {
-    font-size: 0.7em;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: var(--interactive-accent);
-    color: var(--text-on-accent);
-    opacity: 0.85;
-    font-weight: 500;
-}
-
-.kanban-card-tag-more {
-    background: var(--background-modifier-border);
-    color: var(--text-muted);
+.kanban-card-tags .tag {
+    font-size: 0.75em;
 }
 
 /* ========== Due Date ========== */
