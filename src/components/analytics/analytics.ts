@@ -377,7 +377,7 @@ export const analytics: Component<['searchFolder', 'colors', 'showTitle', 'showI
             default: ''
         },
         colors: {
-            description: 'Color scheme: "colorful" (default), "accent" (all accent color), or "false" (no colors)',
+            description: 'Color scheme: "colorful", "accent" (all accent color), or "false" (no colors)',
             default: 'colorful'
         },
         showTitle: {

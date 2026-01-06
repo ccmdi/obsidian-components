@@ -160,7 +160,7 @@ export const projectCards: Component<[
             default: 'auto'
         },
         sortBy: {
-            description: 'Sort method: "priority" (default) or "date"',
+            description: 'Sort method: "priority" or "date"',
             default: 'priority'
         },
         limit: {

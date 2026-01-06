@@ -109,7 +109,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
     isMountable: false,
     args: {
         layout: { description: 'Layout configuration (b64)', default: '', hidden: true },
-        columns: { description: 'Number of columns (default: 1)', default: '1' }
+        columns: { description: 'Number of columns', default: '1' }
     },
     does: [ComponentAction.READ],
     styles: widgetSpaceStyles,

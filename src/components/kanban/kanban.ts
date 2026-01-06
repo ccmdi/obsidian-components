@@ -102,11 +102,11 @@ export const kanban: Component<[
             default: ''
         },
         statusProperty: {
-            description: 'Frontmatter property to use for status (default: "status")',
+            description: 'Frontmatter property to use for status',
             default: 'status'
         },
         columns: {
-            description: 'Column config: "id:Title:color,..." or simple "todo,doing,done"',
+            description: '"id:Title:color,..." or simple "todo,doing,done"',
             default: ''
         },
         showTags: {
