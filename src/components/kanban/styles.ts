@@ -25,9 +25,20 @@ export const kanbanStyles = /*css*/`
     transition: background-color 0.2s ease;
 }
 
+/* No-scroll mode: columns shrink to fit */
+.kanban-no-scroll {
+    overflow-x: visible;
+}
+
+.kanban-no-scroll .kanban-column {
+    min-width: 0;
+    max-width: none;
+}
+
 .kanban-column.drag-over {
     background: var(--background-modifier-hover);
     box-shadow: inset 0 0 0 2px var(--interactive-accent);
+    transition: none;
 }
 
 .kanban-column-header {
@@ -41,6 +52,12 @@ export const kanbanStyles = /*css*/`
     background: inherit;
     border-radius: 10px 10px 0 0;
     z-index: 1;
+}
+
+/* Sync header with column on drag-over (no transition lag) */
+.kanban-column.drag-over .kanban-column-header {
+    background: var(--background-modifier-hover);
+    border-bottom-color: transparent;
 }
 
 .kanban-column-indicator {

@@ -85,7 +85,7 @@ function resolveCoverUrl(app: App, cover: unknown, sourcePath: string): string |
 
 export const kanban: Component<[
     'source', 'query', 'statusProperty', 'columns', 'showTags', 'showDescription',
-    'showPriority', 'showDueDate', 'sortBy', 'limit', 'showCount', 'showCover'
+    'showPriority', 'showDueDate', 'sortBy', 'limit', 'showCount', 'showCover', 'scrollable'
 ]> = {
     name: 'Kanban',
     description: 'Display a kanban board from notes with status frontmatter',
@@ -140,6 +140,10 @@ export const kanban: Component<[
         showCover: {
             description: 'Show cover images on cards',
             default: 'false'
+        },
+        scrollable: {
+            description: 'Allow horizontal scroll when columns overflow (false = columns shrink to fit)',
+            default: 'true'
         }
     },
     isMountable: true,
@@ -159,6 +163,7 @@ export const kanban: Component<[
         const limit = parseInt(args.limit);
         const showCount = parseBoolean(args.showCount, true);
         const showCover = parseBoolean(args.showCover, false);
+        const scrollable = parseBoolean(args.scrollable, true);
 
         // Collect items from folder
         let items: KanbanItem[] = [];
@@ -283,6 +288,9 @@ export const kanban: Component<[
 
         // Build UI
         const wrapper = el.createEl('div', { cls: 'kanban-wrapper' });
+        if (!scrollable) {
+            wrapper.addClass('kanban-no-scroll');
+        }
         const board = wrapper.createEl('div', { cls: 'kanban-board' });
 
         // Track dragged item
@@ -381,15 +389,17 @@ export const kanban: Component<[
                 }
             });
 
-            // Drag events
+            // Drag events - stopPropagation prevents widget-space muuri from intercepting
             card.addEventListener('dragstart', (e) => {
+                e.stopPropagation();
                 draggedCard = card;
                 draggedItem = item;
                 card.addClass('dragging');
                 e.dataTransfer?.setData('text/plain', item.path);
             });
 
-            card.addEventListener('dragend', () => {
+            card.addEventListener('dragend', (e) => {
+                e.stopPropagation();
                 card.removeClass('dragging');
                 draggedCard = null;
                 draggedItem = null;
@@ -432,13 +442,15 @@ export const kanban: Component<[
                 createCard(item, columnContent);
             }
 
-            // Drop zone events
+            // Drop zone events - stopPropagation prevents widget-space muuri from intercepting
             column.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 column.addClass('drag-over');
             });
 
             column.addEventListener('dragleave', (e) => {
+                e.stopPropagation();
                 const relatedTarget = e.relatedTarget as HTMLElement | null;
                 if (!relatedTarget || !column.contains(relatedTarget)) {
                     column.removeClass('drag-over');
@@ -447,6 +459,7 @@ export const kanban: Component<[
 
             column.addEventListener('drop', async (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 column.removeClass('drag-over');
 
                 if (!draggedItem || !draggedCard) return;

@@ -374,11 +374,11 @@ export const widgetSpace: Component<['layout', 'columns']> = {
         };
 
         const isComponentEnabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
-        const availableComponents = COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
+        const getAvailableComponents = () => COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
 
         container.addEventListener('dblclick', (e) => {
             if (e.target === container || e.target === grid) {
-                new ComponentSelectorModal(app, availableComponents, (comp) => {
+                new ComponentSelectorModal(app, getAvailableComponents(), (comp) => {
                     new ComponentArgsModal(app, comp, {
                         mode: 'widget-space',
                         submitText: 'Add Widget',
