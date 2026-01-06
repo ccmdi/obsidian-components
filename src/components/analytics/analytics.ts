@@ -49,8 +49,8 @@ const renderAnalytics = async (
 ): Promise<void> => {
     injectOjsStyles();
 
-    const searchFolder = args.searchFolder || "";
-    const colors = args.colors || "colorful";
+    const searchFolder = args.searchFolder;
+    const colors = args.colors;
     const showTitle = parseBoolean(args.showTitle);
     const showInlineList = parseBoolean(args.showInlineList);
 

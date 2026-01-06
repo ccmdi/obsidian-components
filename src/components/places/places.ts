@@ -127,14 +127,14 @@ export const places: Component<[
 
     render: async (args, el, ctx, app, instance: ComponentInstance) => {
         const source = args.source;
-        const query = args.query || '';
+        const query = args.query;
         const showFlags = parseBoolean(args.showFlags, true);
         const showStateTable = parseBoolean(args.showStateTable, false);
-        const countryField = args.countryField || 'place.country';
-        const stateField = args.stateField || 'place.state';
-        const localityField = args.localityField || 'place.locality';
-        const scoreField = args.scoreField || 'score';
-        const excludeTag = args.excludeTag || '';
+        const countryField = args.countryField;
+        const stateField = args.stateField;
+        const localityField = args.localityField;
+        const scoreField = args.scoreField;
+        const excludeTag = args.excludeTag;
 
         let places: PlaceData[] = [];
 

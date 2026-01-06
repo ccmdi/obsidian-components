@@ -156,7 +156,7 @@ export const kanban: Component<[
         const showPriority = parseBoolean(args.showPriority, true);
         const showDueDate = parseBoolean(args.showDueDate, true);
         const sortBy = args.sortBy;
-        const limit = parseInt(args.limit) || 0;
+        const limit = parseInt(args.limit);
         const showCount = parseBoolean(args.showCount, true);
         const showCover = parseBoolean(args.showCover, false);
 

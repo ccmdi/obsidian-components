@@ -57,13 +57,13 @@ function updateDisplay(
     container.empty();
 
     const propertyName = args.property;
-    const mode = args.mode || 'both';
-    const dateFormat = args.dateFormat || 'MMM D, YYYY';
-    const countLabel = args.countLabel || 'entries';
+    const mode = args.mode;
+    const dateFormat = args.dateFormat;
+    const countLabel = args.countLabel;
     const singularLabel = args.singularLabel;
-    const latestLabel = args.latestLabel || 'Last updated';
-    const emptyText = args.emptyText || 'No data';
-    const emptyLatestText = args.emptyLatestText || 'never';
+    const latestLabel = args.latestLabel;
+    const emptyText = args.emptyText;
+    const emptyLatestText = args.emptyLatestText;
 
     const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
     if (!(file instanceof TFile)) {

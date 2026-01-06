@@ -11,9 +11,9 @@ const renderPropertyAdder = async (
     componentSettings: Record<string, any> = {}
 ) => {
     const propertyName = args.property;
-    const action = args.action || 'push';
+    const action = args.action;
     const value = args.value;
-    const buttonText = args.buttonText || 'Add Property';
+    const buttonText = args.buttonText;
     const incrementAmount = parseFloat(args.increment) || 1;
 
     if (!propertyName) {
