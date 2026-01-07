@@ -278,7 +278,7 @@ export interface Component<TArgs extends readonly string[]> {
     name?: string;
     description?: string;
     icon?: string;
-    enabled?: boolean; // Default true - set to false to exclude from COMPONENTS array
+    enabled?: boolean | 'extended'; // true (core), 'extended' (extended build only), false (disabled)
     args: Partial<Record<TArgs[number], ComponentArg>>;
     aliases?: string[];
     render: RenderFunction<TArgs>;

@@ -21,7 +21,7 @@ export const ankiStatus: Component<['showStats', 'showDeck', 'compact']> = {
             default: 'false'
         }
     },
-    enabled: false,
+    enabled: 'extended',
     isMountable: true,
     does: [ComponentAction.EXTERNAL],
     styles: ankiStatusStyles,

@@ -8,6 +8,8 @@
 		"dev": "node esbuild.config.mjs",
 		"prebuild": "node scripts/register.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"build:extended": "cross-env BUILD_TIER=extended npm run build",
+		"dev:extended": "cross-env BUILD_TIER=extended npm run dev",
 		"test": "npx tsx --tsconfig tests/tsconfig.json tests/expression.test.ts && npx tsx --tsconfig tests/tsconfig.json tests/utils.test.ts",
 		"vbump": "node version-bump.mjs"
 	},
@@ -16,6 +18,7 @@
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
+		"cross-env": "^7.0.3",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",

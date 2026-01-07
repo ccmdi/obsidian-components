@@ -16,10 +16,21 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "22.x"
-      - name: Build plugin
-        run: |
-          npm install
-          npm run build
+
+      - name: Install dependencies
+        run: npm install
+
+      # Build extended first, zip it
+      - name: Build extended
+        run: npm run build:extended
+
+      - name: Create extended zip
+        run: zip components-extended.zip main.js manifest.json styles.css
+
+      # Build core (overwrites main.js)
+      - name: Build core
+        run: npm run build
+
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -27,4 +38,5 @@ jobs:
           tag="${GITHUB_REF#refs/tags/}"
           gh release create "$tag" \
             --title="$tag" \
-            main.js manifest.json styles.css
+            main.js manifest.json styles.css \
+            components-extended.zip

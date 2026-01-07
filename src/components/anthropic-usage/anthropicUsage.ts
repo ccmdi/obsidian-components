@@ -32,6 +32,7 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
     isMountable: true,
     does: [ComponentAction.EXTERNAL],
     styles: anthropicUsageStyles,
+    enabled: 'extended',
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const widget = el.createEl('div', { cls: 'anthropic-usage-container' });
 
