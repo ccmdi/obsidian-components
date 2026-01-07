@@ -84,7 +84,7 @@ function resolveCoverUrl(app: App, cover: unknown, sourcePath: string): string |
 }
 
 export const kanban: Component<[
-    'source', 'query', 'statusProperty', 'columns', 'showTags', 'showDescription',
+    'source', 'query', 'statusProperty', 'dueDateProperty', 'columns', 'showTags', 'showDescription',
     'showPriority', 'showDueDate', 'sortBy', 'limit', 'showCount', 'showCover', 'scrollable'
 ]> = {
     name: 'Kanban',
@@ -104,6 +104,10 @@ export const kanban: Component<[
         statusProperty: {
             description: 'Frontmatter property to use for status',
             default: 'status'
+        },
+        dueDateProperty: {
+            description: 'Frontmatter property to use for due date',
+            default: 'dueDate'
         },
         columns: {
             description: '"id:Title:color,..." or simple "todo,doing,done"',
@@ -154,6 +158,7 @@ export const kanban: Component<[
         const source = args.source;
         const query = args.query;
         const statusProperty = args.statusProperty;
+        const dueDateProperty = args.dueDateProperty;
         const columns = parseColumns(args.columns);
         const showTags = parseBoolean(args.showTags, true);
         const showDescription = parseBoolean(args.showDescription, true);
@@ -224,14 +229,10 @@ export const kanban: Component<[
                 description: fm.description,
                 priority: fm.priority,
                 tags: allTags,
-                dueDate: fm.dueDate || fm.due,
+                dueDate: fm[dueDateProperty],
                 cover: fm.cover
             });
         }
-
-        // Store data for drag operations
-        instance.data.statusProperty = statusProperty;
-        instance.data.items = items;
 
         // Sort items
         const sortItems = (itemList: KanbanItem[]): KanbanItem[] => {
@@ -266,9 +267,9 @@ export const kanban: Component<[
         }
 
         for (const item of items) {
-            const normalizedStatus = item.status.toLowerCase().replace(/\s+/g, '-');
-            if (itemsByStatus[normalizedStatus]) {
-                itemsByStatus[normalizedStatus].push(item);
+            // item.status is already normalized during collection
+            if (itemsByStatus[item.status]) {
+                itemsByStatus[item.status].push(item);
             } else {
                 // Put in first column if status doesn't match any column
                 const firstCol = columns[0];
