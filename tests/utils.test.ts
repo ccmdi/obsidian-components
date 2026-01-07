@@ -13,19 +13,18 @@ import {
     parseArgsAliases,
     matchesQuery
 } from '../src/utils';
-import { TFile, CachedMetadata } from './mocks/obsidian';
 
 // Helper to create fake TFile for matchesQuery tests
-function fakeFile(path: string): TFile {
-    return { path } as TFile;
+function fakeFile(path: string): any {
+    return { path };
 }
 
 // Helper to create fake CachedMetadata for matchesQuery tests
-function fakeCache(opts: { frontmatter?: Record<string, any>; tags?: string[] } = {}): CachedMetadata {
+function fakeCache(opts: { frontmatter?: Record<string, any>; tags?: string[] } = {}): any {
     return {
         frontmatter: opts.frontmatter || {},
         tags: opts.tags?.map(tag => ({ tag: tag.startsWith('#') ? tag : `#${tag}` })) || []
-    } as CachedMetadata;
+    };
 }
 
 runTests('Utils Tests');
