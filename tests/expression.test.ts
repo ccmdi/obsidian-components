@@ -1,47 +1,17 @@
 // expression.test.ts - Tests for the expression DSL
-// Run with: npx tsx src/expression.test.ts
 
-import { evaluateExpression, isTruthy, evaluateArgs } from './expression';
-
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void) {
-    try {
-        fn();
-        passed++;
-        console.log(`  [PASS] ${name}`);
-    } catch (e: any) {
-        failed++;
-        console.log(`  [FAIL] ${name}`);
-        console.log(`         ${e.message}`);
-    }
-}
-
-function expect<T>(actual: T) {
-    return {
-        toBe(expected: T) {
-            if (actual !== expected) {
-                throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
-            }
-        },
-        toEqual(expected: T) {
-            if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-                throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
-            }
-        }
-    };
-}
+import { test, expect, runTests, exitWithStatus } from './test-utils';
+import { evaluateExpression, isTruthy, evaluateArgs } from '../src/expression';
 
 // Helper to evaluate with context
 function evaluate(input: string, fm: Record<string, unknown> = {}) {
     return evaluateExpression(input, { frontmatter: fm }).value;
 }
 
-console.log('\n=== Expression DSL Tests ===\n');
+runTests('Expression DSL Tests');
 
 // --- Literals (in expressions) ---
-console.log('Literals:');
+console.log('\nLiterals:');
 // Plain literals are returned as-is (backwards compat), but literals in expressions are parsed
 test('number in expression', () => expect(evaluate('42 + 0')).toBe(42));
 test('string in expression', () => expect(evaluate('if(true, "hello", "bye")')).toBe('hello'));
@@ -275,5 +245,4 @@ test('expression with single quoted strings', () => expect(evaluate("if(contains
 test('mixed quotes in nested calls', () => expect(evaluate("if(contains('2025-01-01', \"2025\"), 'match', 'no')")).toBe('match'));
 
 // --- Summary ---
-console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
-process.exit(failed > 0 ? 1 : 0);
+exitWithStatus();

@@ -34,6 +34,7 @@ llm.json
 
 *.md
 !README.md
+!TESTING.md
 
 images/*
 !images/preview.png

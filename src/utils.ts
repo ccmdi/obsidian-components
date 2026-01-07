@@ -118,8 +118,26 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
 }
 
 export function camelToSentence(str: string): string {
-    const result = str.replace(/([A-Z])/g, " $1");
-    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase().trim();
+    // Insert spaces at word boundaries while preserving acronyms
+    const spaced = str
+        // Split acronyms from following words: "HTMLParser" -> "HTML Parser"
+        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+        // Split camelCase: "camelCase" -> "camel Case"
+        .replace(/([a-z])([A-Z])/g, '$1 $2');
+
+    const words = spaced.split(' ');
+    return words.map((word, i) => {
+        // Keep all-caps words (acronyms) as-is: "FM", "HTML", "JSON"
+        if (word === word.toUpperCase() && word.length > 1) {
+            return word;
+        }
+        // First word: capitalize first letter, lowercase rest
+        if (i === 0) {
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }
+        // Other words: all lowercase
+        return word.toLowerCase();
+    }).join(' ');
 }
 
 /**
