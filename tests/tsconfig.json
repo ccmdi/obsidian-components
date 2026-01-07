@@ -1,0 +1,17 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "obsidian": ["./mocks/obsidian.ts"],
+            "utils": ["../src/utils.ts"],
+            "*": ["../src/*"]
+        },
+        "rootDir": "..",
+        "noEmit": true
+    },
+    "include": [
+        "./**/*.ts",
+        "../src/**/*.ts"
+    ]
+}
