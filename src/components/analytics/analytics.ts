@@ -49,8 +49,8 @@ const renderAnalytics = async (
 ): Promise<void> => {
     injectOjsStyles();
 
-    const searchFolder = args.searchFolder || "";
-    const colors = args.colors || "colorful";
+    const searchFolder = args.searchFolder;
+    const colors = args.colors;
     const showTitle = parseBoolean(args.showTitle);
     const showInlineList = parseBoolean(args.showInlineList);
 
@@ -377,7 +377,7 @@ export const analytics: Component<['searchFolder', 'colors', 'showTitle', 'showI
             default: ''
         },
         colors: {
-            description: 'Color scheme: "colorful" (default), "accent" (all accent color), or "false" (no colors)',
+            description: 'Color scheme: "colorful", "accent" (all accent color), or "false" (no colors)',
             default: 'colorful'
         },
         showTitle: {

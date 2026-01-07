@@ -160,7 +160,7 @@ export const projectCards: Component<[
             default: 'auto'
         },
         sortBy: {
-            description: 'Sort method: "priority" (default) or "date"',
+            description: 'Sort method: "priority" or "date"',
             default: 'priority'
         },
         limit: {
@@ -182,11 +182,11 @@ export const projectCards: Component<[
 
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const source = args.source;
-        const query = args.query || '';
+        const query = args.query;
         const showTags = parseBoolean(args.showTags, false);
         const showFilter = parseBoolean(args.showFilter, false);
         const showProgressGlobal = args.showProgress;
-        const sortBy = args.sortBy || 'priority';
+        const sortBy = args.sortBy;
         const limit = args.limit ? parseInt(args.limit) : undefined;
         const showBadges = parseBoolean(args.showBadges, true);
         const showFooter = parseBoolean(args.showFooter, true);
@@ -620,9 +620,9 @@ export const projectCards: Component<[
     // Incremental refresh - only update projects, preserve filter input focus
     renderRefresh: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const source = args.source;
-        const query = args.query || '';
+        const query = args.query;
         const showProgressGlobal = args.showProgress;
-        const sortBy = args.sortBy || 'priority';
+        const sortBy = args.sortBy;
         const limit = args.limit ? parseInt(args.limit) : undefined;
         const showBadges = parseBoolean(args.showBadges, true);
         const showFooter = parseBoolean(args.showFooter, true);

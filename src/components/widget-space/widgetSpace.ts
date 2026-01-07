@@ -109,7 +109,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
     isMountable: false,
     args: {
         layout: { description: 'Layout configuration (b64)', default: '', hidden: true },
-        columns: { description: 'Number of columns (default: 1)', default: '1' }
+        columns: { description: 'Number of columns', default: '1' }
     },
     does: [ComponentAction.READ],
     styles: widgetSpaceStyles,
@@ -157,7 +157,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             const sidebarView = getSidebarView();
             if (!sidebarView) return;
 
-            const widgets: WidgetConfig[] = muuri.getItems()
+            const activeWidgetConfigs: WidgetConfig[] = muuri.getItems()
                 .map((item, index) => {
                     const itemEl = item.getElement();
                     if (!itemEl) return null;
@@ -175,6 +175,13 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                     };
                 })
                 .filter((w): w is WidgetConfig => w !== null);
+
+            // Merge active widgets with preserved disabled widgets
+            const maxOrder = activeWidgetConfigs.length > 0 
+                ? Math.max(...activeWidgetConfigs.map(w => w.order)) + 1 
+                : 0;
+            const disabledWithOrder = disabledWidgets.map((w, i) => ({ ...w, order: maxOrder + i }));
+            const widgets = [...activeWidgetConfigs, ...disabledWithOrder];
 
             sidebarView.componentArgs = {
                 ...sidebarView.componentArgs,
@@ -203,7 +210,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             return { x: col * colWidth, y };
         };
 
-        const addWidget = async (componentKey: string, componentName: string, componentArgs: Record<string, string> = {}, initialPos?: { x: number; y: number }) => {
+        const addWidget = async (componentKey: string, componentName: string, componentArgs: Record<string, string> = {}, initialPos?: { x: number; y: number }, skipSave = false) => {
             const widgetId = `widget-${++widgetCounter}`;
             const widget = grid.createEl('div', { cls: `widget-item${isInSidebar ? ' in-sidebar' : ''}` });
             widget.dataset.widgetId = widgetId;
@@ -275,7 +282,9 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             requestAnimationFrame(() => {
                 grid.classList.add('transitions-enabled');
             });
-            saveLayout();
+            if (!skipSave) {
+                saveLayout();
+            }
         };
 
         const removeWidget = (widget: HTMLElement) => {
@@ -287,8 +296,10 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             const inst = contentEl?.dataset.componentId ? componentInstances.get(contentEl.dataset.componentId) : undefined;
             inst?.destroy();
 
-            widget.remove();
-            muuri.refreshItems();
+            const item = muuri.getItems().find(i => i.getElement() === widget);
+            if (item) {
+                muuri.remove([item], { removeElements: true });
+            }
             muuri.layout(true);
             activeWidgets.delete(widgetId);
             saveLayout();
@@ -374,11 +385,17 @@ export const widgetSpace: Component<['layout', 'columns']> = {
         };
 
         const isComponentEnabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
-        const availableComponents = COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
+        const getAvailableComponents = () => COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
+
+        // Preserve disabled widgets upfront so they survive saves
+        const disabledWidgets = layout.widgets.filter(cfg => {
+            const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
+            return comp && !isComponentEnabled(cfg.componentKey);
+        });
 
         container.addEventListener('dblclick', (e) => {
             if (e.target === container || e.target === grid) {
-                new ComponentSelectorModal(app, availableComponents, (comp) => {
+                new ComponentSelectorModal(app, getAvailableComponents(), (comp) => {
                     new ComponentArgsModal(app, comp, {
                         mode: 'widget-space',
                         submitText: 'Add Widget',
@@ -427,13 +444,18 @@ export const widgetSpace: Component<['layout', 'columns']> = {
 
         initMuuri();
 
-        for (const cfg of [...layout.widgets].sort((a, b) => (a.order || 0) - (b.order || 0))) {
-            const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-            if (comp && isComponentEnabled(cfg.componentKey)) {
-                // Pass saved position so widgets appear in correct place immediately
-                const initialPos = (cfg.x !== undefined && cfg.y !== undefined) ? { x: cfg.x, y: cfg.y } : undefined;
-                await addWidget(cfg.componentKey, comp.name || comp.keyName, cfg.args, initialPos);
-            }
+        // Load only enabled widgets
+        const enabledConfigs = layout.widgets
+            .filter(cfg => {
+                const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
+                return comp && isComponentEnabled(cfg.componentKey);
+            })
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        for (const cfg of enabledConfigs) {
+            const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey)!;
+            const initialPos = (cfg.x !== undefined && cfg.y !== undefined) ? { x: cfg.x, y: cfg.y } : undefined;
+            await addWidget(cfg.componentKey, comp.name || comp.keyName, cfg.args, initialPos, true);
         }
 
         grid.dataset.initialLoadComplete = 'true';

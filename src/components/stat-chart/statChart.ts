@@ -52,16 +52,11 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const query = args.query;
         const field = args.field;
-        const chartType = args.type || 'bar';
+        const chartType = args.type;
         const threshold = parseInt(args.threshold) || 0;
-        const label = args.label || 'Count';
-
-        // Default dates
-        const today = new Date().toISOString().split('T')[0];
-        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-        const startDate = args.startDate || weekAgo;
-        const endDate = args.endDate || today;
+        const label = args.label;
+        const startDate = args.startDate;
+        const endDate = args.endDate;
         
         let chartInstance: any = null;
         
