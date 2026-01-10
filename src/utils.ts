@@ -46,6 +46,14 @@ export function escapeForSingleQuotes(str: string): string {
     return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
+/**
+ * Resolve a relative path against a base path.
+ * Handles ".." (parent directory) and "." (current directory) segments.
+ *
+ * @param pathArg - The base path
+ * @param path - The relative path to resolve
+ * @returns The resolved path
+ */
 export function resolvePath(pathArg: string, path: string): string {
     const isAbsolute = pathArg.startsWith('/');
 
@@ -71,7 +79,14 @@ export function resolvePath(pathArg: string, path: string): string {
     return resolvedPath;
 }
 
-
+/**
+ * Resolve special variables in component arguments, including Variable.replaceAll
+ * and path resolution for relative paths.
+ *
+ * @param args - The arguments to resolve
+ * @param ctx - Optional markdown processor context for variable replacement
+ * @returns The resolved arguments
+ */
 export function resolveSpecialVariables(args: Record<string, string>, ctx?: MarkdownPostProcessorContext): Record<string, string> {
     const resolved = { ...args };
 
@@ -117,6 +132,13 @@ export function parseFM(args: Record<string, string>, app: App, ctx: MarkdownPos
     return args;
 }
 
+/**
+ * Convert a camelCase or PascalCase string to sentence case.
+ * Preserves acronyms (e.g., "HTML", "JSON") as uppercase.
+ *
+ * @param str - The string to convert
+ * @returns The sentence case string
+ */
 export function camelToSentence(str: string): string {
     // Insert spaces at word boundaries while preserving acronyms
     const spaced = str
@@ -178,6 +200,14 @@ export function parseFileContent(
     return { args, needsRecovery };
 }
 
+/**
+ * Apply CSS styles from component arguments to an HTML element.
+ * Handles both style properties and class/className attributes.
+ *
+ * @param element - The element to style
+ * @param args - The arguments containing style properties
+ * @param handledKeys - Set of keys to skip (already handled by component)
+ */
 export function applyCssFromArgs(element: HTMLElement, args: Record<string, string>, handledKeys: Set<string> = new Set()) {
     Object.entries(args).forEach(([key, value]) => {
         if (!handledKeys.has(key)) {
@@ -278,6 +308,15 @@ export function createColoredIcon(
     return container;
 }
 
+/**
+ * Create a new note from a template file using Templater plugin if available,
+ * or fall back to simple file creation.
+ *
+ * @param app - The Obsidian app instance
+ * @param templatePath - Path to the template file
+ * @param folderPath - Folder where the new note should be created
+ * @param targetName - Name of the new note (without .md extension)
+ */
 export async function useTemplate(
     app: App,
     templatePath: string,
@@ -285,7 +324,6 @@ export async function useTemplate(
     targetName: string
 ): Promise<void> {
     let fullPath: string;
-    //TODO
     if(folderPath) {
         fullPath = `${folderPath}/${targetName}.md`;
     }
@@ -318,6 +356,13 @@ export async function useTemplate(
     }
 }
 
+/**
+ * Navigate to a file in the workspace.
+ *
+ * @param app - The Obsidian app instance
+ * @param filePath - Path to the file to navigate to
+ * @param isNewTab - Whether to open in a new tab
+ */
 export async function useNavigation(
     app: App,
     filePath: string,
@@ -480,6 +525,17 @@ export function renderExternalLinkToElement(text: string, container: HTMLElement
     }
 }
 
+/**
+ * Extract tasks from a file's content.
+ *
+ * @param app - The Obsidian app instance
+ * @param file - The file to extract tasks from
+ * @param options - Task filtering options
+ * @param options.completed - Include completed tasks
+ * @param options.incomplete - Include incomplete tasks
+ * @param options.section - Optional section heading to limit search to
+ * @returns Array of task text strings
+ */
 export async function getTasks(app: App, file: TFile, options: {
     completed?: boolean;
     incomplete?: boolean;
@@ -646,6 +702,13 @@ export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: s
     });
 }
 
+/**
+ * Convert a record of arguments back to source code format (key=value lines).
+ *
+ * @param args - The arguments to convert
+ * @param apply - Optional function to filter or transform entries
+ * @returns The source code string
+ */
 export function argsToSource(args: Record<string, string>, apply: (entries: [string, string][]) => [string, string][] = (e) => e): string {
     const entries = Object.entries(args);
     return apply(entries).map(([k, v]) => `${k}=${v}`).join('\n');
@@ -654,6 +717,15 @@ export function argsToSource(args: Record<string, string>, apply: (entries: [str
 const aliases = {
     folder: 'query'
 }
+
+/**
+ * Parse and resolve argument aliases.
+ * Replaces alias keys with their canonical keys based on component arg definitions.
+ *
+ * @param args - The arguments to parse
+ * @param componentArgKeys - Set of valid argument keys for the component
+ * @returns The arguments with aliases resolved
+ */
 export function parseArgsAliases(args: Record<string, string>, componentArgKeys: Set<string>): Record<string, string> {
     return Object.keys(args).reduce((acc, key) => {
         if (aliases[key] && !args[aliases[key]] && componentArgKeys.has(aliases[key])) {

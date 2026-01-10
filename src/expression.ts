@@ -1,5 +1,3 @@
-// expression.ts - DSL for dynamic component argument values
-
 export interface ExpressionContext {
     frontmatter: Record<string, unknown>;
 }
@@ -18,8 +16,12 @@ interface Token {
     raw: string;
 }
 
-// ============ TOKENIZER ============
-
+/**
+ * Tokenize an input expression string into a sequence of tokens.
+ *
+ * @param input - The expression string to tokenize
+ * @returns Array of tokens representing the expression
+ */
 function tokenize(input: string): Token[] {
     const tokens: Token[] = [];
     let i = 0;
@@ -34,13 +36,11 @@ function tokenize(input: string): Token[] {
     while (!isAtEnd()) {
         const c = peek();
 
-        // Whitespace
         if (c === ' ' || c === '\t' || c === '\r' || c === '\n') {
             advance();
             continue;
         }
 
-        // Two-character operators
         if (c === '=' && peek(1) === '=') {
             tokens.push({ type: 'EQ', value: '==', raw: '==' });
             i += 2;
@@ -77,7 +77,6 @@ function tokenize(input: string): Token[] {
             continue;
         }
 
-        // Single-character operators
         if (c === '>') { tokens.push({ type: 'GT', value: '>', raw: '>' }); advance(); continue; }
         if (c === '<') { tokens.push({ type: 'LT', value: '<', raw: '<' }); advance(); continue; }
         if (c === '!') { tokens.push({ type: 'NOT', value: '!', raw: '!' }); advance(); continue; }
@@ -89,14 +88,13 @@ function tokenize(input: string): Token[] {
         if (c === ')') { tokens.push({ type: 'RPAREN', value: ')', raw: ')' }); advance(); continue; }
         if (c === ',') { tokens.push({ type: 'COMMA', value: ',', raw: ',' }); advance(); continue; }
 
-        // String literals
         if (c === '"' || c === "'") {
             const quote = c;
-            advance(); // consume opening quote
+            advance();
             let str = '';
             while (!isAtEnd() && peek() !== quote) {
                 if (peek() === '\\' && peek(1)) {
-                    advance(); // consume backslash
+                    advance();
                     const escaped = advance();
                     if (escaped === 'n') str += '\n';
                     else if (escaped === 't') str += '\t';
@@ -106,12 +104,11 @@ function tokenize(input: string): Token[] {
                     str += advance();
                 }
             }
-            if (!isAtEnd()) advance(); // consume closing quote
+            if (!isAtEnd()) advance();
             tokens.push({ type: 'STRING', value: str, raw: `${quote}${str}${quote}` });
             continue;
         }
 
-        // Numbers
         if (isDigit(c) || (c === '.' && isDigit(peek(1)))) {
             let num = '';
             let seenDot = false;
@@ -123,14 +120,12 @@ function tokenize(input: string): Token[] {
             continue;
         }
 
-        // Identifiers, keywords, fm.*/file.* references
         if (isAlpha(c)) {
             let ident = '';
             while (!isAtEnd() && (isAlphaNumeric(peek()) || peek() === '.')) {
                 ident += advance();
             }
 
-            // Check for fm.* or file.* references
             if (ident.startsWith('fm.')) {
                 tokens.push({ type: 'FM_REF', value: ident.slice(3), raw: ident });
             } else if (ident.startsWith('file.')) {
@@ -151,16 +146,12 @@ function tokenize(input: string): Token[] {
             continue;
         }
 
-        // Unknown character - treat as part of a plain string
-        // This handles cases like plain values without quotes
         throw new Error(`Unexpected character: ${c} at position ${i}`);
     }
 
     tokens.push({ type: 'EOF', value: '', raw: '' });
     return tokens;
 }
-
-// ============ PARSER ============
 
 type Expr =
     | { type: 'literal'; value: string | number | boolean | null | undefined }
@@ -172,6 +163,11 @@ type Expr =
     | { type: 'contains'; haystack: Expr; needle: Expr }
     | { type: 'length'; operand: Expr };
 
+/**
+ * Parser for expression DSL.
+ * Converts a sequence of tokens into an abstract syntax tree (AST).
+ * Implements a recursive descent parser with proper operator precedence.
+ */
 class Parser {
     private tokens: Token[];
     private current = 0;
@@ -373,8 +369,13 @@ class Parser {
     }
 }
 
-// ============ EVALUATOR ============
-
+/**
+ * Evaluate an AST expression node with the given context.
+ *
+ * @param expr - The expression AST node to evaluate
+ * @param context - The evaluation context containing frontmatter data
+ * @returns The evaluated result
+ */
 function evaluate(expr: Expr, context: ExpressionContext): unknown {
     switch (expr.type) {
         case 'literal':
@@ -475,6 +476,13 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
     }
 }
 
+/**
+ * Get a nested property from an object using dot notation.
+ *
+ * @param obj - The object to access
+ * @param path - The property path (e.g., "user.name")
+ * @returns The value at the path, or undefined if not found
+ */
 function getNestedProperty(obj: Record<string, unknown>, path: string): unknown {
     const parts = path.split('.');
     let current: unknown = obj;
@@ -485,6 +493,12 @@ function getNestedProperty(obj: Record<string, unknown>, path: string): unknown 
     return current;
 }
 
+/**
+ * Convert a value to a number for arithmetic operations.
+ *
+ * @param value - The value to convert
+ * @returns The numeric value, or 0 if conversion fails
+ */
 function toNumber(value: unknown): number {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
@@ -495,8 +509,15 @@ function toNumber(value: unknown): number {
     return 0;
 }
 
+/**
+ * Perform loose equality comparison between two values.
+ * Handles null/undefined, numeric, and case-insensitive string comparisons.
+ *
+ * @param a - First value to compare
+ * @param b - Second value to compare
+ * @returns True if values are loosely equal
+ */
 function looseEquals(a: unknown, b: unknown): boolean {
-    // Handle null/undefined
     if (a === null || a === undefined) {
         return b === null || b === undefined;
     }
@@ -504,18 +525,14 @@ function looseEquals(a: unknown, b: unknown): boolean {
         return false;
     }
 
-    // Try numeric comparison first
     const numA = typeof a === 'number' ? a : parseFloat(String(a));
     const numB = typeof b === 'number' ? b : parseFloat(String(b));
     if (!isNaN(numA) && !isNaN(numB)) {
         return numA === numB;
     }
 
-    // String comparison (case-insensitive)
     return String(a).toLowerCase() === String(b).toLowerCase();
 }
-
-// ============ PUBLIC API ============
 
 /**
  * Check if a value is truthy.

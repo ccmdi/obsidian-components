@@ -1,5 +1,3 @@
-// main.ts
-
 import { Plugin, Editor, Menu, TFile, MarkdownView, Notice } from 'obsidian';
 import { ComponentsSettings, DEFAULT_SETTINGS } from 'settings';
 import { COMPONENTS, Component, componentInstances } from 'components';
@@ -47,18 +45,14 @@ export default class ComponentsPlugin extends Plugin {
             }
         });
 
-        // Add sidebar icon for widget-space
         this.addRibbonIcon('layout-grid', 'Open Widget Space', async () => {
-            // Check if widget-space view already exists
             const existingLeaf = this.app.workspace.getLeavesOfType(COMPONENT_SIDEBAR_VIEW_TYPE).find(leaf => {
                 return (leaf.view as ComponentSidebarView).componentKey === 'widget-space';
             });
 
             if (existingLeaf) {
-                // If it exists, just reveal it
                 this.app.workspace.revealLeaf(existingLeaf);
             } else {
-                // Create new leaf with widget-space
                 const leaf = this.app.workspace.getRightLeaf(false);
                 await leaf?.setViewState({
                     type: COMPONENT_SIDEBAR_VIEW_TYPE,
@@ -80,6 +74,8 @@ export default class ComponentsPlugin extends Plugin {
 
     /**
      * Refresh all components that use a specific reference ID.
+     *
+     * @param refId - The reference ID to refresh
      */
     refreshByRef(refId: string): void {
         componentInstances.forEach((instance) => {
@@ -90,10 +86,10 @@ export default class ComponentsPlugin extends Plugin {
     }
 
     /**
-     * Register context menu handler for editing components
+     * Register context menu handler for editing components in both reading and editing modes.
+     * Provides an "Edit" menu option for components with arguments.
      */
     registerComponentContextMenu() {
-        // Track the last right-clicked component for editor-menu event
         let lastClickedComponent: {
             el: HTMLElement;
             key: string;
@@ -101,16 +97,14 @@ export default class ComponentsPlugin extends Plugin {
             sourcePath: string;
         } | null = null;
 
-        // Capture right-click target before Obsidian's menu handler
         this.registerDomEvent(document, 'contextmenu', (e: MouseEvent) => {
             const target = e.target as HTMLElement;
             const componentEl = target.closest('.component[data-component-key]') as HTMLElement;
-            
+
             if (componentEl) {
-                // Skip sidebar components - they can't be edited via code blocks
-                const isInSidebar = componentEl.classList.contains('in-sidebar') || 
+                const isInSidebar = componentEl.classList.contains('in-sidebar') ||
                                     componentEl.closest('.workspace-leaf-content[data-type="component-sidebar"]');
-                
+
                 if (isInSidebar) {
                     lastClickedComponent = null;
                     return;
@@ -126,7 +120,9 @@ export default class ComponentsPlugin extends Plugin {
                         if (componentArgsStr) {
                             currentArgs = JSON.parse(componentArgsStr);
                         }
-                    } catch { /* ignore */ }
+                    } catch (error) {
+                        console.warn('Failed to parse component args:', error);
+                    }
 
                     lastClickedComponent = {
                         el: componentEl,
@@ -141,12 +137,11 @@ export default class ComponentsPlugin extends Plugin {
                 lastClickedComponent = null;
             }
 
-            // In reading mode (no editor), show our own menu
             const isInEditor = target.closest('.cm-editor, .markdown-source-view');
             if (componentEl && !isInEditor) {
                 const componentKey = componentEl.dataset.componentKey;
                 const sourcePath = componentEl.dataset.componentSource;
-                
+
                 if (!componentKey || !sourcePath) return;
                 if (componentEl.dataset.componentRef) return;
 
@@ -172,9 +167,8 @@ export default class ComponentsPlugin extends Plugin {
                 });
                 menu.showAtMouseEvent(e);
             }
-        }, true); // Use capture phase to run before Obsidian
+        }, true);
 
-        // Editing mode: hook into Obsidian's editor-menu event  
         this.registerEvent(
             this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, view: MarkdownView) => {
                 // Only add edit option if we clicked on a rendered component
@@ -214,7 +208,13 @@ export default class ComponentsPlugin extends Plugin {
     }
 
     /**
-     * Update the code block arguments in the source file
+     * Update the code block arguments in the source file by finding and replacing
+     * the component's code block with new arguments.
+     *
+     * @param el - The component HTML element
+     * @param componentKey - The component key name
+     * @param newArgs - The new arguments to set
+     * @param sourcePath - The path to the source file
      */
     async updateCodeBlockArgs(
         el: HTMLElement,
@@ -271,8 +271,11 @@ export default class ComponentsPlugin extends Plugin {
         await this.app.vault.modify(file, newLines.join('\n'));
     }
 
+    /**
+     * Update global styles for components based on plugin settings.
+     * Applies default container margins to non-sidebar components.
+     */
     updateGlobalStyles() {
-        // Remove existing global styles
         if (this.globalStyleElement) {
             this.globalStyleElement.remove();
         }
@@ -302,16 +305,18 @@ export default class ComponentsPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
 
-        // Refresh renders
         this.registerProcessors();
 
-        // Toggle autocomplete based on settings
         if (this.settings.enableAutoComplete && !this.autoComplete) {
             this.autoComplete = new ComponentAutoComplete(this);
             this.registerEditorSuggest(this.autoComplete);
         }
     }
 
+    /**
+     * Register markdown code block processors for all components and their aliases.
+     * Also handles the generic 'component' block with ref support and optional OJS processor.
+     */
     registerProcessors() {
         COMPONENTS.forEach(component => {
 
