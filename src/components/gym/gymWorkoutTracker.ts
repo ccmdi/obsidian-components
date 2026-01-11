@@ -1,6 +1,7 @@
 import { Component, ComponentInstance, ComponentAction } from "components";
 import { ComponentGroup } from "groups";
 import { gymRoutineMenuStyles } from "./styles";
+import { WorkoutExercise } from "./types";
 
 export const gymWorkoutTracker: Component<[]> = {
     keyName: 'gym-workout-tracker',
@@ -12,7 +13,8 @@ export const gymWorkoutTracker: Component<[]> = {
     group: ComponentGroup.GYM,
     styles: gymRoutineMenuStyles,
     does: [ComponentAction.READ, ComponentAction.WRITE],
-    render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
+    refresh: 'metadataChanged',
+    render: async (args, el, ctx, app, instance: ComponentInstance) => {
         const initiator = ctx.sourcePath;
         const file = app.vault.getFileByPath(initiator);
         if (!file) {
@@ -30,7 +32,6 @@ export const gymWorkoutTracker: Component<[]> = {
             return;
         }
 
-        // Save workout data function
         async function saveWorkout() {
             try {
                 await app.fileManager.processFrontMatter(file!, (frontmatter) => {
@@ -41,13 +42,9 @@ export const gymWorkoutTracker: Component<[]> = {
             }
         }
 
-        // Create main container
         const container = el.createEl("div", { cls: "gym-routine-container" });
-
-        // Main content area
         const mainContent = container.createEl("div", { cls: "gym-routine-main" });
 
-        // Group exercises by routine
         const exercisesByRoutine: { [key: string]: WorkoutExercise[] } = {};
         workoutData.forEach(exercise => {
             if (!exercisesByRoutine[exercise.routine]) {
@@ -56,155 +53,62 @@ export const gymWorkoutTracker: Component<[]> = {
             exercisesByRoutine[exercise.routine].push(exercise);
         });
 
-        // Process each routine
         Object.keys(exercisesByRoutine).forEach(routineName => {
             const routineSection = mainContent.createEl("div", { cls: "gym-routine-view-section" });
-
-            routineSection.createEl("h3", {
-                text: routineName,
-                attr: {
-                    style: "color: var(--text-accent); margin-bottom: 15px;"
-                }
-            });
+            routineSection.createEl("h3", { text: routineName, cls: "gym-section-title" });
 
             const tableContainer = routineSection.createEl("div", { cls: "gym-routine-table-container" });
-
-            const table = tableContainer.createEl("table", {
-                cls: "gym-routine-table",
-                attr: {
-                    style: "table-layout: fixed; width: 100%;"
-                }
-            });
+            const table = tableContainer.createEl("table", { cls: "gym-routine-table" });
 
             const thead = table.createEl("thead");
             const headerRow = thead.createEl("tr");
 
-            // Fixed column widths
-            const headers = [
-                { text: 'Exercise', width: '25%' },
-                { text: 'Set', width: '10%' },
-                { text: 'Target', width: '15%' },
-                { text: 'Actual Reps', width: '15%' },
-                { text: 'Actual Weight', width: '15%' },
-                { text: 'Complete', width: '20%' }
-            ];
-
-            headers.forEach(header => {
-                headerRow.createEl("th", {
-                    text: header.text,
-                    attr: {
-                        style: `width: ${header.width};`
-                    }
-                });
+            const headers = ['Exercise', 'Set', 'Target', 'Actual Reps', 'Actual Weight', 'Complete'];
+            headers.forEach(text => {
+                headerRow.createEl("th", { text });
             });
 
             const tbody = table.createEl("tbody");
 
-            exercisesByRoutine[routineName].forEach((exercise, exerciseIndex) => {
+            exercisesByRoutine[routineName].forEach((exercise) => {
                 exercise.sets.forEach((set, setIndex) => {
-                    const row = tbody.createEl("tr", {
-                        attr: {
-                            style: set.completed ?
-                                "background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3); opacity: 0.7;" :
-                                ""
-                        }
-                    });
+                    const row = tbody.createEl("tr");
+                    if (set.completed) row.addClass('completed');
 
-                    // Exercise name (only show on first set)
                     row.createEl("td", {
                         text: setIndex === 0 ? exercise.name : '',
-                        attr: {
-                            style: "padding: 8px 12px; border: 1px solid var(--background-modifier-border); vertical-align: middle;"
-                        }
+                        cls: 'text-left'
                     });
 
-                    // Set number
-                    row.createEl("td", {
-                        text: `${set.setNumber}`,
-                        attr: {
-                            style: "padding: 8px 12px; text-align: center; border: 1px solid var(--background-modifier-border); vertical-align: middle;"
-                        }
-                    });
+                    row.createEl("td", { text: `${set.setNumber}` });
 
-                    // Target info
                     const targetText = `${set.targetReps}${set.targetWeight ? ' @ ' + set.targetWeight : ''}`;
-                    row.createEl("td", {
-                        text: targetText,
-                        attr: {
-                            style: "padding: 8px 12px; text-align: center; border: 1px solid var(--background-modifier-border); vertical-align: middle; font-size: 14px;"
-                        }
-                    });
+                    row.createEl("td", { text: targetText });
 
-                    // Actual reps input
-                    const repsCell = row.createEl("td", {
-                        attr: {
-                            style: "padding: 8px 12px; text-align: center; border: 1px solid var(--background-modifier-border); vertical-align: middle;"
-                        }
-                    });
+                    const repsCell = row.createEl("td");
                     const repsInput = repsCell.createEl("input", {
                         type: "number",
                         value: set.actualReps,
-                        placeholder: set.targetReps,
-                        attr: {
-                            style: `
-                                border: 1px solid var(--background-modifier-border);
-                                background: var(--background-primary);
-                                color: var(--text-normal);
-                                width: 100%;
-                                text-align: center;
-                                padding: 4px;
-                                box-sizing: border-box;
-                            `
-                        }
+                        placeholder: set.targetReps
                     });
                     repsInput.addEventListener('change', async () => {
                         set.actualReps = repsInput.value;
                         await saveWorkout();
                     });
 
-                    // Actual weight input
-                    const weightCell = row.createEl("td", {
-                        attr: {
-                            style: "padding: 8px 12px; text-align: center; border: 1px solid var(--background-modifier-border); vertical-align: middle;"
-                        }
-                    });
+                    const weightCell = row.createEl("td");
                     const weightInput = weightCell.createEl("input", {
                         type: "text",
                         value: set.actualWeight,
-                        placeholder: set.targetWeight,
-                        attr: {
-                            style: `
-                                border: 1px solid var(--background-modifier-border);
-                                background: var(--background-primary);
-                                color: var(--text-normal);
-                                width: 100%;
-                                text-align: center;
-                                padding: 4px;
-                                box-sizing: border-box;
-                            `
-                        }
+                        placeholder: set.targetWeight
                     });
                     weightInput.addEventListener('change', async () => {
                         set.actualWeight = weightInput.value;
                         await saveWorkout();
                     });
 
-                    // Complete checkbox
-                    const completeCell = row.createEl("td", {
-                        attr: {
-                            style: "padding: 8px 12px; text-align: center; border: 1px solid var(--background-modifier-border); vertical-align: middle;"
-                        }
-                    });
-
-                    const checkbox = completeCell.createEl("input", {
-                        type: "checkbox",
-                        attr: {
-                            style: `
-                                cursor: pointer;
-                                accent-color: var(--interactive-accent);
-                            `
-                        }
-                    });
+                    const completeCell = row.createEl("td");
+                    const checkbox = completeCell.createEl("input", { type: "checkbox" });
 
                     if (set.completed) {
                         checkbox.checked = true;
@@ -212,16 +116,7 @@ export const gymWorkoutTracker: Component<[]> = {
 
                     checkbox.addEventListener('change', async () => {
                         set.completed = checkbox.checked;
-
-                        // Update row styling
-                        if (set.completed) {
-                            row.style.background = "hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3)";
-                            row.style.opacity = "0.7";
-                        } else {
-                            row.style.background = "";
-                            row.style.opacity = "";
-                        }
-
+                        row.toggleClass('completed', set.completed);
                         await saveWorkout();
                     });
                 });
@@ -229,19 +124,3 @@ export const gymWorkoutTracker: Component<[]> = {
         });
     }
 };
-
-// Types
-interface WorkoutSet {
-    setNumber: number;
-    targetReps: string;
-    targetWeight: string;
-    actualReps: string;
-    actualWeight: string;
-    completed: boolean;
-}
-
-interface WorkoutExercise {
-    name: string;
-    routine: string;
-    sets: WorkoutSet[];
-}

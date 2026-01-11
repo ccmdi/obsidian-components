@@ -344,7 +344,6 @@ export const bookCards: Component<['source', 'limit']> = {
             books = books.slice(0, limit);
         }
 
-        // Skip re-render if data unchanged
         if (!ComponentInstance.hasDataChanged(instance, 'books', books)) {
             debug('green', 'book-cards: skipped re-render (no changes)');
             return;

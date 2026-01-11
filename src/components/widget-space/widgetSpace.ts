@@ -5,7 +5,7 @@ import ConfirmationModal from "native/confirmation";
 import { ComponentArgsModal } from "native/modal";
 import { COMPONENTS, componentInstances } from "components";
 import ComponentSidebarView from "native/sidebar";
-import ComponentsPlugin, { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
+import { COMPONENT_SIDEBAR_VIEW_TYPE } from "main";
 import Muuri from "muuri";
 import { argsToSource } from "utils";
 
@@ -131,6 +131,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
         let widgetCounter = 0;
         let muuri!: MuuriGridExt;
 
+        // TODO: passthrough as data
         // Find sidebar view for state persistence (check if we're inside a sidebar)
         const isInSidebar = !!el.closest('.in-sidebar');
         const getSidebarView = (): ComponentSidebarView | undefined => {
@@ -351,10 +352,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 }
             });
 
-            let isDragging = false;
-
             muuri.on('dragStart', (item) => {
-                isDragging = true;
                 const el = item.getElement();
                 if (el) { el.style.zIndex = '1000'; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.2)'; }
             });
@@ -372,7 +370,6 @@ export const widgetSpace: Component<['layout', 'columns']> = {
                 container.addEventListener('click', suppressClick, { capture: true, once: true });
                 setTimeout(() => {
                     container.removeEventListener('click', suppressClick, { capture: true });
-                    isDragging = false;
                 }, 50);
             });
 
@@ -384,13 +381,12 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             });
         };
 
-        const isComponentEnabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
-        const getAvailableComponents = () => COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
+        const getAvailableComponents = () => COMPONENTS.filter(c => c.isMountable && Component.Filters.enabled(c.keyName));
 
         // Preserve disabled widgets upfront so they survive saves
         const disabledWidgets = layout.widgets.filter(cfg => {
             const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-            return comp && !isComponentEnabled(cfg.componentKey);
+            return comp && !Component.Filters.enabled(cfg.componentKey);
         });
 
         container.addEventListener('dblclick', (e) => {
@@ -448,7 +444,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
         const enabledConfigs = layout.widgets
             .filter(cfg => {
                 const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-                return comp && isComponentEnabled(cfg.componentKey);
+                return comp && Component.Filters.enabled(cfg.componentKey);
             })
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 

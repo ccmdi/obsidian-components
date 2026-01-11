@@ -20,7 +20,7 @@ export function parseArguments(source: string): Record<string, string> {
         const key = trimmed.slice(0, eqIndex).trim();
         if (!/^[a-zA-Z0-9_!-]+$/.test(key)) continue;
 
-        let value = trimmed.slice(eqIndex + 1).trim();
+        const value = trimmed.slice(eqIndex + 1).trim();
 
         args[key] = value;
     }
@@ -295,7 +295,6 @@ export async function useTemplate(
     const fileExists = app.vault.getAbstractFileByPath(fullPath);
 
     if (!fileExists) {
-        //@ts-ignore use user's templater plugin
         const tp = app.plugins.plugins["templater-obsidian"]?.templater?.current_functions_object;
         if (tp && templatePath) {
             const templateFile = tp.file.find_tfile(templatePath);
@@ -551,7 +550,8 @@ export async function getTasks(app: App, file: TFile, options: {
 export function matchesQuery(file: TFile, cache: CachedMetadata | null, query: string): boolean {
     if (!query.trim()) return true;
 
-    const frontmatter = cache?.frontmatter || {};
+    //TODO
+    const frontmatter = cache?.frontmatter as Record<string, unknown> | undefined || {};
     const tags = cache?.tags?.map((t) => t.tag) || [];
     const fmTags = Array.isArray(frontmatter?.tags) ? frontmatter.tags :
                   frontmatter?.tags ? [frontmatter.tags] : [];
@@ -663,4 +663,14 @@ export function parseArgsAliases(args: Record<string, string>, componentArgKeys:
         }
         return acc;
     }, {});
+}
+
+/**
+ * Calculate median of an array of numbers
+ */
+export function median(arr: number[]): number {
+    if (arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }

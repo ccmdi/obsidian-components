@@ -7,7 +7,7 @@ let currentSuite = '';
 
 export function describe(name: string, fn: () => void) {
     currentSuite = name;
-    console.log(`\n${name}:`);
+    console.log(`\n${name} ${currentSuite}:`);
     fn();
 }
 

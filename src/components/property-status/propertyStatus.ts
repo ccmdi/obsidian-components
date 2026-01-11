@@ -184,8 +184,4 @@ export const propertyStatus: Component<PropertyStatusArgs> = {
         instance.data.container = container;
         updateDisplay(container, args, app, ctx);
     },
-
-    renderRefresh: async (args, el, ctx, app, instance) => {
-        updateDisplay(instance.data.container, args, app, ctx);
-    }
 };

@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView, Notice } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView } from "obsidian";
 import { parseArguments, validateArguments, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
 import { applyCssFromArgs } from "utils";
 import { evaluateArgs, isTruthy } from "expression";
@@ -580,6 +580,10 @@ export namespace Component {
         }
 
         return { instance, isNew: true };
+    }
+
+    export namespace Filters {
+        export const enabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
     }
 
     export async function render(

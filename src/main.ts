@@ -272,7 +272,6 @@ export default class ComponentsPlugin extends Plugin {
     }
 
     updateGlobalStyles() {
-        // Remove existing global styles
         if (this.globalStyleElement) {
             this.globalStyleElement.remove();
         }

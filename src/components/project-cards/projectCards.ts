@@ -191,7 +191,6 @@ export const projectCards: Component<[
         const showBadges = parseBoolean(args.showBadges, true);
         const showFooter = parseBoolean(args.showFooter, true);
 
-        // Get tag configurations from component settings (stored as JSON strings)
         let tagAliases: TagAliasEntry[] = [];
         let tagColors: TagColorEntry[] = [];
         
@@ -205,7 +204,6 @@ export const projectCards: Component<[
             if (colorsStr) tagColors = JSON.parse(colorsStr);
         } catch { /* ignore parse errors */ }
 
-        // Build lookup maps
         const tagDisplayNames: Record<string, string> = {};
         for (const entry of tagAliases) {
             if (entry.tag && entry.displayName) {
@@ -236,7 +234,6 @@ export const projectCards: Component<[
             return tagColorMap['default'] || { bg: '#666666', text: 'white' };
         };
 
-        // Collect projects based on source type
         let projects: ProjectData[] = [];
 
         // Check if source is already project data (array from fm.projects)
@@ -308,7 +305,6 @@ export const projectCards: Component<[
             for (const file of files) {
                 const cache = app.metadataCache.getFileCache(file);
                 
-                // Apply query filter if present
                 if (fullQuery && !matchesQuery(file, cache, fullQuery)) continue;
 
                 const fm = cache?.frontmatter;
@@ -335,7 +331,6 @@ export const projectCards: Component<[
             }
         }
 
-        // Store for filter updates (also sets initial hash)
         instance.data.allProjects = projects;
         ComponentInstance.hasDataChanged(instance, 'projects', projects);
         instance.data.currentFilter = '';
@@ -392,7 +387,6 @@ export const projectCards: Component<[
                 card.style.backgroundRepeat = 'no-repeat';
             }
 
-            // Click handler to open project
             if (project.path) {
                 card.addEventListener('click', async () => {
                     await useNavigation(app, project.path, false);
@@ -530,6 +524,7 @@ export const projectCards: Component<[
             instance.data.filterInput = filterInput;
             instance.data.statusSelect = statusSelect;
 
+            // TODO
             // Read initial filter from frontmatter
             const currentFile = app.vault.getAbstractFileByPath(ctx.sourcePath);
             if (currentFile instanceof TFile) {
@@ -579,8 +574,6 @@ export const projectCards: Component<[
                 saveTimeout = setTimeout(async () => {
                     const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
                     if (file instanceof TFile) {
-                        // Mark that we're saving to prevent re-render from our own save
-                        instance.data.isSavingFilter = true;
                         try {
                             await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
                                 fm.tagFilter = filterValue;
@@ -588,14 +581,11 @@ export const projectCards: Component<[
                         } catch (e) {
                             console.warn('Failed to save filter:', e);
                         }
-                        // Reset flag after a short delay
-                        setTimeout(() => { instance.data.isSavingFilter = false; }, 100);
                     }
                 }, 500);
             });
         }
 
-        // Projects container
         const projectsContainer = wrapper.createEl('div', { cls: 'projects-container' });
         
         // Store reference for live updates
@@ -632,7 +622,6 @@ export const projectCards: Component<[
         const projectsContainer = instance.data.projectsContainer as HTMLElement;
         if (!projectsContainer) return;
 
-        // Get tag configurations from component settings
         let tagAliases: TagAliasEntry[] = [];
         let tagColors: TagColorEntry[] = [];
         
@@ -754,7 +743,6 @@ export const projectCards: Component<[
             }
         }
 
-        // Skip re-render if data unchanged
         if (!ComponentInstance.hasDataChanged(instance, 'projects', projects)) {
             debug('green', 'project-cards: skipped re-render (no changes)');
             return;

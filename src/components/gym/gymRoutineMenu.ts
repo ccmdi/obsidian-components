@@ -1,6 +1,8 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { ComponentGroup } from "groups";
 import { gymRoutineMenuStyles } from "./styles";
+import { Notice } from "obsidian";
+import { Routine } from "./types";
 
 export const gymRoutineMenu: Component<[]> = {
     keyName: 'gym-routine-menu',
@@ -36,12 +38,12 @@ export const gymRoutineMenu: Component<[]> = {
                 });
             } catch (error) {
                 console.error('Error saving routines:', error);
-                alert('Error saving routines: ' + error.message);
+                new Notice('Error saving routines: ' + (error as Error).message);
             }
         }
 
         function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            return crypto.randomUUID();
         }
 
         // Initialize
@@ -230,12 +232,11 @@ export const gymRoutineMenu: Component<[]> = {
             if (isEditing) {
                 const deleteBtn = buttonsSection.createEl("button", { text: "Delete", cls: "delete-btn" });
                 deleteBtn.addEventListener('click', async () => {
-                    if (confirm('Are you sure you want to delete this routine?')) {
-                        routines = routines.filter(r => r.id !== routine.id);
-                        await saveRoutines();
-                        await loadRoutines();
-                        renderRoutinesList();
-                    }
+                    routines = routines.filter(r => r.id !== routine.id);
+                    await saveRoutines();
+                    await loadRoutines();
+                    renderRoutinesList();
+                    new Notice('Routine deleted');
                 });
             }
 
@@ -245,7 +246,7 @@ export const gymRoutineMenu: Component<[]> = {
                 const name = nameInput.value.trim();
                 
                 if (!name) {
-                    alert('Please enter a routine name');
+                    new Notice('Please enter a routine name');
                     return;
                 }
 
@@ -321,18 +322,3 @@ export const gymRoutineMenu: Component<[]> = {
         renderRoutinesList();
     }
 };
-
-// Types
-interface Exercise {
-    name: string;
-    sets: string;
-    reps: string;
-    weight: string;
-}
-
-interface Routine {
-    id: string;
-    name: string;
-    days: string[];
-    exercises: Exercise[];
-}

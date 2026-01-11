@@ -1,13 +1,13 @@
 // Mock obsidian module for testing
 export class TFile {
-    path: string = '';
-    basename: string = '';
-    extension: string = 'md';
+    path = '';
+    basename = '';
+    extension = 'md';
     stat = { ctime: 0, mtime: 0, size: 0 };
 }
 
 export class TFolder {
-    path: string = '';
+    path = '';
     children: (TFile | TFolder)[] = [];
 }
 

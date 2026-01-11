@@ -1,6 +1,6 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
 import { TFile, TFolder } from "obsidian";
-import { parseBoolean, matchesQuery } from "utils";
+import { parseBoolean, matchesQuery, usePropertyAccess, median } from "utils";
 import { placesStyles } from "./styles";
 
 interface PlaceData {
@@ -23,13 +23,6 @@ interface StateStats {
 }
 
 /**
- * Get a nested property from an object using dot notation
- */
-function getNestedProperty(obj: unknown, path: string): unknown {
-    return path.split('.').reduce((current, key) => (current as Record<string, unknown>)?.[key], obj);
-}
-
-/**
  * Check if a value looks like place data (array) rather than a query string
  */
 function isPlaceData(value: unknown): boolean {
@@ -48,16 +41,6 @@ function isPlaceData(value: unknown): boolean {
     }
 
     return false;
-}
-
-/**
- * Calculate median of an array of numbers
- */
-function median(arr: number[]): number {
-    if (arr.length === 0) return 0;
-    const sorted = [...arr].sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /**
@@ -153,10 +136,10 @@ export const places: Component<[
             places = placeList.map((p: PlaceData) => ({
                 name: p.name,
                 path: p.path,
-                country: getNestedProperty(p, countryField) as string | undefined || p.country,
-                state: getNestedProperty(p, stateField) as string | undefined || p.state,
-                locality: getNestedProperty(p, localityField) as string | undefined || p.locality,
-                score: getNestedProperty(p, scoreField) as number | undefined ?? p.score
+                country: usePropertyAccess(p, countryField) as string | undefined || p.country,
+                state: usePropertyAccess(p, stateField) as string | undefined || p.state,
+                locality: usePropertyAccess(p, localityField) as string | undefined || p.locality,
+                score: usePropertyAccess(p, scoreField) as number | undefined ?? p.score
             }));
         } else {
             // Dynamic mode: resolve source as folder path or query
@@ -200,13 +183,11 @@ export const places: Component<[
             for (const file of files) {
                 const cache = app.metadataCache.getFileCache(file);
 
-                // Apply query filter if present
                 if (fullQuery && !matchesQuery(file, cache, fullQuery)) continue;
 
                 const fm = cache?.frontmatter;
                 if (!fm) continue;
 
-                // Check for exclude tag
                 if (excludeTag) {
                     const inlineTags = cache?.tags?.map(t => t.tag.replace(/^#/, '')) || [];
                     const fmTags = Array.isArray(fm.tags) ? fm.tags : (fm.tags ? [fm.tags] : []);
@@ -215,10 +196,10 @@ export const places: Component<[
                 }
 
                 // Extract place data using configurable field paths
-                const country = getNestedProperty(fm, countryField);
-                const state = getNestedProperty(fm, stateField);
-                const locality = getNestedProperty(fm, localityField);
-                const score = getNestedProperty(fm, scoreField);
+                const country = usePropertyAccess(fm, countryField);
+                const state = usePropertyAccess(fm, stateField);
+                const locality = usePropertyAccess(fm, localityField);
+                const score = usePropertyAccess(fm, scoreField);
 
                 places.push({
                     name: fm.name || file.basename,
@@ -329,6 +310,7 @@ export const places: Component<[
             }
         }
 
+        // TODO
         // Store data for potential refresh
         instance.data.places = places;
     }

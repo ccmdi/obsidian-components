@@ -135,78 +135,44 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
 
                 const noteCard = timelineContent.createEl('div', {
                     cls: 'note-card',
-                    attr: {
-                        style: 'background: var(--background-secondary); border-radius: 8px; padding: 12px 16px; transition: box-shadow 0.2s ease; border: 1px solid var(--background-modifier-border); margin-bottom: 8px; transform: none;',
-                        'data-file-path': file.path
-                    }
+                    attr: { 'data-file-path': file.path }
                 });
 
-                const noteHeader = noteCard.createEl('div', {
-                    cls: 'note-header',
-                    attr: { style: 'display: flex; justify-content: space-between; align-items: center;' }
-                });
+                const noteHeader = noteCard.createEl('div', { cls: 'note-header' });
 
                 const formattedDate = dateFormat ? formatDate(new Date(fileName + 'T00:00:00'), dateFormat) : fileName;
-                const noteDateDiv = noteHeader.createEl('div', {
-                    cls: 'note-date',
-                    attr: { style: 'font-size: 1.1em; font-weight: bold; color: var(--color-accent); line-height: 1.2; display: flex; align-items: center; gap: 8px; cursor: pointer;' }
-                });
+                const noteDateDiv = noteHeader.createEl('div', { cls: 'note-date' });
                 noteDateDiv.appendText(formattedDate);
 
                 if (hasJournal) {
-                    noteDateDiv.createEl('span', {
-                        attr: { style: 'color: var(--color-accent); font-size: 0.9em;' },
-                        text: '✓'
-                    });
+                    noteDateDiv.createEl('span', { cls: 'journal-check', text: '✓' });
                 }
 
                 if (hasJournal && showJournalDropdown) {
                     noteHeader.createEl('button', {
                         cls: 'dropdown-button',
-                        attr: {
-                            style: 'background: var(--background-modifier-hover); border: none; padding: 2px; width: 24px; height: 24px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1); transition: box-shadow 0.2s ease, transform 0.1s ease;',
-                            'data-file-path': file.path
-                        }
+                        attr: { 'data-file-path': file.path }
                     });
                 }
 
-                // Show completed tasks directly
                 if (showTasks && data.completedTasks.length > 0) {
-                    const tasksContainer = noteCard.createEl('div', {
-                        attr: { style: 'margin-top: 8px;' }
-                    });
+                    const tasksContainer = noteCard.createEl('div', { cls: 'tasks-container' });
 
                     data.completedTasks.forEach(task => {
-                        const taskDiv = tasksContainer.createEl('div', {
-                            attr: {
-                                style: 'font-size: 0.9em; color: var(--text-muted); margin-bottom: 2px; padding-left: 6px; border-left: 2px solid var(--color-accent);'
-                            }
-                        });
+                        const taskDiv = tasksContainer.createEl('div', { cls: 'task-item' });
                         taskDiv.appendText('✓ ');
                         renderMarkdownLinkToElement(task, taskDiv);
                     });
                 }
 
-                // Journal content in dropdown
                 if (hasJournal && showJournalDropdown) {
                     const journalContentDiv = noteCard.createEl('div', {
                         cls: 'journal-content',
-                        attr: {
-                            style: 'display: grid; margin-top: 0; grid-template-rows: 0fr; overflow: hidden; background: var(--background-primary); border-radius: 6px; border: 0 solid var(--background-modifier-border); color: var(--text-normal); font-size: 0.95em; line-height: 1.5; opacity: 0; box-shadow: 0 0 0 rgba(0, 0, 0, 0); transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-width 0.4s cubic-bezier(0.4, 0, 0.2, 1), margin-top 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);',
-                            'data-file-path': file.path
-                        }
+                        attr: { 'data-file-path': file.path }
                     });
 
-                    const innerDiv = journalContentDiv.createEl('div', {
-                        attr: {
-                            style: 'min-height: 0; opacity: 0; transform: translateX(-12px) scale(0.98); margin: 0; padding: 0; overflow: hidden; transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s cubic-bezier(0.4, 0, 0.2, 1);'
-                        }
-                    });
-
-                    innerDiv.createEl('div', {
-                        attr: { style: 'white-space: pre-wrap;' },
-                        text: data.journalContent
-                    });
+                    const innerDiv = journalContentDiv.createEl('div', { cls: 'journal-content-inner' });
+                    innerDiv.createEl('div', { cls: 'journal-text', text: data.journalContent });
                 }
             });
         };
@@ -249,10 +215,7 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
                 }
 
                 container.empty();
-                container.createEl('div', {
-                    attr: { style: 'text-align: center; padding: 20px; color: var(--text-muted);' },
-                    text: 'Loading timeline...'
-                });
+                container.createEl('div', { cls: 'loading-message', text: 'Loading timeline...' });
 
                 await checkAllContent(files);
 
@@ -268,45 +231,8 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
                         const filePath = target.getAttribute('data-file-path');
                         if (filePath) {
                             const journalContent = container.querySelector(`.journal-content[data-file-path="${filePath}"]`) as HTMLElement;
-                            const isOpen = target.classList.contains('open');
-
-                            if (isOpen) {
-                                target.classList.remove('open');
-                                journalContent.classList.remove('visible');
-
-                                // Hide inner content FIRST
-                                const innerDiv = journalContent.querySelector('div') as HTMLElement;
-                                if (innerDiv) {
-                                    innerDiv.style.opacity = '0';
-                                    innerDiv.style.transform = 'translateX(-12px) scale(0.98)';
-                                    innerDiv.style.paddingTop = '0';
-                                    innerDiv.style.paddingBottom = '0';
-                                }
-
-                                // Then collapse container after a brief delay
-                                setTimeout(() => {
-                                    journalContent.style.gridTemplateRows = '0fr';
-                                    journalContent.style.marginTop = '0';
-                                    journalContent.style.borderWidth = '0';
-                                    journalContent.style.opacity = '0';
-                                }, 0);
-                            } else {
-                                target.classList.add('open');
-                                journalContent.classList.add('visible');
-                                // Direct style fallback
-                                journalContent.style.gridTemplateRows = '1fr';
-                                journalContent.style.marginTop = '10px';
-                                journalContent.style.borderWidth = '1px';
-                                journalContent.style.opacity = '1';
-
-                                // Fix inner content styling
-                                const innerDiv = journalContent.querySelector('div') as HTMLElement;
-                                if (innerDiv) {
-                                    innerDiv.style.opacity = '1';
-                                    innerDiv.style.transform = 'translateX(0) scale(1)';
-                                    innerDiv.style.padding = '12px';
-                                }
-                            }
+                            target.classList.toggle('open');
+                            journalContent.classList.toggle('visible');
                         }
                     } else if (target.classList.contains('note-date')) {
                         const noteCard = target.closest('.note-card');

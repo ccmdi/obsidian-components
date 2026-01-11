@@ -47,11 +47,6 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
     does: [ComponentAction.READ, ComponentAction.WRITE],
     styles: remindersStyles,
     render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
-        // Store render function for reuse in renderRefresh
-        instance.data.renderContent = async (container: HTMLElement) => {
-            await renderRemindersContent(args, container, ctx, app, instance);
-        };
-
         const container = el.createEl('div', { cls: 'reminders-container' });
 
         // Show placeholder with same layout as empty state while loading
@@ -63,7 +58,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
         container.createEl('div', { cls: 'reminders-empty' });
 
         instance.data.container = container;
-        await instance.data.renderContent(container);
+        await renderRemindersContent(args, container, ctx, app, instance);
     },
 
     renderRefresh: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
@@ -121,7 +116,6 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
     }
 };
 
-// Extracted render logic for reuse
 async function renderRemindersContent(
     args: ComponentArgs<['query', 'monthsBack', 'limit', 'showAges', 'colorAges', 'showCount', 'sort', 'showHeader']>,
     container: HTMLElement,

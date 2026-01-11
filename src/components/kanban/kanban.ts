@@ -171,7 +171,7 @@ export const kanban: Component<[
         const scrollable = parseBoolean(args.scrollable, true);
 
         // Collect items from folder
-        let items: KanbanItem[] = [];
+        const items: KanbanItem[] = [];
 
         let folderPath = source.trim();
         if (folderPath.startsWith('"') && folderPath.endsWith('"')) {
@@ -247,13 +247,14 @@ export const kanban: Component<[
                         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
                     case 'name':
                         return a.name.localeCompare(b.name);
-                    case 'mtime':
+                    case 'mtime': {
                         const fileA = app.vault.getAbstractFileByPath(a.path);
                         const fileB = app.vault.getAbstractFileByPath(b.path);
                         if (fileA instanceof TFile && fileB instanceof TFile) {
                             return fileB.stat.mtime - fileA.stat.mtime;
                         }
                         return 0;
+                    }
                     default:
                         return (b.priority ?? 0) - (a.priority ?? 0);
                 }
@@ -355,7 +356,7 @@ export const kanban: Component<[
                     tagEl.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        // @ts-ignore - globalSearch is available in Obsidian
+
                         const searchPlugin = app.internalPlugins?.getPluginById('global-search');
                         if (searchPlugin?.instance) {
                             searchPlugin.instance.openGlobalSearch(`tag:${fullTag}`);
@@ -401,7 +402,6 @@ export const kanban: Component<[
                 }
             });
 
-            // Drag events - stopPropagation prevents widget-space muuri from intercepting
             card.addEventListener('dragstart', (e) => {
                 e.stopPropagation();
                 draggedCard = card;
@@ -416,7 +416,6 @@ export const kanban: Component<[
                 draggedCard = null;
                 draggedItem = null;
 
-                // Remove all drag-over classes
                 board.querySelectorAll('.drag-over').forEach(el => el.removeClass('drag-over'));
             });
         };
@@ -454,7 +453,6 @@ export const kanban: Component<[
                 createCard(item, columnContent);
             }
 
-            // Drop zone events - stopPropagation prevents widget-space muuri from intercepting
             column.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.stopPropagation();

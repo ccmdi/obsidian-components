@@ -58,7 +58,6 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
             await useTemplate(app, templatePath, folderPath, targetName);
         };
 
-        // Prevent mousedown from stealing focus - this is the key fix
         btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
             handleClick(e);

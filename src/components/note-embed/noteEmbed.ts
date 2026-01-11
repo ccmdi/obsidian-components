@@ -28,7 +28,6 @@ export const noteEmbed: Component<['target']> = {
 	) => {
 		const targetPath = args.target;
 
-		// Try to find the file
 		let file: TFile | null = null;
 
 		// First try as direct path
@@ -87,7 +86,8 @@ export const noteEmbed: Component<['target']> = {
 
 		// Use Obsidian's native markdown renderer to render the content
 		// This provides full Obsidian context including wikilinks, embeds, etc.
-		await MarkdownRenderer.renderMarkdown(
+		await MarkdownRenderer.render(
+			app,
 			content,
 			container,
 			file.path,
