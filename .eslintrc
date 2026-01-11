@@ -9,7 +9,7 @@
       "eslint:recommended",
       "plugin:@typescript-eslint/eslint-recommended",
       "plugin:@typescript-eslint/recommended"
-    ], 
+    ],
     "parserOptions": {
         "sourceType": "module"
     },
@@ -18,6 +18,22 @@
       "@typescript-eslint/no-unused-vars": ["error", { "args": "none" }],
       "@typescript-eslint/ban-ts-comment": "off",
       "no-prototype-builtins": "off",
-      "@typescript-eslint/no-empty-function": "off"
-    } 
+      "@typescript-eslint/no-empty-function": "off",
+      "@typescript-eslint/no-namespace": "off"
+    },
+    "overrides": [
+      {
+        "files": ["src/components/**/*.ts"],
+        "excludedFiles": ["**/styles.ts"],
+        "rules": {
+          "no-restricted-syntax": [
+            "warn",
+            {
+              "selector": "CallExpression[callee.property.name='empty']",
+              "message": "Avoid .empty() in components. Render cycle clears el; renderRefresh should do partial updates."
+            }
+          ]
+        }
+      }
+    ]
   }

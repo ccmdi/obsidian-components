@@ -60,7 +60,6 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
         
         let chartInstance: any = null;
         
-        // Load Chart.js
         const loadChartJS = async () => {
             if (window.Chart) return window.Chart;
             
@@ -106,7 +105,6 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
             allFiles.forEach(file => {
                 const cache = app.metadataCache.getFileCache(file);
                 
-                // Check if file matches query
                 if (!matchesQuery(file, cache, query)) {
                     return;
                 }
@@ -126,15 +124,10 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
             return statsByDate;
         };
         
-        // Create UI
         const container = el.createEl('div', { cls: 'stat-chart-container' });
-        
         const filterContainer = el.createEl('div', { cls: 'stat-chart-filters' });
-        
         const startInput = el.createEl('input', { type: 'date', value: startDate });
-        
         const endInput = el.createEl('input', { type: 'date', value: endDate });
-        
         const chartContainer = el.createEl('div', { cls: 'stat-chart' });
         chartContainer.style.height = args.height || '400px';
         
@@ -192,6 +185,7 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
             });
         };
         
+        // TODO last instance of args.original
         // Determine what frontmatter properties to use for saving dates
         const startDateFMKey = args.original.startDate?.startsWith('fm.') ? args.original.startDate.slice(3) : 'chartStartDate';
         const endDateFMKey = args.original.endDate?.startsWith('fm.') ? args.original.endDate.slice(3) : 'chartEndDate';
@@ -217,7 +211,6 @@ export const statChart: Component<['query', 'field', 'type', 'threshold', 'label
         
         updateChart();
 
-        // Cleanup chart instance when component is destroyed
         ComponentInstance.addCleanup(instance, () => {
             if (chartInstance) {
                 chartInstance.destroy();

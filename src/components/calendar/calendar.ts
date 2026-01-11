@@ -17,10 +17,8 @@ const renderCalendar = async (
     let dailyNotesFormat = 'YYYY-MM-DD';
 
     try {
-        // @ts-ignore - Access daily notes plugin settings
-        const dailyNotesPlugin = app.internalPlugins?.plugins?.['daily-notes'];
+        const dailyNotesPlugin = app.internalPlugins?.getPluginById('daily-notes');
         if (dailyNotesPlugin?.enabled) {
-            // @ts-ignore
             const dailyNotesSettings = dailyNotesPlugin.instance?.options;
             if (dailyNotesSettings) {
                 dailyNotesFolder = dailyNotesSettings.folder || '';

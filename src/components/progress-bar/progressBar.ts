@@ -66,48 +66,24 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 	render: async (args, el, ctx, app, instance) => {
 		let progress = parseFloat(args.progress) || 0;
 		progress = Math.max(0, Math.min(100, progress));
-
-		const height = args.height;
-		const backgroundColor = args.backgroundColor;
-		const barColor = args.barColor;
-		const textColor = args.textColor;
-		const borderRadius = args.borderRadius;
 		const showLabel = args.showLabel === 'true';
 
 		const container = el.createDiv({ cls: 'progress-bar-container' });
-		container.style.position = 'relative';
-		container.style.width = '100%';
-		container.style.height = `${height}px`;
-		container.style.backgroundColor = backgroundColor;
-		container.style.borderRadius = `${borderRadius}px`;
-		container.style.overflow = 'hidden';
+		container.style.setProperty('--pb-height', `${args.height}px`);
+		container.style.setProperty('--pb-bg-color', args.backgroundColor);
+		container.style.setProperty('--pb-bar-color', args.barColor);
+		container.style.setProperty('--pb-text-color', args.textColor);
+		container.style.setProperty('--pb-border-radius', `${args.borderRadius}px`);
 
 		const progressFill = container.createDiv({ cls: 'progress-bar-fill' });
-		progressFill.style.position = 'absolute';
-		progressFill.style.left = '0';
-		progressFill.style.top = '0';
 		progressFill.style.width = `${progress}%`;
-		progressFill.style.height = '100%';
-		progressFill.style.transition = 'width 0.5s ease-in-out';
-		progressFill.style.backgroundColor = barColor;
 
 		let label: HTMLElement | null = null;
 		if (showLabel) {
 			const labelOverlay = container.createDiv({ cls: 'progress-bar-label' });
-			labelOverlay.style.position = 'absolute';
-			labelOverlay.style.width = '100%';
-			labelOverlay.style.height = '100%';
-			labelOverlay.style.display = 'flex';
-			labelOverlay.style.alignItems = 'center';
-			labelOverlay.style.justifyContent = 'center';
-
-			label = labelOverlay.createEl('span');
-			label.textContent = `${progress}%`;
-			label.style.color = textColor;
-			label.style.fontWeight = 'bold';
+			label = labelOverlay.createEl('span', { text: `${progress}%` });
 		}
 
-		// Store refs for renderRefresh
 		instance.data.progressFill = progressFill;
 		instance.data.label = label;
 		instance.data.currentProgress = progress;

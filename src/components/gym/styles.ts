@@ -501,6 +501,116 @@ td > span > ul {
     display: none !important;
 }
 
+/* Section titles */
+.gym-section-title {
+    color: var(--text-accent);
+    margin-bottom: 15px;
+    margin-top: 0;
+}
+
+/* Completed row */
+.gym-routine-table tr.completed {
+    background: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+    opacity: 0.7;
+}
+
+/* Table inputs */
+.gym-routine-table input[type="number"],
+.gym-routine-table input[type="text"] {
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    width: 100%;
+    text-align: center;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.gym-routine-table input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--interactive-accent);
+}
+
+/* Stats grid */
+.gym-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+/* Stat card */
+.gym-stat-card {
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 15px;
+    text-align: center;
+}
+
+.gym-stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--text-accent);
+    margin-bottom: 5px;
+}
+
+.gym-stat-label {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* Workout card */
+.gym-workout-card {
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.gym-workout-date {
+    font-weight: bold;
+    color: var(--text-accent);
+    margin-bottom: 8px;
+}
+
+.gym-workout-routine {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.gym-workout-sets {
+    color: var(--text-normal);
+    font-size: 14px;
+}
+
+/* Change indicators */
+.gym-change-positive {
+    color: #4CAF50;
+}
+
+.gym-change-negative {
+    color: #F44336;
+}
+
+.gym-change-neutral {
+    color: var(--text-muted);
+}
+
+/* Table cell alignment */
+.gym-routine-table td.text-left {
+    text-align: left;
+}
+
+/* No data row */
+.gym-routine-table .no-data-cell {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
 /* Mobile horizontal scroll */
 @media (max-width: 768px) {
     .el-pre:has(.gym-routine-table) {

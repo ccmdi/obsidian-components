@@ -97,7 +97,6 @@ async function getWikiSummary(title: string): Promise<WikiSummary | null> {
 
     const data: WikiSummary = await response.json();
 
-    // Skip disambiguation pages
     if (data.type === 'disambiguation') {
         return null;
     }
@@ -253,7 +252,6 @@ export const wiki: Component<['topic', 'compact']> = {
                 return;
             }
 
-            // Get summary
             const summary = await getWikiSummary(matchedTitle);
 
             if (!summary) {
@@ -274,14 +272,12 @@ export const wiki: Component<['topic', 'compact']> = {
     renderRefresh: async (args, el, ctx, app, instance) => {
         const compact = args.compact !== 'false';
 
-        // Get new topic
         let topic = args.topic;
         if (!topic || topic === 'undefined') {
             const filename = ctx.sourcePath.split('/').pop() || '';
             topic = extractTopic(filename);
         }
 
-        // Skip if topic hasn't changed
         if (topic === instance.data.topic) {
             return;
         }

@@ -39,6 +39,7 @@ interface AnalyticsData {
     avgSize: number;
 }
 
+//TODO can be improved
 const renderAnalytics = async (
     args,
     el: HTMLElement,
@@ -74,7 +75,6 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
         : app.vault.getMarkdownFiles();
 
     const totalPages = pages.length;
-    const noteNames = new Set(pages.map((p: TFile) => p.basename));
     const pagePaths = new Set(pages.map((p: TFile) => p.path));
 
     const inlinksMap = new Map<string, number>();

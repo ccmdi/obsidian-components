@@ -2,13 +2,22 @@ import { Component, ComponentAction, ComponentInstance } from "components";
 import { ComponentGroup } from "groups";
 import { gymRoutineMenuStyles } from "./styles";
 import { matchesQuery } from "utils";
+import { WorkoutExercise, WorkoutFile, ExerciseData } from "./types";
+
+interface ExerciseWithProgress extends ExerciseData {
+    improvements: {
+        maxRepsChange: number;
+        avgRepsChange: number;
+        weightChange: number;
+        volumeTrend: string;
+    };
+}
 
 export const gymStats: Component<['query']> = {
     keyName: 'gym-stats',
     name: 'Gym Stats',
     description: 'Display stats for your workouts',
     icon: 'dumbbell',
-    //TODO more args
     args: {
         query: {
             description: 'Query to filter workout files',
@@ -19,7 +28,7 @@ export const gymStats: Component<['query']> = {
     group: ComponentGroup.GYM,
     styles: gymRoutineMenuStyles,
     does: [ComponentAction.READ],
-    render: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
+    render: async (args, el, ctx, app, instance: ComponentInstance) => {
         const allFiles = app.vault.getMarkdownFiles();
 
         const files = allFiles
@@ -28,14 +37,13 @@ export const gymStats: Component<['query']> = {
                 return matchesQuery(file, cache, args.query);
             })
             .sort((a, b) => new Date(b.name.replace('.md', '')).getTime() - new Date(a.name.replace('.md', '')).getTime());
-        
 
         const workoutFiles: WorkoutFile[] = [];
-        
+
         for (const file of files) {
             const cache = app.metadataCache.getFileCache(file);
             const frontmatter = cache?.frontmatter;
-            
+
             if (frontmatter?.exercises && frontmatter.exercises.length > 0) {
                 workoutFiles.push({
                     date: frontmatter.date,
@@ -50,10 +58,8 @@ export const gymStats: Component<['query']> = {
             return;
         }
 
-        // Create main container
         const container = el.createEl("div", { cls: "gym-routine-container" });
 
-        // Header
         const header = container.createEl("div", { cls: "gym-routine-header" });
         header.createEl("div");
         header.createEl("h2", { text: "Exercise Analytics" });
@@ -61,11 +67,9 @@ export const gymStats: Component<['query']> = {
 
         const mainContent = container.createEl("div", { cls: "gym-routine-main" });
 
-        // Calculate date 30 days ago
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        // Aggregate data by exercise
         const exerciseData: { [key: string]: ExerciseData } = {};
         const totalWorkouts = workoutFiles.length;
         let totalSetsCompleted = 0;
@@ -74,7 +78,7 @@ export const gymStats: Component<['query']> = {
             const workoutDate = new Date(workout.date + 'T00:00:00');
             const isRecent = workoutDate >= thirtyDaysAgo;
 
-            workout.exercises.forEach(exercise => {
+            workout.exercises.forEach((exercise: WorkoutExercise) => {
                 if (!exerciseData[exercise.name]) {
                     exerciseData[exercise.name] = {
                         name: exercise.name,
@@ -135,7 +139,6 @@ export const gymStats: Component<['query']> = {
 
                         data.repHistory.push(reps);
 
-                        // Recent 30 days tracking
                         if (isRecent) {
                             data.recent30Days.completedSets++;
                             if (reps > data.recent30Days.maxReps) data.recent30Days.maxReps = reps;
@@ -156,7 +159,6 @@ export const gymStats: Component<['query']> = {
                     }
                 });
 
-                // Calculate average reps
                 if (data.repHistory.length > 0) {
                     data.avgReps = Math.round(data.repHistory.reduce((a, b) => a + b, 0) / data.repHistory.length);
                 }
@@ -168,21 +170,9 @@ export const gymStats: Component<['query']> = {
 
         // Summary stats section
         const summarySection = mainContent.createEl("div", { cls: "gym-routine-view-section" });
-        summarySection.createEl("h3", {
-            text: "Summary Stats",
-            attr: { style: "color: var(--text-accent); margin-bottom: 15px;" }
-        });
+        summarySection.createEl("h3", { text: "Summary Stats", cls: "gym-section-title" });
 
-        const statsGrid = summarySection.createEl("div", {
-            attr: {
-                style: `
-                    display: grid; 
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-                    gap: 15px; 
-                    margin-bottom: 30px;
-                `
-            }
-        });
+        const statsGrid = summarySection.createEl("div", { cls: "gym-stats-grid" });
 
         const recentWorkouts30Days = workoutFiles.filter(w => new Date(w.date) >= thirtyDaysAgo).length;
         const avgWorkoutsPerWeek = Math.round((recentWorkouts30Days / 30) * 7 * 10) / 10;
@@ -197,39 +187,14 @@ export const gymStats: Component<['query']> = {
         ];
 
         stats.forEach(stat => {
-            const statCard = statsGrid.createEl("div", {
-                attr: {
-                    style: `
-                        background: var(--background-primary);
-                        border: 1px solid var(--background-modifier-border);
-                        border-radius: 6px;
-                        padding: 15px;
-                        text-align: center;
-                    `
-                }
-            });
-
-            statCard.createEl("div", {
-                text: stat.value,
-                attr: {
-                    style: "font-size: 24px; font-weight: bold; color: var(--text-accent); margin-bottom: 5px;"
-                }
-            });
-
-            statCard.createEl("div", {
-                text: stat.label,
-                attr: {
-                    style: "color: var(--text-muted); font-size: 14px;"
-                }
-            });
+            const statCard = statsGrid.createEl("div", { cls: "gym-stat-card" });
+            statCard.createEl("div", { text: stat.value, cls: "gym-stat-value" });
+            statCard.createEl("div", { text: stat.label, cls: "gym-stat-label" });
         });
 
         // Past 30 Days Progress section
         const progressSection = mainContent.createEl("div", { cls: "gym-routine-view-section" });
-        progressSection.createEl("h3", {
-            text: "Past 30 Days Progress",
-            attr: { style: "color: var(--text-accent); margin-bottom: 15px;" }
-        });
+        progressSection.createEl("h3", { text: "Past 30 Days Progress", cls: "gym-section-title" });
 
         const progressTableContainer = progressSection.createEl("div", { cls: "gym-routine-table-container" });
         const progressTable = progressTableContainer.createEl("table", { cls: "gym-routine-table" });
@@ -243,13 +208,11 @@ export const gymStats: Component<['query']> = {
 
         const progressTbody = progressTable.createEl("tbody");
 
-        // Filter exercises with recent activity and calculate improvements
-        const exercisesWithProgress = Object.values(exerciseData)
+        const exercisesWithProgress: ExerciseWithProgress[] = Object.values(exerciseData)
             .filter(ex => ex.recent30Days.sessions > 0)
             .map(exercise => {
                 const recent = exercise.recent30Days;
 
-                // Calculate improvements by comparing first half vs second half of the period
                 const midpoint = Math.floor(recent.repHistory.length / 2);
                 const firstHalf = recent.repHistory.slice(0, midpoint);
                 const secondHalf = recent.repHistory.slice(midpoint);
@@ -257,7 +220,6 @@ export const gymStats: Component<['query']> = {
                 const firstHalfAvg = firstHalf.length > 0 ? firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length : 0;
                 const secondHalfAvg = secondHalf.length > 0 ? secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length : 0;
 
-                // Weight progression (first vs last workout)
                 const sortedWeights = [...recent.weightHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
                 const firstWeight = sortedWeights.length > 0 ? sortedWeights[0].weight : 0;
                 const lastWeight = sortedWeights.length > 0 ? sortedWeights[sortedWeights.length - 1].weight : 0;
@@ -275,72 +237,59 @@ export const gymStats: Component<['query']> = {
             })
             .sort((a, b) => b.recent30Days.sessions - a.recent30Days.sessions);
 
-        const formatChange = (value: number, suffix = '') => {
-            if (value === 0) return '—';
+        function getChangeClass(value: number): string {
+            if (value > 0) return 'gym-change-positive';
+            if (value < 0) return 'gym-change-negative';
+            return 'gym-change-neutral';
+        }
+
+        function formatChange(value: number, suffix = ''): { text: string; cls: string } {
+            if (value === 0) return { text: '—', cls: 'gym-change-neutral' };
             const sign = value > 0 ? '+' : '';
-            const color = value > 0 ? '#4CAF50' : value < 0 ? '#F44336' : 'var(--text-muted)';
-            return `<span style="color: ${color}">${sign}${value.toFixed(suffix === 'lbs' || suffix === 'kg' ? 1 : 0)}${suffix}</span>`;
-        };
+            const formatted = suffix === 'lbs' || suffix === 'kg' ? value.toFixed(1) : value.toFixed(0);
+            return { text: `${sign}${formatted}${suffix}`, cls: getChangeClass(value) };
+        }
 
         exercisesWithProgress.forEach(exercise => {
             const row = progressTbody.createEl("tr");
             const recent = exercise.recent30Days;
             const imp = exercise.improvements;
 
-            const lastSession = recent.lastWorkout ? new Date(recent.lastWorkout + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never';
+            const lastSession = recent.lastWorkout
+                ? new Date(recent.lastWorkout + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : 'Never';
 
-            const cells = [
-                { text: exercise.name, html: false },
-                { text: recent.sessions.toString(), html: false },
-                { text: formatChange(imp.maxRepsChange), html: true },
-                { text: formatChange(imp.avgRepsChange, ' reps'), html: true },
-                { text: formatChange(imp.weightChange, 'lbs'), html: true },
-                { text: imp.volumeTrend, html: false },
-                { text: lastSession, html: false }
-            ];
+            row.createEl("td", { text: exercise.name, cls: 'text-left' });
+            row.createEl("td", { text: recent.sessions.toString() });
 
-            cells.forEach((cellData, index) => {
-                const cell = row.createEl("td", {
-                    attr: {
-                        style: index === 0 ?
-                            "padding: 8px 12px; border: 1px solid var(--background-modifier-border); text-align: left;" :
-                            "padding: 8px 12px; border: 1px solid var(--background-modifier-border); text-align: center;"
-                    }
-                });
+            const maxRepsChange = formatChange(imp.maxRepsChange);
+            const maxRepsCell = row.createEl("td");
+            maxRepsCell.createEl("span", { text: maxRepsChange.text, cls: maxRepsChange.cls });
 
-                if (cellData.html) {
-                    // Parse the HTML to extract color and text safely
-                    const match = cellData.text.match(/<span style="color: ([^"]+)">([^<]+)<\/span>/);
-                    if (match) {
-                        const [, color, text] = match;
-                        const span = cell.createEl('span', { text });
-                        span.style.color = color;
-                    } else {
-                        cell.textContent = cellData.text;
-                    }
-                } else {
-                    cell.textContent = cellData.text;
-                }
-            });
+            const avgRepsChange = formatChange(imp.avgRepsChange, ' reps');
+            const avgRepsCell = row.createEl("td");
+            avgRepsCell.createEl("span", { text: avgRepsChange.text, cls: avgRepsChange.cls });
+
+            const weightChange = formatChange(imp.weightChange, 'lbs');
+            const weightCell = row.createEl("td");
+            weightCell.createEl("span", { text: weightChange.text, cls: weightChange.cls });
+
+            row.createEl("td", { text: imp.volumeTrend });
+            row.createEl("td", { text: lastSession });
         });
 
         if (exercisesWithProgress.length === 0) {
             const noDataRow = progressTbody.createEl("tr");
             noDataRow.createEl("td", {
                 text: "No exercise data found for the past 30 days",
-                attr: {
-                    colspan: "7",
-                    style: "padding: 20px; text-align: center; color: var(--text-muted); border: 1px solid var(--background-modifier-border);"
-                }
+                cls: 'no-data-cell',
+                attr: { colspan: "7" }
             });
         }
 
         // Exercise breakdown table
         const exerciseSection = mainContent.createEl("div", { cls: "gym-routine-view-section" });
-        exerciseSection.createEl("h3", {
-            text: "Exercise Breakdown",
-            attr: { style: "color: var(--text-accent); margin-bottom: 15px;" }
-        });
+        exerciseSection.createEl("h3", { text: "Exercise Breakdown", cls: "gym-section-title" });
 
         const tableContainer = exerciseSection.createEl("div", { cls: "gym-routine-table-container" });
         const table = tableContainer.createEl("table", { cls: "gym-routine-table" });
@@ -354,140 +303,52 @@ export const gymStats: Component<['query']> = {
 
         const tbody = table.createEl("tbody");
 
-        // Sort exercises by sessions (most frequent first)
         const sortedExercises = Object.values(exerciseData).sort((a, b) => b.sessions - a.sessions);
 
         sortedExercises.forEach(exercise => {
             const row = tbody.createEl("tr");
 
             const completionRate = Math.round((exercise.completedSets / exercise.totalSets) * 100);
-            const lastDone = exercise.lastPerformed ? new Date(exercise.lastPerformed + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Never";
+            const lastDone = exercise.lastPerformed
+                ? new Date(exercise.lastPerformed + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : "Never";
 
-            const cells = [
-                exercise.name,
-                exercise.sessions.toString(),
-                `${exercise.completedSets}/${exercise.totalSets}`,
-                `${completionRate}%`,
-                exercise.maxReps ? exercise.maxReps.toString() : '-',
-                exercise.avgReps ? exercise.avgReps.toString() : '-',
-                exercise.maxWeight ? exercise.maxWeight.toString() : '-',
-                lastDone
-            ];
-
-            cells.forEach((cellData, index) => {
-                row.createEl("td", {
-                    text: cellData,
-                    attr: {
-                        style: index === 0 ?
-                            "padding: 8px 12px; border: 1px solid var(--background-modifier-border); text-align: left;" :
-                            "padding: 8px 12px; border: 1px solid var(--background-modifier-border); text-align: center;"
-                    }
-                });
-            });
+            row.createEl("td", { text: exercise.name, cls: 'text-left' });
+            row.createEl("td", { text: exercise.sessions.toString() });
+            row.createEl("td", { text: `${exercise.completedSets}/${exercise.totalSets}` });
+            row.createEl("td", { text: `${completionRate}%` });
+            row.createEl("td", { text: exercise.maxReps ? exercise.maxReps.toString() : '-' });
+            row.createEl("td", { text: exercise.avgReps ? exercise.avgReps.toString() : '-' });
+            row.createEl("td", { text: exercise.maxWeight ? exercise.maxWeight.toString() : '-' });
+            row.createEl("td", { text: lastDone });
         });
 
         // Recent activity
         const recentSection = mainContent.createEl("div", { cls: "gym-routine-view-section" });
-        recentSection.createEl("h3", {
-            text: "Recent Activity",
-            attr: { style: "color: var(--text-accent); margin-bottom: 15px;" }
-        });
+        recentSection.createEl("h3", { text: "Recent Activity", cls: "gym-section-title" });
 
         const recentWorkouts = [...workoutFiles]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 5);
 
         recentWorkouts.forEach(workout => {
-            const workoutCard = recentSection.createEl("div", {
-                attr: {
-                    style: `
-                        background: var(--background-primary);
-                        border: 1px solid var(--background-modifier-border);
-                        border-radius: 6px;
-                        padding: 15px;
-                        margin-bottom: 10px;
-                    `
-                }
-            });
+            const workoutCard = recentSection.createEl("div", { cls: "gym-workout-card" });
 
             workoutCard.createEl("div", {
                 text: new Date(workout.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-                attr: {
-                    style: "font-weight: bold; color: var(--text-accent); margin-bottom: 8px;"
-                }
+                cls: "gym-workout-date"
             });
 
             const routineNames = workout.routines ? workout.routines.map(r => r.name).join(', ') : 'Unknown';
-            workoutCard.createEl("div", {
-                text: `Routine: ${routineNames}`,
-                attr: {
-                    style: "color: var(--text-muted); font-size: 14px; margin-bottom: 8px;"
-                }
-            });
+            workoutCard.createEl("div", { text: `Routine: ${routineNames}`, cls: "gym-workout-routine" });
 
             const totalSets = workout.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
             const completedSets = workout.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.completed).length, 0);
 
             workoutCard.createEl("div", {
                 text: `${completedSets}/${totalSets} sets completed (${Math.round((completedSets / totalSets) * 100)}%)`,
-                attr: {
-                    style: "color: var(--text-normal); font-size: 14px;"
-                }
+                cls: "gym-workout-sets"
             });
         });
     }
 };
-
-// Types
-interface WorkoutSet {
-    setNumber: number;
-    targetReps: string;
-    targetWeight: string;
-    actualReps: string;
-    actualWeight: string;
-    completed: boolean;
-}
-
-interface WorkoutExercise {
-    name: string;
-    routine: string;
-    sets: WorkoutSet[];
-}
-
-interface WorkoutFile {
-    date: string;
-    exercises: WorkoutExercise[];
-    routines?: { name: string }[];
-}
-
-interface WeightHistory {
-    weight: number;
-    date: Date;
-    reps: number;
-}
-
-interface Recent30Days {
-    sessions: number;
-    completedSets: number;
-    totalSets: number;
-    maxReps: number;
-    maxWeight: number;
-    avgReps: number;
-    repHistory: number[];
-    weightHistory: WeightHistory[];
-    firstWorkout: string | null;
-    lastWorkout: string | null;
-}
-
-interface ExerciseData {
-    name: string;
-    totalSets: number;
-    completedSets: number;
-    sessions: number;
-    lastPerformed: string | null;
-    maxReps: number;
-    maxWeight: number;
-    avgReps: number;
-    repHistory: number[];
-    recent30Days: Recent30Days;
-}

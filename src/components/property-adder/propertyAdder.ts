@@ -21,7 +21,6 @@ const renderPropertyAdder = async (
         return;
     }
 
-    // Validate action type
     const validActions = ['push', 'increment', 'set', 'toggle', 'pushUnique'];
     if (!validActions.includes(action)) {
         el.textContent = `Error: Invalid action '${action}'. Valid actions: ${validActions.join(', ')}`;
