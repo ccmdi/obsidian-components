@@ -73,7 +73,7 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                     currentRotation = 0;
                     spinIcon(0, 500); // Unwind back to start
                     const t2 = setTimeout(() => {
-                        fetchAndRender();
+                        instance.data.triggerRefresh?.();
                     }, 500);
                     spinTimeouts.push(t2);
                 }, 500);
@@ -201,7 +201,45 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         await fetchAndRender();
 
         // Auto-refresh every 4 minutes
-        ComponentInstance.createUpdateLoop(instance, fetchAndRender, 240000);
+        ComponentInstance.createUpdateLoop(instance, instance.data.triggerRefresh, 240000);
+    },
+    renderRefresh: async (args, el, ctx, app, instance) => {
+        const fetchUsage = async (): Promise<AnthropicUsageData> => {
+            const response = await requestUrl({
+                url: `https://claude.ai/api/organizations/${args.organizationId}/usage`,
+                headers: {
+                    'Cookie': `sessionKey=${args.sessionKey}`
+                }
+            });
+            return JSON.parse(response.text);
+        };
+
+        try {
+            const data = await fetchUsage();
+
+            const valueEl = el.querySelector('.anthropic-usage-value') as HTMLElement;
+            if (valueEl) valueEl.textContent = `${data.five_hour.utilization}%`;
+
+            const barFill = el.querySelector('.anthropic-usage-bar-fill') as HTMLElement;
+            if (barFill) {
+                barFill.style.transition = 'width 300ms ease-out';
+                barFill.style.width = `${data.five_hour.utilization}%`;
+            }
+
+            const resetEl = el.querySelector('.anthropic-usage-reset') as HTMLElement;
+            if (resetEl && data.five_hour.resets_at && window.moment(data.five_hour.resets_at).isValid()) {
+                const resetMoment = window.moment(data.five_hour.resets_at);
+                const resetTime = resetMoment.format('h:mm A');
+                let resetText = `resets ${resetTime}`;
+                if (parseBoolean(args.showRelativeTime)) {
+                    resetText += ` (${resetMoment.fromNow(true)})`;
+                }
+                resetEl.textContent = resetText;
+            }
+        } catch {
+            // On error, fall back to full re-render
+            instance.data.triggerRefresh?.();
+        }
     },
     settings: {}
 };
