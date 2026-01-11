@@ -18,12 +18,10 @@ export class ComponentSelectorModal extends Modal {
         const { contentEl, titleEl } = this;
         contentEl.empty();
 
-        // Set the title in the modal header
         titleEl.setText(this.mode === 'sidebar' ? 'Open Component in Sidebar' : 'Add Component Reference');
 
-        // Get enabled components
         const enabledComponents = COMPONENTS.filter(component =>
-            (this.plugin.settings.componentStates[component.keyName] ?? false) &&
+            Component.Filters.enabled(component.keyName) &&
             (component.isMountable || component.keyName === 'widget-space')
         ).sort((a, b) => (a.name || a.keyName).localeCompare(b.name || b.keyName));
 
@@ -329,7 +327,7 @@ export class PlaceComponentModal extends Modal {
         titleEl.setText('Place Component');
 
         const enabledComponents = COMPONENTS.filter(component =>
-            this.plugin.settings.componentStates[component.keyName] ?? false
+            Component.Filters.enabled(component.keyName)
         ).sort((a, b) => (a.name || a.keyName).localeCompare(b.name || b.keyName));
 
         enabledComponents.forEach(component => {

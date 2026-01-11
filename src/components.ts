@@ -582,6 +582,10 @@ export namespace Component {
         return { instance, isNew: true };
     }
 
+    export namespace Filters {
+        export const enabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
+    }
+
     export async function render(
         component: Component<readonly string[]>,
         source: string,

@@ -384,13 +384,12 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             });
         };
 
-        const isComponentEnabled = (key: string) => ComponentsPlugin.instance.settings.componentStates[key] ?? false;
-        const getAvailableComponents = () => COMPONENTS.filter(c => c.isMountable && isComponentEnabled(c.keyName));
+        const getAvailableComponents = () => COMPONENTS.filter(c => c.isMountable && Component.Filters.enabled(c.keyName));
 
         // Preserve disabled widgets upfront so they survive saves
         const disabledWidgets = layout.widgets.filter(cfg => {
             const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-            return comp && !isComponentEnabled(cfg.componentKey);
+            return comp && !Component.Filters.enabled(cfg.componentKey);
         });
 
         container.addEventListener('dblclick', (e) => {
@@ -448,7 +447,7 @@ export const widgetSpace: Component<['layout', 'columns']> = {
         const enabledConfigs = layout.widgets
             .filter(cfg => {
                 const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-                return comp && isComponentEnabled(cfg.componentKey);
+                return comp && Component.Filters.enabled(cfg.componentKey);
             })
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 
