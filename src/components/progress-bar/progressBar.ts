@@ -68,12 +68,13 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		progress = Math.max(0, Math.min(100, progress));
 		const showLabel = args.showLabel === 'true';
 
-		const container = el.createDiv({ cls: 'progress-bar-container' });
+		const container = el.createDiv();
 		container.style.setProperty('--pb-height', `${args.height}px`);
 		container.style.setProperty('--pb-bg-color', args.backgroundColor);
 		container.style.setProperty('--pb-bar-color', args.barColor);
 		container.style.setProperty('--pb-text-color', args.textColor);
 		container.style.setProperty('--pb-border-radius', `${args.borderRadius}px`);
+		container.addClass('progress-bar-container');
 
 		const progressFill = container.createDiv({ cls: 'progress-bar-fill' });
 		progressFill.style.width = `${progress}%`;

@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile, MarkdownRenderChild, CachedMetadata, WorkspaceLeaf, MarkdownView, TAbstractFile } from "obsidian";
 import { parseArguments, validateArguments, resolveSpecialVariables, parseArgsAliases, matchesQuery } from "utils";
 import { applyCssFromArgs } from "utils";
 import { evaluateArgs, isTruthy } from "expression";
@@ -259,6 +259,7 @@ export type RefreshStrategyOptions =
     | 'anyMetadataChanged'
     | 'queryMetadataChanged'
     | 'leafChanged'
+    | 'fileRenamed'
     | 'daily'
     | 'hourly'
     | { type: 'timeElapsed'; interval: number }
@@ -451,6 +452,21 @@ export namespace Component {
             app.metadataCache.on('changed', handler);
             ComponentInstance.addCleanup(instance, () => app.metadataCache.off('changed', handler));
         }
+        else if (refresh === 'fileRenamed') {
+            const handler = (file: TAbstractFile, oldPath: string) => {
+                if (!(file instanceof TFile)) return;
+                if (oldPath !== instance.element.dataset.componentSource) return;
+
+                instance.element.dataset.componentSource = file.path;
+                instance.data._watchedFilePath = file.path;
+                
+                ctx.sourcePath = file.path;
+
+                instance.data.triggerRefresh();
+            };
+            app.vault.on('rename', handler);
+            ComponentInstance.addCleanup(instance, () => app.vault.off('rename', handler));
+        }
         else if (refresh === 'leafChanged') {
             const isInSidebar = instance.element.closest('.in-sidebar') !== null;
             if (isInSidebar) {
@@ -569,7 +585,8 @@ export namespace Component {
         }
 
         // special variables mandate strategies
-        if (options.usesFm || options.usesFile) {
+        if (options.usesFm || options.usesFile || options.usesContextDependentSpecialVariable) {
+            registerStrategy('fileRenamed');
             registerStrategy('metadataChanged');
         }
         if ((options.usesFm || options.usesFile || options.usesContextDependentSpecialVariable) && options.isInSidebarContext) {

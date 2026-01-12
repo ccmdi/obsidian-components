@@ -1,5 +1,5 @@
 export const progressBarStyles = /*css*/`
-.progress-bar-container {
+.component .progress-bar-container {
 	position: relative;
 	width: 100%;
 	height: var(--pb-height, 30px);
@@ -9,7 +9,7 @@ export const progressBarStyles = /*css*/`
 	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.progress-bar-fill {
+.component .progress-bar-fill {
 	position: absolute;
 	left: 0;
 	top: 0;
@@ -18,7 +18,7 @@ export const progressBarStyles = /*css*/`
 	background-color: var(--pb-bar-color, var(--color-accent));
 }
 
-.progress-bar-label {
+.component .progress-bar-label {
 	position: absolute;
 	width: 100%;
 	height: 100%;
@@ -29,7 +29,7 @@ export const progressBarStyles = /*css*/`
 	user-select: none;
 }
 
-.progress-bar-label span {
+.component .progress-bar-label span {
 	color: var(--pb-text-color, white);
 	font-weight: bold;
 	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);

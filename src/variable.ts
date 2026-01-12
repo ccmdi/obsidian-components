@@ -1,5 +1,4 @@
 import { MarkdownPostProcessorContext } from "obsidian";
-import { escapeForSingleQuotes } from "utils";
 
 const formatDate = (date: Date) => {
     const year = date.getFullYear();
@@ -49,12 +48,7 @@ export namespace Variable {
     export function replaceAll(value: string, ctx?: MarkdownPostProcessorContext): string {
         for (const variable of [...NOTE_CONTEXT_VARIABLES, ...TIME_VARIABLES]) {
             const replacement = variable.resolve({}, ctx);
-            if (value === variable.name) {
-                value = replacement;
-            } else if (value.includes(variable.name)) {
-                const quoted = `'${escapeForSingleQuotes(replacement)}'`;
-                value = value.replace(new RegExp(variable.name, 'g'), quoted);
-            }
+            value = value.replace(new RegExp(variable.name, 'g'), replacement);
         }
         return value;
     }
