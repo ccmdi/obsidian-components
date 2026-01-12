@@ -68,7 +68,6 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		progress = Math.max(0, Math.min(100, progress));
 		const showLabel = args.showLabel === 'true';
 
-		// Create without class, set CSS vars first to prevent flash
 		const container = el.createDiv();
 		container.style.setProperty('--pb-height', `${args.height}px`);
 		container.style.setProperty('--pb-bg-color', args.backgroundColor);
