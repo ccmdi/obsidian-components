@@ -35,6 +35,7 @@ llm.json
 *.md
 !README.md
 !TESTING.md
+scripts/*.ps1
 
 images/*
 !images/preview.png
