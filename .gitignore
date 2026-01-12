@@ -35,6 +35,10 @@ llm.json
 *.md
 !README.md
 !TESTING.md
+!CLAUDE.md
+!docs/ARCHITECTURE.md
+!docs/COMPONENT_IDEAS.md
+!docs/TODO.md
 
 images/*
 !images/preview.png
