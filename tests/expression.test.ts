@@ -244,5 +244,55 @@ test('single quotes outer, double inner', () => expect(evaluate('if(contains("te
 test('expression with single quoted strings', () => expect(evaluate("if(contains('hello', 'ell'), 'found', 'nope')")).toBe('found'));
 test('mixed quotes in nested calls', () => expect(evaluate("if(contains('2025-01-01', \"2025\"), 'match', 'no')")).toBe('match'));
 
+// --- Date-like String Handling (The Subtraction Bug) ---
+console.log('\nDate-like String Handling:');
+test('quoted date string is NOT arithmetic', () => expect(evaluate('"2026-01-12"')).toBe('2026-01-12'));
+test('unquoted date-like IS arithmetic', () => expect(evaluate('2026-01-12')).toBe(2013)); // 2026-1-12
+test('single quoted date string is NOT arithmetic', () => expect(evaluate("'2025-12-25'")).toBe('2025-12-25'));
+test('date in if() condition (quoted)', () => expect(evaluate('if("2026-01-12" == "2026-01-12", "yes", "no")')).toBe('yes'));
+test('date comparison works with quotes', () => expect(evaluate('"2026-01-12" == "2026-01-12"')).toBe(true));
+
+// --- Quote Extraction (Core Bug Fix) ---
+console.log('\nQuote Extraction:');
+test('double quotes extract inner content', () => expect(evaluate('"hello"')).toBe('hello'));
+test('single quotes extract inner content', () => expect(evaluate("'hello'")).toBe('hello'));
+test('double quotes containing single quotes', () => expect(evaluate(`"say 'hi'"`)).toBe("say 'hi'"));
+test('single quotes containing double quotes', () => expect(evaluate(`'say "hi"'`)).toBe('say "hi"'));
+test('empty double quotes', () => expect(evaluate('""')).toBe(''));
+test('empty single quotes', () => expect(evaluate("''")).toBe(''));
+test('quotes with special chars', () => expect(evaluate('"path/to/file.md"')).toBe('path/to/file.md'));
+test('quotes with colons', () => expect(evaluate('"14:30:00"')).toBe('14:30:00'));
+
+// --- evaluateArgs Quote Handling ---
+console.log('\nevaluateArgs Quote Handling:');
+test('evaluateArgs strips double quotes', () => {
+    const result = evaluateArgs(
+        { value: '"2026-01-12"' },
+        { frontmatter: {} }
+    );
+    expect(result.args.value).toBe('2026-01-12');
+});
+test('evaluateArgs strips single quotes', () => {
+    const result = evaluateArgs(
+        { value: "'2026-01-12'" },
+        { frontmatter: {} }
+    );
+    expect(result.args.value).toBe('2026-01-12');
+});
+test('evaluateArgs unquoted date becomes number', () => {
+    const result = evaluateArgs(
+        { value: '2026-01-12' },
+        { frontmatter: {} }
+    );
+    expect(result.args.value).toBe('2013');
+});
+test('evaluateArgs preserves unquoted paths', () => {
+    const result = evaluateArgs(
+        { path: '/daily/notes' },
+        { frontmatter: {} }
+    );
+    expect(result.args.path).toBe('/daily/notes');
+});
+
 // --- Summary ---
 exitWithStatus();

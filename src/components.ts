@@ -569,7 +569,7 @@ export namespace Component {
         }
 
         // special variables mandate strategies
-        if (options.usesFm || options.usesFile) {
+        if (options.usesFm || options.usesFile || options.usesContextDependentSpecialVariable) {
             registerStrategy('metadataChanged');
         }
         if ((options.usesFm || options.usesFile || options.usesContextDependentSpecialVariable) && options.isInSidebarContext) {

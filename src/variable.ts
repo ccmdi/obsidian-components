@@ -1,5 +1,4 @@
 import { MarkdownPostProcessorContext } from "obsidian";
-import { escapeForSingleQuotes } from "utils";
 
 const formatDate = (date: Date) => {
     const year = date.getFullYear();
