@@ -10,7 +10,7 @@ interface AnthropicUsageData {
     };
 }
 
-export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRelativeTime']> = {
+export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRelativeTime', 'label']> = {
     name: 'Anthropic Usage',
     keyName: 'anthropic-usage',
     icon: 'brain',
@@ -26,6 +26,11 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         showRelativeTime: {
             description: 'Show relative time until reset (e.g. "13 minutes")',
             default: 'false',
+            required: false
+        },
+        label: {
+            description: 'Label to display',
+            default: '',
             required: false
         }
     },
@@ -110,7 +115,7 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
             const info = barWrapper.createEl('div', { cls: 'anthropic-usage-info' });
             info.createEl('div', {
                 cls: 'anthropic-usage-label',
-                text: 'Usage'
+                text: 'Usage' + (args.label ? ` (${args.label})` : '')
             });
 
             // Only show reset time if resets_at is a valid date
