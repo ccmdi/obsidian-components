@@ -156,7 +156,8 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
             const response = await requestUrl({
                 url: `https://claude.ai/api/organizations/${args.organizationId}/usage`,
                 headers: {
-                    'Cookie': `sessionKey=${args.sessionKey}`
+                    'Cookie': `sessionKey=${args.sessionKey}`,
+                    'User-Agent': navigator.userAgent
                 }
             });
             return JSON.parse(response.text);
@@ -208,7 +209,8 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
             const response = await requestUrl({
                 url: `https://claude.ai/api/organizations/${args.organizationId}/usage`,
                 headers: {
-                    'Cookie': `sessionKey=${args.sessionKey}`
+                    'Cookie': `sessionKey=${args.sessionKey}`,
+                    'User-Agent': navigator.userAgent
                 }
             });
             return JSON.parse(response.text);
