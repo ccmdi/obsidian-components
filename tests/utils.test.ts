@@ -1,5 +1,6 @@
 // utils.test.ts - Tests for utility functions
 
+import './mocks/dom'; // Mock browser APIs
 import { test, expect, expectThrows, runTests, exitWithStatus } from './test-utils';
 import {
     parseArguments,
@@ -511,6 +512,168 @@ test('complex query with property and tag', () => {
         fakeCache({ frontmatter: { status: 'active', priority: 5 }, tags: ['#work'] }),
         '#work AND [status=active] AND [priority>3]'
     )).toBe(true);
+});
+
+// --- formatDate ---
+console.log('\nformatDate:');
+import { formatDate } from '../src/utils';
+
+test('formatDate with YYYY-MM-DD', () => {
+    const date = new Date('2025-03-15T12:00:00Z');
+    expect(formatDate(date, 'YYYY-MM-DD')).toBe('2025-03-15');
+});
+
+test('formatDate with default (no format)', () => {
+    const date = new Date('2025-03-15T12:00:00Z');
+    const result = formatDate(date, '');
+    expect(result).toBe('2025-03-15');
+});
+
+test('formatDate with MMMM Do YYYY', () => {
+    const date = new Date('2025-03-15T12:00:00Z');
+    const result = formatDate(date, 'MMMM Do YYYY');
+    expect(result).toMatch(/March/);
+});
+
+// --- median ---
+console.log('\nmedian:');
+import { median } from '../src/utils';
+
+test('median of odd-length array', () => {
+    expect(median([1, 3, 5, 7, 9])).toBe(5);
+});
+
+test('median of even-length array', () => {
+    expect(median([1, 2, 3, 4])).toBe(2.5);
+});
+
+test('median of single element', () => {
+    expect(median([42])).toBe(42);
+});
+
+test('median of empty array', () => {
+    expect(median([])).toBe(0);
+});
+
+test('median of unsorted array', () => {
+    expect(median([5, 1, 9, 3, 7])).toBe(5);
+});
+
+test('median with negative numbers', () => {
+    expect(median([-5, -1, 0, 1, 5])).toBe(0);
+});
+
+// --- renderExternalLink ---
+console.log('\nrenderExternalLink:');
+import { renderExternalLink } from '../src/utils';
+
+test('renders markdown link', () => {
+    const result = renderExternalLink('[Google](https://google.com)');
+    expect(result).toBe('<a href="https://google.com" target="_blank">Google</a>');
+});
+
+test('renders multiple links', () => {
+    const result = renderExternalLink('Check [Google](https://google.com) and [GitHub](https://github.com)');
+    expect(result).toContain('<a href="https://google.com" target="_blank">Google</a>');
+    expect(result).toContain('<a href="https://github.com" target="_blank">GitHub</a>');
+});
+
+test('preserves text without links', () => {
+    const result = renderExternalLink('Just plain text');
+    expect(result).toBe('Just plain text');
+});
+
+test('handles empty string', () => {
+    const result = renderExternalLink('');
+    expect(result).toBe('');
+});
+
+// --- useTargetNoteProperty ---
+console.log('\nuseTargetNoteProperty:');
+import { useTargetNoteProperty } from '../src/utils';
+
+test('accesses note.frontmatter.property', () => {
+    const cache = { frontmatter: { title: 'Test Note' } };
+    expect(useTargetNoteProperty(cache, 'note.frontmatter.title')).toBe('Test Note');
+});
+
+test('accesses note.tags', () => {
+    const cache = { tags: [{ tag: '#project' }] };
+    expect(useTargetNoteProperty(cache, 'note.tags')).toEqual([{ tag: '#project' }]);
+});
+
+test('returns undefined for non-note prefix', () => {
+    const cache = { frontmatter: { title: 'Test' } };
+    expect(useTargetNoteProperty(cache, 'frontmatter.title')).toBe(undefined);
+});
+
+test('returns undefined for null cache', () => {
+    expect(useTargetNoteProperty(null, 'note.frontmatter.title')).toBe(undefined);
+});
+
+test('returns undefined for missing property', () => {
+    const cache = { frontmatter: {} };
+    expect(useTargetNoteProperty(cache, 'note.frontmatter.missing')).toBe(undefined);
+});
+
+// --- applyCssFromArgs ---
+console.log('\napplyCssFromArgs:');
+import { applyCssFromArgs } from '../src/utils';
+
+test('applies CSS properties', () => {
+    const element = document.createElement('div');
+    applyCssFromArgs(element, { color: 'red', 'font-size': '16px' });
+    expect(element.style.color).toBe('red');
+    expect(element.style.fontSize).toBe('16px');
+});
+
+test('adds classes from class property', () => {
+    const element = document.createElement('div');
+    applyCssFromArgs(element, { class: 'class1 class2' });
+    expect(element.hasClass('class1')).toBe(true);
+    expect(element.hasClass('class2')).toBe(true);
+});
+
+test('adds classes from className property', () => {
+    const element = document.createElement('div');
+    applyCssFromArgs(element, { className: 'myclass' });
+    expect(element.hasClass('myclass')).toBe(true);
+});
+
+test('skips handled keys', () => {
+    const element = document.createElement('div');
+    const handledKeys = new Set(['skipped']);
+    applyCssFromArgs(element, { color: 'blue', skipped: 'ignored' }, handledKeys);
+    expect(element.style.color).toBe('blue');
+    expect(element.style.getPropertyValue('skipped')).toBe('');
+});
+
+test('throws on invalid CSS property', () => {
+    const element = document.createElement('div');
+    expectThrows(
+        () => applyCssFromArgs(element, { 'invalid-prop-xyz': 'value' }),
+        'invalid or not supported'
+    );
+});
+
+// --- resolveSpecialVariables ---
+console.log('\nresolveSpecialVariables:');
+import { resolveSpecialVariables } from '../src/utils';
+
+test('resolves path with ../', () => {
+    const result = resolveSpecialVariables({ path: 'folder/../other' });
+    expect(result.path).toBe('other');
+});
+
+test('resolves path with ./', () => {
+    const result = resolveSpecialVariables({ path: './folder/file' });
+    expect(result.path).toBe('folder/file');
+});
+
+test('preserves values without path navigation', () => {
+    const result = resolveSpecialVariables({ name: 'test', value: '123' });
+    expect(result.name).toBe('test');
+    expect(result.value).toBe('123');
 });
 
 // --- Summary ---

@@ -294,5 +294,36 @@ test('evaluateArgs preserves unquoted paths', () => {
     expect(result.args.path).toBe('/daily/notes');
 });
 
+// --- Length Function ---
+console.log('\nLength Function:');
+test('length of string', () => expect(evaluate('length("hello")')).toBe(5));
+test('length of empty string', () => expect(evaluate('length("")')).toBe(0));
+test('length of array', () => expect(evaluate('length(fm.items)', { items: [1, 2, 3, 4] })).toBe(4));
+test('length of empty array', () => expect(evaluate('length(fm.items)', { items: [] })).toBe(0));
+test('length of non-string/array', () => expect(evaluate('length(fm.value)', { value: 123 })).toBe(0));
+test('length in expression', () => expect(evaluate('length("test") > 3')).toBe(true));
+test('length in if()', () => expect(evaluate('if(length(fm.name) > 0, "has name", "no name")', { name: 'Alice' })).toBe('has name'));
+
+// --- Nullish Coalescing ---
+console.log('\nNullish Coalescing (??):');
+test('?? with null left side', () => expect(evaluate('fm.val ?? "default"', { val: null })).toBe('default'));
+test('?? with undefined left side', () => expect(evaluate('fm.missing ?? "default"', {})).toBe('default'));
+test('?? with 0 left side (keeps 0)', () => expect(evaluate('fm.val ?? "default"', { val: 0 })).toBe(0));
+test('?? with empty string left side (keeps empty)', () => expect(evaluate('fm.val ?? "default"', { val: '' })).toBe(''));
+test('?? with false left side (keeps false)', () => expect(evaluate('fm.val ?? "default"', { val: false })).toBe(false));
+test('?? with truthy left side', () => expect(evaluate('fm.val ?? "default"', { val: 'exists' })).toBe('exists'));
+test('?? chain', () => expect(evaluate('fm.a ?? fm.b ?? fm.c ?? "none"', { c: 'found' })).toBe('found'));
+test('?? vs ||', () => {
+    // ?? only falls back on null/undefined, || falls back on any falsy
+    expect(evaluate('fm.val || "default"', { val: 0 })).toBe('default'); // || treats 0 as falsy
+    expect(evaluate('fm.val ?? "default"', { val: 0 })).toBe(0); // ?? keeps 0
+});
+
+// --- Array Index Access in Frontmatter ---
+console.log('\nArray Index Access:');
+test('fm.array returns array', () => expect(evaluate('fm.items', { items: ['a', 'b', 'c'] })).toEqual(['a', 'b', 'c']));
+// Note: Array index access like fm.items[0] is not directly supported in expression syntax
+// It would need to be accessed via usePropertyAccess in utils.ts
+
 // --- Summary ---
 exitWithStatus();

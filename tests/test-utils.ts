@@ -58,9 +58,41 @@ export function expect<T>(actual: T) {
                 throw new Error(`Expected null, got ${JSON.stringify(actual)}`);
             }
         },
-        toContain(expected: string) {
-            if (typeof actual !== 'string' || !actual.includes(expected)) {
-                throw new Error(`Expected "${actual}" to contain "${expected}"`);
+        toContain(expected: any) {
+            if (typeof actual === 'string' && typeof expected === 'string') {
+                if (!actual.includes(expected)) {
+                    throw new Error(`Expected "${actual}" to contain "${expected}"`);
+                }
+            } else if (Array.isArray(actual)) {
+                if (!actual.includes(expected)) {
+                    throw new Error(`Expected ${JSON.stringify(actual)} to contain ${JSON.stringify(expected)}`);
+                }
+            } else {
+                throw new Error(`toContain expects string or array, got ${typeof actual}`);
+            }
+        },
+        toMatch(pattern: RegExp) {
+            if (typeof actual !== 'string') {
+                throw new Error(`toMatch expects string, got ${typeof actual}`);
+            }
+            if (!pattern.test(actual)) {
+                throw new Error(`Expected "${actual}" to match ${pattern}`);
+            }
+        },
+        toBeGreaterThan(expected: number) {
+            if (typeof actual !== 'number' || typeof expected !== 'number') {
+                throw new Error(`toBeGreaterThan expects numbers`);
+            }
+            if (!(actual > expected)) {
+                throw new Error(`Expected ${actual} to be greater than ${expected}`);
+            }
+        },
+        toBeLessThan(expected: number) {
+            if (typeof actual !== 'number' || typeof expected !== 'number') {
+                throw new Error(`toBeLessThan expects numbers`);
+            }
+            if (!(actual < expected)) {
+                throw new Error(`Expected ${actual} to be less than ${expected}`);
             }
         },
         toThrow(expectedMessage?: string) {
