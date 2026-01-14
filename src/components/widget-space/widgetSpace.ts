@@ -381,10 +381,17 @@ export const widgetSpace: Component<['layout', 'columns']> = {
             });
         };
 
-        const getAvailableComponents = () => COMPONENTS.filter(c => c.isMountable && Component.Filters.enabled(c.keyName));
+        const getAvailableComponents = () => {
+            // In sidebar context, show all components including disabled ones
+            if (isInSidebar) {
+                return COMPONENTS.filter(c => c.isMountable);
+            }
+            // Outside sidebar, only show enabled components
+            return COMPONENTS.filter(c => c.isMountable && Component.Filters.enabled(c.keyName));
+        };
 
-        // Preserve disabled widgets upfront so they survive saves
-        const disabledWidgets = layout.widgets.filter(cfg => {
+        // Preserve disabled widgets upfront so they survive saves (only outside sidebar)
+        const disabledWidgets = isInSidebar ? [] : layout.widgets.filter(cfg => {
             const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
             return comp && !Component.Filters.enabled(cfg.componentKey);
         });
@@ -440,11 +447,13 @@ export const widgetSpace: Component<['layout', 'columns']> = {
 
         initMuuri();
 
-        // Load only enabled widgets
+        // Load widgets based on context
+        // In sidebar, load all widgets; outside sidebar, load only enabled widgets
         const enabledConfigs = layout.widgets
             .filter(cfg => {
                 const comp = COMPONENTS.find(c => c.keyName === cfg.componentKey);
-                return comp && Component.Filters.enabled(cfg.componentKey);
+                if (!comp) return false;
+                return isInSidebar || Component.Filters.enabled(cfg.componentKey);
             })
             .sort((a, b) => (a.order || 0) - (b.order || 0));
 
