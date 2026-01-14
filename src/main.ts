@@ -1,5 +1,3 @@
-// main.ts
-
 import { Plugin, Editor, Menu, TFile, MarkdownView, Notice } from 'obsidian';
 import { ComponentsSettings, DEFAULT_SETTINGS } from 'settings';
 import { COMPONENTS, Component, componentInstances } from 'components';
@@ -47,7 +45,6 @@ export default class ComponentsPlugin extends Plugin {
             }
         });
 
-        // Add sidebar icon for widget-space
         this.addRibbonIcon('layout-grid', 'Open Widget Space', async () => {
             // Check if widget-space view already exists
             const existingLeaf = this.app.workspace.getLeavesOfType(COMPONENT_SIDEBAR_VIEW_TYPE).find(leaf => {
@@ -55,10 +52,8 @@ export default class ComponentsPlugin extends Plugin {
             });
 
             if (existingLeaf) {
-                // If it exists, just reveal it
                 this.app.workspace.revealLeaf(existingLeaf);
             } else {
-                // Create new leaf with widget-space
                 const leaf = this.app.workspace.getRightLeaf(false);
                 await leaf?.setViewState({
                     type: COMPONENT_SIDEBAR_VIEW_TYPE,
@@ -177,7 +172,6 @@ export default class ComponentsPlugin extends Plugin {
         // Editing mode: hook into Obsidian's editor-menu event  
         this.registerEvent(
             this.app.workspace.on('editor-menu', (menu: Menu, editor: Editor, view: MarkdownView) => {
-                // Only add edit option if we clicked on a rendered component
                 if (!lastClickedComponent) return;
 
                 const component = COMPONENTS.find(c => 
@@ -228,15 +222,12 @@ export default class ComponentsPlugin extends Plugin {
         const content = await this.app.vault.read(file);
         const lines = content.split('\n');
 
-        // Find the code block by looking for the component key
-        // We need to find the code block that contains our current args
         let blockStart = -1;
         let blockEnd = -1;
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (line.trim() === `\`\`\`${componentKey}`) {
-                // Found potential start, look for end
                 blockStart = i;
                 for (let j = i + 1; j < lines.length; j++) {
                     if (lines[j].trim() === '```') {
@@ -244,9 +235,7 @@ export default class ComponentsPlugin extends Plugin {
                         break;
                     }
                 }
-                // Check if this block matches our current args by comparing content
                 if (blockEnd > blockStart) {
-                    // For now, use first matching block (could be improved with unique IDs)
                     break;
                 }
             }
@@ -254,14 +243,12 @@ export default class ComponentsPlugin extends Plugin {
 
         if (blockStart === -1 || blockEnd === -1) return;
 
-        // Build new code block content
         const argsLines = argsToSource(newArgs, (entries) => 
             entries.filter(([, value]) => value && value.trim() !== '')
         );
 
         const newCodeBlock = `\`\`\`${componentKey}\n${argsLines}\n\`\`\``;
 
-        // Replace the old code block
         const newLines = [
             ...lines.slice(0, blockStart),
             newCodeBlock,
@@ -290,7 +277,6 @@ export default class ComponentsPlugin extends Plugin {
             this.globalStyleElement.remove();
         }
 
-        // Cleanup all component instances
         Array.from(componentInstances.values()).forEach(instance => instance.destroy());
     }
 
@@ -301,10 +287,8 @@ export default class ComponentsPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
 
-        // Refresh renders
         this.registerProcessors();
 
-        // Toggle autocomplete based on settings
         if (this.settings.enableAutoComplete && !this.autoComplete) {
             this.autoComplete = new ComponentAutoComplete(this);
             this.registerEditorSuggest(this.autoComplete);
@@ -313,8 +297,6 @@ export default class ComponentsPlugin extends Plugin {
 
     registerProcessors() {
         COMPONENTS.forEach(component => {
-
-            // Register main component keyName
             const registerProcessor = (processorKey: string) => {
                 if (!this.registeredProcessors.has(processorKey)) {
                     this.registerMarkdownCodeBlockProcessor(
@@ -340,10 +322,8 @@ export default class ComponentsPlugin extends Plugin {
                 }
             };
 
-            // Register main keyName
             registerProcessor(component.keyName);
 
-            // Register aliases
             if (component.aliases) {
                 component.aliases.forEach(alias => {
                     registerProcessor(alias);
@@ -365,7 +345,6 @@ export default class ComponentsPlugin extends Plugin {
                     const targetComponent = COMPONENTS.find(c => c.keyName === targetComponentKey);
 
                     if (targetComponent) {
-                        // Merge: Local args override Reference args, Reference args override Defaults
                         const mergedArgs = { ...refArgs, ...args };
                         delete mergedArgs['ref'];
                         delete mergedArgs['component'];
@@ -373,7 +352,6 @@ export default class ComponentsPlugin extends Plugin {
                         el.dataset.componentRef = refId;
                         await Component.render(targetComponent, argsToSource(mergedArgs), el, ctx, this.app, this.settings.componentSettings[targetComponent.keyName] || {});
 
-                        // Override triggerRefresh to re-fetch ref definition
                         const instanceId = el.dataset.componentId;
                         const instance = instanceId ? componentInstances.get(instanceId) : null;
                         if (instance) {
@@ -403,7 +381,6 @@ export default class ComponentsPlugin extends Plugin {
             this.registeredProcessors.add('component');
         }
 
-        // Register ojs (JavaScript execution) processor if enabled
         if (this.settings.enableJsExecution && !this.registeredProcessors.has('ojs')) {
             injectOjsStyles();
             this.registerMarkdownCodeBlockProcessor('ojs', async (source, el, ctx) => {

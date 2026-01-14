@@ -1,5 +1,3 @@
-// expression.ts - DSL for dynamic component argument values
-
 export interface ExpressionContext {
     frontmatter: Record<string, unknown>;
 }
@@ -18,8 +16,6 @@ interface Token {
     raw: string;
 }
 
-// ============ TOKENIZER ============
-
 function tokenize(input: string): Token[] {
     const tokens: Token[] = [];
     let i = 0;
@@ -34,13 +30,11 @@ function tokenize(input: string): Token[] {
     while (!isAtEnd()) {
         const c = peek();
 
-        // Whitespace
         if (c === ' ' || c === '\t' || c === '\r' || c === '\n') {
             advance();
             continue;
         }
 
-        // Two-character operators
         if (c === '=' && peek(1) === '=') {
             tokens.push({ type: 'EQ', value: '==', raw: '==' });
             i += 2;
@@ -77,7 +71,6 @@ function tokenize(input: string): Token[] {
             continue;
         }
 
-        // Single-character operators
         if (c === '>') { tokens.push({ type: 'GT', value: '>', raw: '>' }); advance(); continue; }
         if (c === '<') { tokens.push({ type: 'LT', value: '<', raw: '<' }); advance(); continue; }
         if (c === '!') { tokens.push({ type: 'NOT', value: '!', raw: '!' }); advance(); continue; }
@@ -89,14 +82,13 @@ function tokenize(input: string): Token[] {
         if (c === ')') { tokens.push({ type: 'RPAREN', value: ')', raw: ')' }); advance(); continue; }
         if (c === ',') { tokens.push({ type: 'COMMA', value: ',', raw: ',' }); advance(); continue; }
 
-        // String literals
         if (c === '"' || c === "'") {
             const quote = c;
-            advance(); // consume opening quote
+            advance();
             let str = '';
             while (!isAtEnd() && peek() !== quote) {
                 if (peek() === '\\' && peek(1)) {
-                    advance(); // consume backslash
+                    advance();
                     const escaped = advance();
                     if (escaped === 'n') str += '\n';
                     else if (escaped === 't') str += '\t';
@@ -106,12 +98,11 @@ function tokenize(input: string): Token[] {
                     str += advance();
                 }
             }
-            if (!isAtEnd()) advance(); // consume closing quote
+            if (!isAtEnd()) advance();
             tokens.push({ type: 'STRING', value: str, raw: `${quote}${str}${quote}` });
             continue;
         }
 
-        // Numbers
         if (isDigit(c) || (c === '.' && isDigit(peek(1)))) {
             let num = '';
             let seenDot = false;
@@ -123,14 +114,12 @@ function tokenize(input: string): Token[] {
             continue;
         }
 
-        // Identifiers, keywords, fm.*/file.* references
         if (isAlpha(c)) {
             let ident = '';
             while (!isAtEnd() && (isAlphaNumeric(peek()) || peek() === '.')) {
                 ident += advance();
             }
 
-            // Check for fm.* or file.* references
             if (ident.startsWith('fm.')) {
                 tokens.push({ type: 'FM_REF', value: ident.slice(3), raw: ident });
             } else if (ident.startsWith('file.')) {
@@ -151,16 +140,12 @@ function tokenize(input: string): Token[] {
             continue;
         }
 
-        // Unknown character - treat as part of a plain string
-        // This handles cases like plain values without quotes
         throw new Error(`Unexpected character: ${c} at position ${i}`);
     }
 
     tokens.push({ type: 'EOF', value: '', raw: '' });
     return tokens;
 }
-
-// ============ PARSER ============
 
 type Expr =
     | { type: 'literal'; value: string | number | boolean | null | undefined }
@@ -182,7 +167,6 @@ class Parser {
 
     parse(): Expr {
         const expr = this.expression();
-        // Ensure we consumed all tokens - if not, this wasn't a valid expression
         if (!this.isAtEnd()) {
             throw new Error(`Unexpected token after expression: ${this.peek().raw}`);
         }
@@ -263,7 +247,6 @@ class Parser {
     }
 
     private call(): Expr {
-        // Handle if() function
         if (this.match('IF')) {
             this.consume('LPAREN', "Expected '(' after 'if'");
             const condition = this.expression();
@@ -272,13 +255,11 @@ class Parser {
             let elseBranch: Expr | null = null;
 
             if (this.match('COMMA')) {
-                // Ternary form: if(condition, thenValue, elseValue)
                 thenBranch = this.expression();
                 if (this.match('COMMA')) {
                     elseBranch = this.expression();
                 }
             } else {
-                // Boolean form: if(condition) -> returns boolean
                 thenBranch = { type: 'literal', value: true };
                 elseBranch = { type: 'literal', value: false };
             }
@@ -287,7 +268,6 @@ class Parser {
             return { type: 'if', condition, thenBranch, elseBranch };
         }
 
-        // Handle contains(haystack, needle) function
         if (this.match('CONTAINS')) {
             this.consume('LPAREN', "Expected '(' after 'contains'");
             const haystack = this.expression();
@@ -297,7 +277,6 @@ class Parser {
             return { type: 'contains', haystack, needle };
         }
 
-        // Handle length(value) function
         if (this.match('LENGTH')) {
             this.consume('LPAREN', "Expected '(' after 'length'");
             const operand = this.expression();
@@ -322,7 +301,6 @@ class Parser {
         }
 
         if (this.match('IDENTIFIER')) {
-            // Treat unknown identifiers as string literals (for backward compat)
             return { type: 'literal', value: this.previous().value as string };
         }
 
@@ -373,8 +351,6 @@ class Parser {
     }
 }
 
-// ============ EVALUATOR ============
-
 function evaluate(expr: Expr, context: ExpressionContext): unknown {
     switch (expr.type) {
         case 'literal':
@@ -386,7 +362,6 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
         }
 
         case 'fileRef': {
-            // file.* uses same frontmatter source in current implementation
             const value = getNestedProperty(context.frontmatter, expr.key);
             return value;
         }
@@ -407,24 +382,16 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
             const right = evaluate(expr.right, context);
 
             switch (expr.operator) {
-                // Logical
                 case '&&': return isTruthy(left) ? right : left;
                 case '||': return isTruthy(left) ? left : right;
                 case '??': return (left !== null && left !== undefined) ? left : right;
-
-                // Equality
                 case '==': return looseEquals(left, right);
                 case '!=': return !looseEquals(left, right);
-
-                // Comparison
                 case '>': return toNumber(left) > toNumber(right);
                 case '>=': return toNumber(left) >= toNumber(right);
                 case '<': return toNumber(left) < toNumber(right);
                 case '<=': return toNumber(left) <= toNumber(right);
-
-                // Arithmetic
                 case '+': {
-                    // String concatenation if either is a string
                     if (typeof left === 'string' || typeof right === 'string') {
                         return String(left ?? '') + String(right ?? '');
                     }
@@ -451,11 +418,9 @@ function evaluate(expr: Expr, context: ExpressionContext): unknown {
             const haystack = evaluate(expr.haystack, context);
             const needle = evaluate(expr.needle, context);
 
-            // Array contains
             if (Array.isArray(haystack)) {
                 return haystack.some(item => looseEquals(item, needle));
             }
-            // String contains (case-insensitive)
             if (typeof haystack === 'string' && needle != null) {
                 return haystack.toLowerCase().includes(String(needle).toLowerCase());
             }
@@ -496,7 +461,6 @@ function toNumber(value: unknown): number {
 }
 
 function looseEquals(a: unknown, b: unknown): boolean {
-    // Handle null/undefined
     if (a === null || a === undefined) {
         return b === null || b === undefined;
     }
@@ -504,18 +468,14 @@ function looseEquals(a: unknown, b: unknown): boolean {
         return false;
     }
 
-    // Try numeric comparison first
     const numA = typeof a === 'number' ? a : parseFloat(String(a));
     const numB = typeof b === 'number' ? b : parseFloat(String(b));
     if (!isNaN(numA) && !isNaN(numB)) {
         return numA === numB;
     }
 
-    // String comparison (case-insensitive)
     return String(a).toLowerCase() === String(b).toLowerCase();
 }
-
-// ============ PUBLIC API ============
 
 /**
  * Check if a value is truthy.
@@ -567,7 +527,6 @@ export function evaluateExpression(
 
         return { value, referencedKeys: { fmKeys, fileKeys } };
     } catch {
-        // If tokenizing or parsing fails, return as plain string
         return { value: input, referencedKeys: { fmKeys, fileKeys } };
     }
 }
@@ -587,7 +546,6 @@ export function evaluateArgs(
     for (const [key, value] of Object.entries(args)) {
         const { value: evaluated, referencedKeys } = evaluateExpression(value, context);
 
-        // Convert result to string for component args
         if (evaluated === null || evaluated === undefined) {
             result[key] = 'undefined';
         } else if (typeof evaluated === 'object') {

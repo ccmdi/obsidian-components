@@ -73,22 +73,14 @@ export namespace ComponentInstance {
                 cleanup: []
             },
             destroy: () => {
-                // Clear all intervals
                 instance.data.intervals?.forEach(interval => clearInterval(interval));
-
-                // Disconnect all observers
                 instance.data.observers?.forEach(observer => observer.disconnect());
-
-                // Run all cleanup functions
                 instance.data.cleanup?.forEach(cleanupFn => cleanupFn());
-
-                // Remove from registry and clear element reference
                 componentInstances.delete(id);
                 delete el.dataset.componentId;
             }
         };
 
-        // Store instance reference on element
         el.dataset.componentId = id;
         componentInstances.set(id, instance);
 
@@ -403,7 +395,6 @@ export namespace Component {
                 const { fmKeys, fileKeys } = instance.data.watchedKeys;
                 const allWatchedKeys = [...fmKeys, ...fileKeys];
 
-                // Smart refresh: only trigger if watched keys actually changed
                 if (allWatchedKeys.length > 0) {
                     const prevFmValues = instance.data._watchedFmValues || {};
                     const prevFileValues = instance.data._watchedFileValues || {};
@@ -575,7 +566,6 @@ export namespace Component {
             }
         };
 
-        // handle component-specified refresh strategies
         if (component.refresh) {
             if (Array.isArray(component.refresh)) {
                 component.refresh.forEach(registerStrategy);
@@ -584,7 +574,6 @@ export namespace Component {
             }
         }
 
-        // special variables mandate strategies
         if (options.usesFm || options.usesFile || options.usesContextDependentSpecialVariable) {
             registerStrategy('fileRenamed');
             registerStrategy('metadataChanged');
@@ -611,12 +600,6 @@ export namespace Component {
         app: App,
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
-        // debug('render', component.keyName, el.dataset.componentSource);
-        // debug('COMPONENT', component);
-        // debug(ctx)
-        
-        // Dynamic context: use active file's path instead of source file's path
-        // Always apply in sidebar/widget-space context (no docId)
         const isInSidebarContext = !ctx.docId;
         if (isInSidebarContext) {
             const activeFile = app.workspace.getActiveFile();
@@ -637,16 +620,13 @@ export namespace Component {
 
         const componentArgKeys = new Set(Component.getArgKeys(component));
 
-        // Resolve special variables first (__TODAY__, __SELF__, etc.)
         args = resolveSpecialVariables(args, ctx);
 
-        // Get frontmatter for expression evaluation
         const file = app.vault.getAbstractFileByPath(ctx.sourcePath);
         const frontmatter = file instanceof TFile
             ? app.metadataCache.getFileCache(file)?.frontmatter || {}
             : {};
 
-        // Evaluate expressions (handles fm.*, file.*, if(), operators)
         const exprResult = evaluateArgs(args, { frontmatter });
         args = exprResult.args;
         const fmKeys = exprResult.fmKeys;
@@ -654,7 +634,6 @@ export namespace Component {
         const usesFm = fmKeys.length > 0;
         const usesFile = fileKeys.length > 0;
 
-        // Check if any file.* keys were undefined (for recovery)
         const needsFileRecovery = fileKeys.some(key => {
             const value = frontmatter[key];
             return value === undefined;
@@ -662,29 +641,23 @@ export namespace Component {
 
         args = parseArgsAliases(args, componentArgKeys);
 
-        // Handle special KEYS
         const cssOverrides: Record<string, string> = {};
         const cleanArgs: Record<string, string> = {};
         let isEnabled = true;
 
         Object.entries(args).forEach(([key, value]) => {
-            // ! => force to CSS
             if (key.endsWith('!')) {
                 const cleanKey = key.slice(0, -1);
                 cssOverrides[cleanKey] = value;
                 componentArgKeys.delete(cleanKey);
-            // enabled => RESERVED KEYWORD for enabling/disabling components
             } else if (key === 'enabled') {
                 isEnabled = isTruthy(value);
                 componentArgKeys.delete(key);
-            // all other keys => component args / CSS carryovers
             } else {
                 cleanArgs[key] = value;
             }
         });
 
-        // Create instance and register refresh handlers BEFORE checking enabled
-        // This ensures disabled components can still react to changes (e.g. enabled=fm.showWidget)
         const { instance, isNew } = getOrCreateInstance(component, el, ctx, app, {
             usesFm,
             usesFile,
@@ -695,7 +668,6 @@ export namespace Component {
             query: args.query
         });
 
-        // Track ALL fm/file keys (including those inside expressions) for change detection
         instance.data._watchedFmValues = Object.fromEntries(
             fmKeys.map(key => [key, frontmatter[key]])
         );
@@ -711,7 +683,6 @@ export namespace Component {
         el.dataset.componentSource = ctx.sourcePath;
 
         instance.data.triggerRefresh = async () => {
-            // Guard against concurrent renders - queue refresh if already rendering
             if (instance.data._isRendering) {
                 instance.data._pendingRefresh = true;
                 return;
@@ -737,7 +708,6 @@ export namespace Component {
         }
 
         el.removeClass('component-disabled');
-        // Show the container if it was hidden
         const container = el.closest('.widget-item.in-sidebar') as HTMLElement;
         if (container) {
             const wasHidden = container.style.display === 'none';
@@ -754,20 +724,16 @@ export namespace Component {
 
         applyCssFromArgs(el, { ...cleanArgs, ...cssOverrides }, componentArgKeys);
 
-        // Internal global class
         el.addClass('component');
 
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
 
         let renderFn: RenderFunction<readonly string[]>;
-        // Use renderRefresh only if instance exists AND element has content
-        // (element may have been cleared by disable, requiring full render)
         const prevArgs = instance.data._prevEvaluatedArgs as Record<string, string> | undefined;
         let needsDelayedFullRefresh = false;
 
         if (!isNew && component.renderRefresh && el.hasChildNodes()) {
-            // Check what changed: handled args vs unhandled args
             let handledArgsChanged = false;
             let unhandledArgsChanged = false;
 
@@ -784,11 +750,6 @@ export namespace Component {
                 }
             }
 
-            // Decide render strategy:
-            // - Handled changed, unhandled didn't → renderRefresh only
-            // - Handled changed, unhandled too → renderRefresh + delayed full refresh
-            // - Handled didn't change, unhandled did → skip to full render immediately
-            // - Nothing changed → renderRefresh (for periodic/time-based updates)
             if (unhandledArgsChanged && !handledArgsChanged) {
                 el.empty();
                 renderFn = component.render;
@@ -802,14 +763,12 @@ export namespace Component {
             renderFn = component.render;
         }
 
-        // Store current args for next comparison
         instance.data._prevEvaluatedArgs = { ...argsWithDefaults };
 
         instance.data._isRendering = true;
         try {
             await renderFn(argsWithOriginal, el, ctx, app, instance, componentSettings);
 
-            // If renderRefresh ran but couldn't handle all arg changes, do a full refresh after animation
             if (needsDelayedFullRefresh) {
                 const animationDuration = component.renderRefreshDuration ?? 500;
                 setTimeout(() => {
@@ -820,16 +779,12 @@ export namespace Component {
             }
         } finally {
             instance.data._isRendering = false;
-            // Process queued refresh if one was requested during render
             if (instance.data._pendingRefresh) {
                 instance.data._pendingRefresh = false;
                 instance.data.triggerRefresh();
             }
         }
 
-        // debug(`render took ${Date.now()}ms`);
-
-        // Recovery: if file.* args were undefined, wait for cache update then refresh
         const recoveryKey = `_recoveryAttempted_${ctx.sourcePath}`;
         const alreadyAttempted = instance.data[recoveryKey] === true;
 
@@ -854,7 +809,6 @@ export namespace Component {
                     }
                 };
                 app.metadataCache.on('changed', recoveryHandler);
-                //cleanup
                 setTimeout(() => {
                     app.metadataCache.off('changed', recoveryHandler);
                 }, 2000);
