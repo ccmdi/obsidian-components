@@ -224,6 +224,10 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         try {
             const data = await fetchUsage();
 
+            // Clear stale state on successful refresh
+            const container = el.querySelector('.anthropic-usage-container');
+            container?.removeClass('anthropic-usage-stale');
+
             const valueEl = el.querySelector('.anthropic-usage-value') as HTMLElement;
             if (valueEl) valueEl.textContent = `${data.five_hour.utilization}%`;
 
@@ -244,8 +248,8 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                 resetEl.textContent = resetText;
             }
         } catch {
-            // On error, fall back to full re-render
-            instance.data.triggerRefresh?.();
+            const container = el.querySelector('.anthropic-usage-container');
+            container?.addClass('anthropic-usage-stale');
         }
     },
     settings: {}

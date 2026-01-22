@@ -108,4 +108,22 @@ export const anthropicUsageStyles = /*css*/`
         0%, 100% { opacity: 0.6; }
         50% { opacity: 1; }
     }
+
+    .anthropic-usage-container.anthropic-usage-stale {
+        opacity: 0.6;
+        border-color: var(--text-error);
+    }
+
+    .anthropic-usage-container.anthropic-usage-stale::after {
+        content: '⚠';
+        position: absolute;
+        top: 4px;
+        right: 8px;
+        font-size: 10px;
+        color: var(--text-error);
+    }
+
+    .anthropic-usage-container {
+        position: relative;
+    }
 `;
