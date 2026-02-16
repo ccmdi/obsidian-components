@@ -1,6 +1,6 @@
 import { Component, ComponentInstance, ComponentAction, ComponentSettingsData } from "components";
-import { App, MarkdownPostProcessorContext, TFile, getAllTags } from "obsidian";
-import { parseBoolean, renderMarkdownLinkToElement } from "utils";
+import { App, MarkdownPostProcessorContext, MarkdownRenderer, TFile, getAllTags } from "obsidian";
+import { parseBoolean } from "utils";
 import { createApi, injectOjsStyles } from "ojs";
 
 interface LinkData {
@@ -57,7 +57,7 @@ const renderAnalytics = async (
 
     try {
         const data = await analyzeVault(app, searchFolder);
-        generateAnalyticsDOM(el, data, searchFolder, colors, showTitle, showInlineList);
+        await generateAnalyticsDOM(el, data, searchFolder, app, ctx, colors, showTitle, showInlineList);
 
     } catch (error) {
         console.error('Analytics error:', error);
@@ -221,7 +221,7 @@ async function analyzeVault(app: App, searchFolder: string): Promise<AnalyticsDa
     };
 }
 
-function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, colors = "colorful", showTitle = true, showInlineList = true): void {
+async function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder: string, app: App, ctx: MarkdownPostProcessorContext, colors = "colorful", showTitle = true, showInlineList = true): Promise<void> {
     const {
         totalPages, islands, wellConnected, substantialNotes, totalInternalLinks,
         totalUnresolvedLinks, recentlyActive, staleNotes, taggedNotes, totalTags,
@@ -322,29 +322,25 @@ function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, searchFolder
 
     // Sections
     if (showInlineList) {
-        generateSectionDOM(el, 'Authorities', authorities.slice(0, 3), (a) => `[[${a.link}]] (${a.inlinks})`);
-        generateSectionDOM(el, 'Hubs', hubs.slice(0, 3), (h) => `[[${h.link}]] (${h.internalOutlinks})`);
-        generateSectionDOM(el, 'Bridges', wellConnected.slice(0, 3), (w) => `[[${w.link}]] (${w.inlinks}↔${w.internalOutlinks})`);
-        generateSectionDOM(el, 'Islands', islands.slice(0, 3), (i) => `[[${i.link}]]`);
-        generateSectionDOM(el, 'Dead-ends', deadEnds.slice(0, 3), (d) => `[[${d.link}]] (${d.inlinks}→)`);
-        generateSectionDOM(el, 'Orphans', orphans.slice(0, 3), (o) => `[[${o.link}]] (→${o.outlinks})`);
+        await generateSectionDOM(el, app, ctx, 'Authorities', authorities.slice(0, 3), (a) => `[[${a.link}]] (${a.inlinks})`);
+        await generateSectionDOM(el, app, ctx, 'Hubs', hubs.slice(0, 3), (h) => `[[${h.link}]] (${h.internalOutlinks})`);
+        await generateSectionDOM(el, app, ctx, 'Bridges', wellConnected.slice(0, 3), (w) => `[[${w.link}]] (${w.inlinks}↔${w.internalOutlinks})`);
+        await generateSectionDOM(el, app, ctx, 'Islands', islands.slice(0, 3), (i) => `[[${i.link}]]`);
+        await generateSectionDOM(el, app, ctx, 'Dead-ends', deadEnds.slice(0, 3), (d) => `[[${d.link}]] (${d.inlinks}→)`);
+        await generateSectionDOM(el, app, ctx, 'Orphans', orphans.slice(0, 3), (o) => `[[${o.link}]] (→${o.outlinks})`);
         generateMissingLinksDOM(el, topMissingLinks);
     }
 }
 
-function generateSectionDOM<T>(el: HTMLElement, title: string, items: T[], formatter: (item: T) => string): void {
+async function generateSectionDOM<T>(el: HTMLElement, app: App, ctx: MarkdownPostProcessorContext, title: string, items: T[], formatter: (item: T) => string): Promise<void> {
     if (items.length === 0) return;
 
     const p = el.createEl('p');
     p.createEl('strong', { text: `${title}: ` });
-
-    items.forEach((item, index) => {
-        if (index > 0) {
-            p.appendText(' • ');
-        }
-        const text = formatter(item);
-        renderMarkdownLinkToElement(text, p);
-    });
+    const md = items.map(formatter).join(' \u2022 ');
+    const span = p.createEl('span', { attr: { style: 'display: inline' } });
+    await MarkdownRenderer.render(app, md, span, ctx.sourcePath, ctx as any);
+    span.querySelectorAll('p').forEach(p => p.style.display = 'inline');
 }
 
 function generateMissingLinksDOM(el: HTMLElement, topMissingLinks: [string, number][]): void {

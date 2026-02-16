@@ -70,11 +70,18 @@ export const timelineStyles = /*css*/`
   }
 
   .timeline-container .task-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
     font-size: 0.9em;
     color: var(--text-muted);
     margin-bottom: 2px;
     padding-left: 6px;
     border-left: 2px solid var(--color-accent);
+  }
+  .timeline-container .task-item p {
+    margin: 0;
+    display: inline;
   }
 
   .timeline-container .journal-content {

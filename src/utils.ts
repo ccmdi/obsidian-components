@@ -402,51 +402,6 @@ export function useTargetNoteSorting<T extends { fm?: CachedMetadata | null, age
 }
 
 /**
- * Renders text with markdown links as DOM elements (safe alternative to innerHTML).
- * Creates text nodes and link elements instead of HTML strings.
- */
-export function renderMarkdownLinkToElement(text: string, container: HTMLElement): void {
-    const linkRegex = /\[\[([^\]]+)\]\]/g;
-    let lastIndex = 0;
-    let match;
-
-    while ((match = linkRegex.exec(text)) !== null) {
-        // Add text before the link
-        if (match.index > lastIndex) {
-            container.appendText(text.substring(lastIndex, match.index));
-        }
-
-        // Parse the link
-        const linkText = match[1];
-        const [target, display] = linkText.split('|');
-        const displayText = display || target;
-
-        // Create the link element
-        container.createEl('a', {
-            cls: 'internal-link',
-            text: displayText.trim(),
-            attr: {
-                href: '#',
-                'data-href': target.trim()
-            }
-        });
-
-        lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text after the last link
-    if (lastIndex < text.length) {
-        container.appendText(text.substring(lastIndex));
-    }
-}
-
-export function renderExternalLink(text: string): string {
-    return text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
-        return `<a href="${url}" target="_blank">${linkText}</a>`;
-    });
-}
-
-/**
  * Renders text with external links as DOM elements (safe alternative to innerHTML).
  * Creates text nodes and link elements instead of HTML strings.
  */

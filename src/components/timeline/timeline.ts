@@ -1,6 +1,6 @@
 import { Component, ComponentAction, ComponentInstance } from "components";
-import { TFile } from "obsidian";
-import { formatDate, getTasks, matchesQuery, renderMarkdownLinkToElement } from "utils";
+import { MarkdownRenderer, TFile } from "obsidian";
+import { formatDate, getTasks, matchesQuery } from "utils";
 import timelineStyles from "./styles";
 
 
@@ -125,10 +125,10 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
             return result;
         };
 
-        const renderTimelineDOM = (container: HTMLElement, sortedFiles: TFile[]): void => {
+        const renderTimelineDOM = async (container: HTMLElement, sortedFiles: TFile[]): Promise<void> => {
             const timelineContent = container.createEl('div', { cls: 'timeline-content' });
 
-            sortedFiles.forEach(file => {
+            for (const file of sortedFiles) {
                 const fileName = file.name.replace('.md', '');
                 const data = journalData[file.path] || { hasJournal: false, completedTasks: [], journalContent: '' };
                 const hasJournal = data.hasJournal && data.journalContent;
@@ -158,11 +158,11 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
                 if (showTasks && data.completedTasks.length > 0) {
                     const tasksContainer = noteCard.createEl('div', { cls: 'tasks-container' });
 
-                    data.completedTasks.forEach(task => {
+                    for (const task of data.completedTasks) {
                         const taskDiv = tasksContainer.createEl('div', { cls: 'task-item' });
                         taskDiv.appendText('✓ ');
-                        renderMarkdownLinkToElement(task, taskDiv);
-                    });
+                        await MarkdownRenderer.render(app, task, taskDiv, file.path, ctx as any);
+                    }
                 }
 
                 if (hasJournal && showJournalDropdown) {
@@ -174,7 +174,7 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
                     const innerDiv = journalContentDiv.createEl('div', { cls: 'journal-content-inner' });
                     innerDiv.createEl('div', { cls: 'journal-text', text: data.journalContent });
                 }
-            });
+            }
         };
 
         const checkAllContent = async (files: TFile[]) => {
@@ -214,13 +214,10 @@ export const timeline: Component<['query', 'limit', 'journalSection', 'taskSecti
                     return;
                 }
 
-                container.empty();
-                container.createEl('div', { cls: 'loading-message', text: 'Loading timeline...' });
-
                 await checkAllContent(files);
 
                 container.empty();
-                renderTimelineDOM(container, files);
+                await renderTimelineDOM(container, files);
 
                 container.addEventListener('mousedown', async (event) => {
                     event.preventDefault();
