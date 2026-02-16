@@ -5,7 +5,7 @@ import { TFile } from "obsidian";
 
 export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', 'colorAges', 'showCount', 'sort', 'showHeader']> = {
     name: 'Reminders',
-    description: 'Display reminders from daily notes',
+    description: 'Display incomplete tasks from matched notes',
     keyName: 'reminders',
     icon: 'bell',
     refresh: 'daily',
@@ -15,7 +15,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
             default: ''
         },
         monthsBack: {
-            description: 'Months back to look for tasks',
+            description: 'Months back to look for tasks (by file modification time)',
             default: '6'
         },
         limit: {
@@ -77,15 +77,9 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
         instance.data.container = newContainer;
     },
     settings: {
-        folder: {
-            name: "Daily Notes Folder",
-            desc: "Path to folder containing daily notes",
-            type: "text",
-            default: "Daily"
-        },
         monthsBack: {
             name: "Months Back",
-            desc: "How many months back to search for tasks",
+            desc: "How many months back to search (by file modification time)",
             type: "number",
             default: 2
         },
@@ -176,28 +170,23 @@ async function renderRemindersContent(
     };
 
     try {
-        // Get date range
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - monthsBack);
-        const startDateStr = startDate.toISOString().slice(0, 10);
+        const startTimestamp = startDate.getTime();
 
-        // Get all files and filter by query
         const allFiles = app.vault.getMarkdownFiles();
 
         const files = allFiles
-            .filter(file => {
+            .filter((file: TFile) => {
                 const cache = app.metadataCache.getFileCache(file);
                 return matchesQuery(file, cache, query);
             })
-            .filter(file =>
-                file.name.replace('.md', '') >= startDateStr &&
-                /^\d{4}-\d{2}-\d{2}$/.test(file.name.replace('.md', ''))
-            )
-            .sort((a, b) => b.name.localeCompare(a.name));
+            .filter((file: TFile) => file.stat.mtime >= startTimestamp)
+            .sort((a: TFile, b: TFile) => b.stat.mtime - a.stat.mtime);
 
         if (files.length === 0) {
             container.empty();
-            container.textContent = `No daily note files found matching query.`;
+            container.textContent = `No files found matching query.`;
             return;
         }
 
@@ -211,7 +200,8 @@ async function renderRemindersContent(
         }> = {};
 
         for (const file of files) {
-            const fileDate = new Date(file.name.replace('.md', ''));
+            const basename = file.name.replace('.md', '');
+            const fileDate = /^\d{4}-\d{2}-\d{2}$/.test(basename) ? new Date(basename) : new Date(file.stat.ctime);
 
             const allTasksInFile = await getTasks(app, file, { incomplete: true, completed: true });
             const completedTasks = await getTasks(app, file, { incomplete: false, completed: true });
