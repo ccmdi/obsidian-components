@@ -13,7 +13,6 @@ export const gymWorkoutTracker: Component<[]> = {
     group: ComponentGroup.GYM,
     styles: gymRoutineMenuStyles,
     does: [ComponentAction.READ, ComponentAction.WRITE],
-    refresh: 'metadataChanged',
     render: async (args, el, ctx, app, instance: ComponentInstance) => {
         const initiator = ctx.sourcePath;
         const file = app.vault.getFileByPath(initiator);

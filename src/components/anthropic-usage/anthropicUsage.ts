@@ -8,9 +8,13 @@ interface AnthropicUsageData {
         utilization: number;
         resets_at: string;
     };
+    seven_day: {
+        utilization: number;
+        resets_at: string;
+    };
 }
 
-export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRelativeTime']> = {
+export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRelativeTime', 'label']> = {
     name: 'Anthropic Usage',
     keyName: 'anthropic-usage',
     icon: 'brain',
@@ -26,6 +30,11 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         showRelativeTime: {
             description: 'Show relative time until reset (e.g. "13 minutes")',
             default: 'false',
+            required: false
+        },
+        label: {
+            description: 'Label to display',
+            default: '',
             required: false
         }
     },
@@ -110,7 +119,7 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
             const info = barWrapper.createEl('div', { cls: 'anthropic-usage-info' });
             info.createEl('div', {
                 cls: 'anthropic-usage-label',
-                text: 'Usage'
+                text: 'Usage' + (args.label ? ` (${args.label})` : '')
             });
 
             // Only show reset time if resets_at is a valid date
@@ -128,8 +137,14 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                 });
             }
 
-            // Progress bar
+            // Progress bar (weekly layer behind five-hour layer)
             const bar = barWrapper.createEl('div', { cls: 'anthropic-usage-bar' });
+            if (usageData.seven_day) {
+                bar.createEl('div', {
+                    cls: 'anthropic-usage-bar-fill-weekly',
+                    attr: { style: `width: ${usageData.seven_day.utilization}%` }
+                });
+            }
             bar.createEl('div', {
                 cls: 'anthropic-usage-bar-fill',
                 attr: { style: `width: ${usageData.five_hour.utilization}%` }
@@ -156,7 +171,8 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
             const response = await requestUrl({
                 url: `https://claude.ai/api/organizations/${args.organizationId}/usage`,
                 headers: {
-                    'Cookie': `sessionKey=${args.sessionKey}`
+                    'Cookie': `sessionKey=${args.sessionKey}`,
+                    'User-Agent': navigator.userAgent
                 }
             });
             return JSON.parse(response.text);
@@ -198,7 +214,7 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         });
 
         // Initial fetch
-        await fetchAndRender();
+        fetchAndRender();
 
         // Auto-refresh every 4 minutes
         ComponentInstance.createUpdateLoop(instance, instance.data.triggerRefresh, 240000);
@@ -208,7 +224,8 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
             const response = await requestUrl({
                 url: `https://claude.ai/api/organizations/${args.organizationId}/usage`,
                 headers: {
-                    'Cookie': `sessionKey=${args.sessionKey}`
+                    'Cookie': `sessionKey=${args.sessionKey}`,
+                    'User-Agent': navigator.userAgent
                 }
             });
             return JSON.parse(response.text);
@@ -216,6 +233,10 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
 
         try {
             const data = await fetchUsage();
+
+            // Clear stale state on successful refresh
+            const container = el.querySelector('.anthropic-usage-container');
+            container?.removeClass('anthropic-usage-stale');
 
             const valueEl = el.querySelector('.anthropic-usage-value') as HTMLElement;
             if (valueEl) valueEl.textContent = `${data.five_hour.utilization}%`;
@@ -236,9 +257,17 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                 }
                 resetEl.textContent = resetText;
             }
+
+            if (data.seven_day) {
+                const weeklyFill = el.querySelector('.anthropic-usage-bar-fill-weekly') as HTMLElement;
+                if (weeklyFill) {
+                    weeklyFill.style.transition = 'width 300ms ease-out';
+                    weeklyFill.style.width = `${data.seven_day.utilization}%`;
+                }
+            }
         } catch {
-            // On error, fall back to full re-render
-            instance.data.triggerRefresh?.();
+            const container = el.querySelector('.anthropic-usage-container');
+            container?.addClass('anthropic-usage-stale');
         }
     },
     settings: {}

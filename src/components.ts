@@ -6,6 +6,7 @@ import ComponentsPlugin from "main";
 import { ComponentGroup } from "groups";
 import { parseYaml } from "obsidian";
 import { NOTE_CONTEXT_VARIABLES } from "variable";
+import { debug } from "debug";
 
 /**
  * Global instance registry for cleanup
@@ -398,6 +399,7 @@ export namespace Component {
         if (!refresh) return;
         if (refresh === 'metadataChanged') {
             const handler = (file: TFile, data: string, cache: CachedMetadata) => {
+                debug(`[metadataChanged] ${component.keyName} | file=${file.path} source=${instance.element.dataset.componentSource}`);
                 if (file.path !== instance.element.dataset.componentSource) return;
 
                 const { fmKeys, fileKeys } = instance.data.watchedKeys;
@@ -427,9 +429,15 @@ export namespace Component {
                         }
                     }
 
-                    if (!changed) return;
+                    if (!changed) {
+                        debug(`[metadataChanged] ${component.keyName} | SKIPPED (watched keys unchanged)`);
+                        return;
+                    }
+                } else {
+                    debug(`[metadataChanged] ${component.keyName} | NO watched keys, triggering unconditionally`);
                 }
 
+                debug(`[metadataChanged] ${component.keyName} | TRIGGERING REFRESH (passed all checks)`);
                 instance.data.triggerRefresh();
             };
             app.metadataCache.on('changed', handler);
@@ -437,6 +445,7 @@ export namespace Component {
         }
         else if (refresh === 'anyMetadataChanged') {
             const handler = (file: TFile, data: string, cache: CachedMetadata) => {
+                debug(`[anyMetadataChanged] ${component.keyName} | file=${file.path}`);
                 instance.data.triggerRefresh();
             };
             app.metadataCache.on('changed', handler);
@@ -444,6 +453,7 @@ export namespace Component {
         }
         else if (refresh === 'queryMetadataChanged') {
             const handler = (file: TFile, data: string, cache: CachedMetadata) => {
+                debug(`[queryMetadataChanged] ${component.keyName} | file=${file.path} query=${instance.data.watchedQuery}`);
                 const query = instance.data.watchedQuery;
                 if (!query) return;
                 if (!matchesQuery(file, cache, query)) return;
@@ -454,6 +464,7 @@ export namespace Component {
         }
         else if (refresh === 'fileRenamed') {
             const handler = (file: TAbstractFile, oldPath: string) => {
+                debug(`[fileRenamed] ${component.keyName} | oldPath=${oldPath} newPath=${file.path}`);
                 if (!(file instanceof TFile)) return;
                 if (oldPath !== instance.element.dataset.componentSource) return;
 
@@ -471,6 +482,7 @@ export namespace Component {
             const isInSidebar = instance.element.closest('.in-sidebar') !== null;
             if (isInSidebar) {
                 const handler = (leaf: WorkspaceLeaf) => {
+                    debug(`[leafChanged] ${component.keyName} | leaf=${leaf.view?.getViewType()}`);
                     if (!(leaf.view instanceof MarkdownView)) return;
 
                     const fm = leaf.view.getViewData();
@@ -525,6 +537,7 @@ export namespace Component {
                     ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
                     : new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1);
                 const timeout = setTimeout(() => {
+                    debug(`[${refresh}] ${component.keyName} | triggered at ${new Date().toISOString()}`);
                     instance.data.triggerRefresh();
                     schedule();
                 }, next.getTime() - now.getTime());
@@ -534,7 +547,10 @@ export namespace Component {
             ComponentInstance.addCleanup(instance, () => clearTimeout(instance.data.boundaryTimeout));
         }
         else if (refresh.type === 'timeElapsed') {
-            const interval = setInterval(() => instance.data.triggerRefresh(), refresh.interval);
+            const interval = setInterval(() => {
+                debug(`[timeElapsed] ${component.keyName} | interval=${refresh.interval}ms`);
+                instance.data.triggerRefresh();
+            }, refresh.interval);
             ComponentInstance.addInterval(instance, interval);
         }
     }
@@ -611,7 +627,7 @@ export namespace Component {
         app: App,
         componentSettings?: ComponentSettingsData
     ): Promise<void> {
-        // debug('render', component.keyName, el.dataset.componentSource);
+        debug('render', component.keyName, el.dataset.componentSource);
         // debug('COMPONENT', component);
         // debug(ctx)
         
