@@ -204,7 +204,7 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         });
 
         // Initial fetch
-        await fetchAndRender();
+        fetchAndRender();
 
         // Auto-refresh every 4 minutes
         ComponentInstance.createUpdateLoop(instance, instance.data.triggerRefresh, 240000);
