@@ -8,6 +8,10 @@ interface AnthropicUsageData {
         utilization: number;
         resets_at: string;
     };
+    seven_day: {
+        utilization: number;
+        resets_at: string;
+    };
 }
 
 export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRelativeTime', 'label']> = {
@@ -133,8 +137,14 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                 });
             }
 
-            // Progress bar
+            // Progress bar (weekly layer behind five-hour layer)
             const bar = barWrapper.createEl('div', { cls: 'anthropic-usage-bar' });
+            if (usageData.seven_day) {
+                bar.createEl('div', {
+                    cls: 'anthropic-usage-bar-fill-weekly',
+                    attr: { style: `width: ${usageData.seven_day.utilization}%` }
+                });
+            }
             bar.createEl('div', {
                 cls: 'anthropic-usage-bar-fill',
                 attr: { style: `width: ${usageData.five_hour.utilization}%` }
@@ -246,6 +256,14 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
                     resetText += ` (${resetMoment.fromNow(true)})`;
                 }
                 resetEl.textContent = resetText;
+            }
+
+            if (data.seven_day) {
+                const weeklyFill = el.querySelector('.anthropic-usage-bar-fill-weekly') as HTMLElement;
+                if (weeklyFill) {
+                    weeklyFill.style.transition = 'width 300ms ease-out';
+                    weeklyFill.style.width = `${data.seven_day.utilization}%`;
+                }
             }
         } catch {
             const container = el.querySelector('.anthropic-usage-container');
