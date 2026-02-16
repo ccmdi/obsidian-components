@@ -1,7 +1,7 @@
 import { Component, ComponentAction, ComponentArgs, ComponentInstance } from "components";
-import { useNavigation, useTargetNoteSorting, getTasks, matchesQuery, renderMarkdownLinkToElement } from "utils";
+import { useNavigation, useTargetNoteSorting, getTasks, matchesQuery } from "utils";
 import { remindersStyles } from "./styles";
-import { TFile } from "obsidian";
+import { MarkdownRenderer, TFile } from "obsidian";
 
 export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', 'colorAges', 'showCount', 'sort', 'showHeader']> = {
     name: 'Reminders',
@@ -321,7 +321,7 @@ async function renderRemindersContent(
             });
 
             const textSpan = listItem.createEl('span', { cls: 'reminder-text' });
-            renderMarkdownLinkToElement(task.text, textSpan);
+            await MarkdownRenderer.render(app, task.text, textSpan, task.file.path, ctx);
 
             if (showAges && task.age >= 7) {
                 const color = getColorForAge(task.age);

@@ -88,6 +88,9 @@ export const remindersStyles = /*css*/`
         overflow-wrap: break-word;
         white-space: normal;
     }
+    .reminder-text p {
+        margin: 0;
+    }
     .reminder-age {
         font-size: 0.8em;
         margin-left: 8px;
