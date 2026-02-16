@@ -77,6 +77,7 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		container.addClass('progress-bar-container');
 
 		const progressFill = container.createDiv({ cls: 'progress-bar-fill' });
+		progressFill.style.transition = 'width 0.5s ease-in-out';
 		progressFill.style.width = `${progress}%`;
 
 		let label: HTMLElement | null = null;
