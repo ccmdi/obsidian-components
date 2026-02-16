@@ -174,6 +174,11 @@ async function renderRemindersContent(
         startDate.setMonth(startDate.getMonth() - monthsBack);
         const startTimestamp = startDate.getTime();
 
+        const fileTime = (file: TFile) => {
+            const basename = file.name.replace('.md', '');
+            return /^\d{4}-\d{2}-\d{2}$/.test(basename) ? new Date(basename).getTime() : file.stat.mtime;
+        };
+
         const allFiles = app.vault.getMarkdownFiles();
 
         const files = allFiles
@@ -181,8 +186,8 @@ async function renderRemindersContent(
                 const cache = app.metadataCache.getFileCache(file);
                 return matchesQuery(file, cache, query);
             })
-            .filter((file: TFile) => file.stat.mtime >= startTimestamp)
-            .sort((a: TFile, b: TFile) => b.stat.mtime - a.stat.mtime);
+            .filter((file: TFile) => fileTime(file) >= startTimestamp)
+            .sort((a: TFile, b: TFile) => fileTime(b) - fileTime(a));
 
         if (files.length === 0) {
             container.empty();
@@ -200,8 +205,7 @@ async function renderRemindersContent(
         }> = {};
 
         for (const file of files) {
-            const basename = file.name.replace('.md', '');
-            const fileDate = /^\d{4}-\d{2}-\d{2}$/.test(basename) ? new Date(basename) : new Date(file.stat.ctime);
+            const fileDate = new Date(fileTime(file));
 
             const allTasksInFile = await getTasks(app, file, { incomplete: true, completed: true });
             const completedTasks = await getTasks(app, file, { incomplete: false, completed: true });
