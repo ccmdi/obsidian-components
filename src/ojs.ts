@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext } from "obsidian";
+import { App, MarkdownPostProcessorContext, TFile } from "obsidian";
 
 export const ojsStyles = /*css*/`
 .vault-analytics-grid {
@@ -47,13 +47,89 @@ export interface CardOptions {
     subtitle?: string;
 }
 
+export interface QueryResult {
+    file: TFile;
+    fm: Record<string, any>;
+}
+
 export interface OjsApi {
     grid: (parent: HTMLElement, className?: string) => HTMLElement;
     card: (parent: HTMLElement, options: CardOptions) => HTMLElement;
+    loadScript: (url: string) => Promise<void>;
+    loadStyle: (url: string) => Promise<void>;
+    fetchJSON: <T = any>(url: string, cacheMins?: number) => Promise<T>;
+    query: (path?: string, filter?: (result: QueryResult) => boolean) => QueryResult[];
 }
 
-export function createApi(): OjsApi {
+const scriptCache = new Map<string, Promise<void>>();
+const styleCache = new Map<string, Promise<void>>();
+const jsonCache = new Map<string, { data: any; expires: number }>();
+
+export function createApi(app: App): OjsApi {
     return {
+        loadScript(url: string): Promise<void> {
+            const existing = scriptCache.get(url);
+            if (existing) return existing;
+
+            const promise = new Promise<void>((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.addEventListener('load', () => resolve());
+                script.addEventListener('error', () => {
+                    scriptCache.delete(url);
+                    reject(new Error(`Failed to load script: ${url}`));
+                });
+                document.head.appendChild(script);
+            });
+
+            scriptCache.set(url, promise);
+            return promise;
+        },
+
+        loadStyle(url: string): Promise<void> {
+            const existing = styleCache.get(url);
+            if (existing) return existing;
+
+            const promise = new Promise<void>((resolve, reject) => {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = url;
+                link.addEventListener('load', () => resolve());
+                link.addEventListener('error', () => {
+                    styleCache.delete(url);
+                    reject(new Error(`Failed to load stylesheet: ${url}`));
+                });
+                document.head.appendChild(link);
+            });
+
+            styleCache.set(url, promise);
+            return promise;
+        },
+
+        async fetchJSON<T = any>(url: string, cacheMins = 5): Promise<T> {
+            const cached = jsonCache.get(url);
+            if (cached && Date.now() < cached.expires) return cached.data as T;
+
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Fetch failed (${res.status}): ${url}`);
+            const data = await res.json();
+            jsonCache.set(url, { data, expires: Date.now() + cacheMins * 60_000 });
+            return data as T;
+        },
+
+        query(path?: string, filter?: (result: QueryResult) => boolean): QueryResult[] {
+            const results: QueryResult[] = [];
+            for (const file of app.vault.getMarkdownFiles()) {
+                if (path && !file.path.startsWith(path)) continue;
+                const cache = app.metadataCache.getFileCache(file);
+                const fm = (cache?.frontmatter as Record<string, any>) || {};
+                const result = { file, fm };
+                if (filter && !filter(result)) continue;
+                results.push(result);
+            }
+            return results;
+        },
+
         grid(parent: HTMLElement, className = 'vault-analytics-grid'): HTMLElement {
             return parent.createEl('div', { cls: className });
         },
@@ -105,7 +181,7 @@ export async function executeOjs(
     ctx: MarkdownPostProcessorContext,
     app: App
 ): Promise<void> {
-    const api = createApi();
+    const api = createApi(app);
 
     try {
         const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;

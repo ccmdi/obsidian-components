@@ -229,7 +229,7 @@ async function generateAnalyticsDOM(el: HTMLElement, data: AnalyticsData, search
         authorities, hubs, deadEnds, orphans, topMissingLinks
     } = data;
 
-    const api = createApi();
+    const api = createApi(app);
 
     // Map color based on scheme
     const getColor = (originalColor: string): string => {
