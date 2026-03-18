@@ -15,6 +15,7 @@ export const progressBarStyles = /*css*/`
 	top: 0;
 	height: 100%;
 	background-color: var(--pb-bar-color, var(--color-accent));
+	transition: width 0.5s ease-in-out;
 }
 
 .component .progress-bar-label {

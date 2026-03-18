@@ -142,6 +142,7 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'showRead'
         await populateNotifications(instance);
     },
 
+    renderRefreshArgs: [],
     renderRefresh: async (args, el, ctx, app, instance: ComponentInstance) => {
         await populateNotifications(instance);
     },

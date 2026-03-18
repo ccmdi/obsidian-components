@@ -219,6 +219,7 @@ export const anthropicUsage: Component<['organizationId', 'sessionKey', 'showRel
         // Auto-refresh every 4 minutes
         ComponentInstance.createUpdateLoop(instance, instance.data.triggerRefresh, 240000);
     },
+    renderRefreshArgs: ['organizationId', 'sessionKey', 'showRelativeTime'],
     renderRefresh: async (args, el, ctx, app, instance) => {
         const fetchUsage = async (): Promise<AnthropicUsageData> => {
             const response = await requestUrl({

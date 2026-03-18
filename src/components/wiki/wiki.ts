@@ -269,6 +269,7 @@ export const wiki: Component<['topic', 'compact']> = {
         }
     },
 
+    renderRefreshArgs: ['compact', 'topic'],
     renderRefresh: async (args, el, ctx, app, instance) => {
         const compact = args.compact !== 'false';
 

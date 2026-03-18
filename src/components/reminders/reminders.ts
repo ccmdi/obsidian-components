@@ -61,6 +61,7 @@ export const reminders: Component<['query', 'monthsBack', 'limit', 'showAges', '
         await renderRemindersContent(args, container, ctx, app, instance);
     },
 
+    renderRefreshArgs: ['query', 'monthsBack', 'limit', 'showAges', 'colorAges', 'showCount', 'sort', 'showHeader'],
     renderRefresh: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         // Keep showing old content while fetching new data
         const oldContainer = instance.data.container as HTMLElement;

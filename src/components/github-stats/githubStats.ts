@@ -147,6 +147,7 @@ export const githubStats: Component<['GITHUB_TOKEN']> = {
         instance.data.tooltip = tooltip;
     },
 
+    renderRefreshArgs: [],
     renderRefresh: async (args, el, ctx, app, instance) => {
         const { last7Days } = await fetchGithubData(instance.data.token);
         renderStreakSquares(instance.data.streakContainer, last7Days, instance.data.tooltip);

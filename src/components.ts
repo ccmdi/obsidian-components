@@ -285,6 +285,7 @@ export interface Component<TArgs extends readonly string[]> {
     aliases?: string[];
     render: RenderFunction<TArgs>;
     renderRefresh?: RenderFunction<TArgs>;
+    renderRefreshArgs?: TArgs[number][]; // Args handled by renderRefresh (determines if renderRefresh or full render is used)
     renderRefreshDuration?: number; // ms to wait before full refresh after renderRefresh (default 500)
     refresh?: RefreshStrategy;
     isMountable: boolean;
@@ -338,44 +339,9 @@ export namespace Component {
         return result;
     }
 
-    /**
-     * Static analysis of renderRefresh to detect which args it accesses.
-     * Extracts args.X patterns and destructuring like { x, y } = args.
-     * Results are cached per component.
-     */
-    const renderRefreshArgsCache = new WeakMap<Component<readonly string[]>, Set<string>>();
-
     export function getRenderRefreshArgs(component: Component<readonly string[]>): Set<string> {
         if (!component.renderRefresh) return new Set();
-
-        const cached = renderRefreshArgsCache.get(component);
-        if (cached) return cached;
-
-        const source = component.renderRefresh.toString();
-        const args = new Set<string>();
-
-        // Match args.propertyName
-        const dotAccess = /args\.(\w+)/g;
-        let match;
-        while ((match = dotAccess.exec(source)) !== null) {
-            args.add(match[1]);
-        }
-
-        // Match args['propertyName'] or args["propertyName"]
-        const bracketAccess = /args\[['"](\w+)['"]\]/g;
-        while ((match = bracketAccess.exec(source)) !== null) {
-            args.add(match[1]);
-        }
-
-        // Match destructuring: const { x, y } = args or { x, y } = args
-        const destructure = /\{\s*([^}]+)\}\s*=\s*args/g;
-        while ((match = destructure.exec(source)) !== null) {
-            const props = match[1].split(',').map(p => p.trim().split(/[:\s]/)[0].trim());
-            props.forEach(p => { if (p) args.add(p); });
-        }
-
-        renderRefreshArgsCache.set(component, args);
-        return args;
+        return new Set(component.renderRefreshArgs ?? []);
     }
 
     /**

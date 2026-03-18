@@ -77,7 +77,6 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		container.addClass('progress-bar-container');
 
 		const progressFill = container.createDiv({ cls: 'progress-bar-fill' });
-		progressFill.style.transition = 'width 0.5s ease-in-out';
 		progressFill.style.width = `${progress}%`;
 
 		let label: HTMLElement | null = null;
@@ -91,7 +90,8 @@ export const progressBar: Component<['progress', 'height', 'backgroundColor', 'b
 		instance.data.currentProgress = progress;
 	},
 
-	renderRefreshDuration: 500, // Animation duration - delayed full refresh waits for this
+	renderRefreshArgs: ['progress'],
+	renderRefreshDuration: 500,
 
 	renderRefresh: async (args, el, ctx, app, instance) => {
 		let newProgress = parseFloat(args.progress) || 0;

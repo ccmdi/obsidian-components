@@ -608,6 +608,7 @@ export const projectCards: Component<[
     },
 
     // Incremental refresh - only update projects, preserve filter input focus
+    renderRefreshArgs: ['source', 'query', 'showProgress', 'sortBy', 'limit', 'showBadges', 'showFooter', 'showTags'],
     renderRefresh: async (args, el, ctx, app, instance: ComponentInstance, componentSettings = {}) => {
         const source = args.source;
         const query = args.query;

@@ -277,6 +277,7 @@ export const bookCards: Component<['source', 'limit']> = {
 
     },
 
+    renderRefreshArgs: ['source', 'limit'],
     renderRefresh: async (args, el, ctx, app, instance: ComponentInstance) => {
         const source = args.source;
         const limit = args.limit ? parseInt(args.limit) : undefined;
