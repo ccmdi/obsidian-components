@@ -90,6 +90,8 @@ export const gymWorkoutTracker: Component<[]> = {
                         value: set.actualReps,
                         placeholder: set.targetReps
                     });
+                    repsInput.addEventListener('click', (e) => e.stopPropagation());
+                    repsInput.addEventListener('focus', (e) => e.stopPropagation());
                     repsInput.addEventListener('change', async () => {
                         set.actualReps = repsInput.value;
                         await saveWorkout();
@@ -97,10 +99,12 @@ export const gymWorkoutTracker: Component<[]> = {
 
                     const weightCell = row.createEl("td");
                     const weightInput = weightCell.createEl("input", {
-                        type: "text",
+                        type: "number",
                         value: set.actualWeight,
                         placeholder: set.targetWeight
                     });
+                    weightInput.addEventListener('click', (e) => e.stopPropagation());
+                    weightInput.addEventListener('focus', (e) => e.stopPropagation());
                     weightInput.addEventListener('change', async () => {
                         set.actualWeight = weightInput.value;
                         await saveWorkout();
@@ -108,6 +112,7 @@ export const gymWorkoutTracker: Component<[]> = {
 
                     const completeCell = row.createEl("td");
                     const checkbox = completeCell.createEl("input", { type: "checkbox" });
+                    checkbox.addEventListener('click', (e) => e.stopPropagation());
 
                     if (set.completed) {
                         checkbox.checked = true;
