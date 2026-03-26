@@ -287,9 +287,7 @@ async function renderRemindersContent(
                 attr: { type: 'checkbox' }
             });
 
-            checkbox.addEventListener('click', async (e) => {
-                e.stopPropagation();
-
+            checkbox.addEventListener('click', async () => {
                 if (checkbox.checked) {
                     checkbox.disabled = true;
                     listItem.addClass('completing');

@@ -44,7 +44,6 @@ const renderPropertyAdder = async (
 
     const handleClick = async (e: Event) => {
         e.preventDefault();
-        e.stopPropagation();
 
         const currentFile = app.workspace.getActiveFile();
         if (!currentFile) {

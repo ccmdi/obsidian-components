@@ -42,7 +42,6 @@ const renderNavigate = async (args: ComponentArgs<['folder', 'template', 'date',
 
         const handleClick = async (e: Event) => {
             e.preventDefault();
-            e.stopPropagation();
 
             let targetName: string;
             if (overrideTarget) {

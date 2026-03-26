@@ -128,8 +128,7 @@ export const githubNotifications: Component<['GITHUB_TOKEN', 'limit', 'showRead'
                 cls: 'github-notifications-refresh',
                 text: '↻'
             });
-            refreshBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
+            refreshBtn.addEventListener('click', async () => {
                 await populateNotifications(instance);
             });
         }

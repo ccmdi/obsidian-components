@@ -739,6 +739,17 @@ export namespace Component {
         // Internal global class
         el.addClass('component');
 
+        // Prevent interactive elements from triggering Obsidian's edit mode switch
+        if (isNew) {
+            const stopEditSwitch = (e: Event) => {
+                if (e.target instanceof HTMLElement && e.target.closest('input, button, select, textarea')) {
+                    e.stopPropagation();
+                }
+            };
+            el.addEventListener('click', stopEditSwitch);
+            el.addEventListener('mousedown', stopEditSwitch);
+        }
+
         const argsWithDefaults = Component.mergeWithDefaults(component, cleanArgs);
         const argsWithOriginal = { ...argsWithDefaults, original: originalArgs } as ComponentArgs;
 
